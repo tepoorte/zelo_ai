@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Zelo AI</title>
+  <style>
+    :root{
+      --bg:#0b0f16;
+      --card: rgba(18, 23, 34, .65);
+      --stroke: rgba(255,255,255,.10);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.70);
+      --blue:#2563eb;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background: var(--bg);
+      overflow:hidden;
+    }
+
+    /* Animated background canvas */
+    #bg{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:-2;
+      display:block;
+    }
+
+    /* subtle vignette + blur */
+    .overlay{
+      position:fixed;
+      inset:0;
+      background:
+        radial-gradient(1200px 700px at 30% 20%, rgba(255,255,255,.06), transparent 55%),
+        radial-gradient(900px 600px at 70% 70%, rgba(255,255,255,.05), transparent 60%),
+        radial-gradient(1200px 900px at 50% 50%, rgba(0,0,0,.15), rgba(0,0,0,.65));
+      z-index:-1;
+      pointer-events:none;
+    }
+
+    /* Layout */
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px;
+      height: 100%;
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    h1{
+      margin:0;
+      font-size: 34px;
+      letter-spacing:.2px;
+    }
+
+    .badge{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+    }
+
+    /* Chat */
+    #messages{
+      flex:1;
+      overflow:auto;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    .row{
+      display:flex;
+      margin: 10px 0;
+    }
+
+    .bubble{
+      max-width: 72%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      border: 1px solid rgba(255,255,255,.10);
+    }
+
+    .userRow{ justify-content:flex-end; }
+    .userBubble{
+      background: rgba(37, 99, 235, .90);
+      border-color: rgba(37, 99, 235, .55);
+    }
+
+    .aiRow{ justify-content:flex-start; }
+    .aiBubble{
+      background: rgba(20, 24, 36, .75);
+    }
+
+    /* Input bar */
+    #inputBar{
+      display:flex;
+      gap:10px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    #input{
+      flex:1;
+      padding: 12px 12px;
+      font-size: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      outline: none;
+    }
+
+    #input::placeholder{ color: rgba(255,255,255,.55); }
+
+    #sendBtn{
+      padding: 12px 16px;
+      font-size: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: var(--blue);
+      color: white;
+      cursor:pointer;
+    }
+
+    #sendBtn:hover{ filter: brightness(1.05); }
+    #sendBtn:disabled{ opacity:.6; cursor:not-allowed; }
+
+    /* small helper */
+    .hint{
+      margin-top:-6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 720px){
+      .wrap{ padding:16px; }
+      h1{ font-size: 28px; }
+      .bubble{ max-width: 86%; }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="bg"></canvas>
+  <div class="overlay"></div>
+
+  <div class="wrap">
+    <header>
+      <h1>Zelo AI</h1>
+      <span class="badge">local dev</span>
+    </header>
+
+    <div id="messages"></div>
+
+    <div class="hint">Prova: “voglio una caesar per 2 persone” oppure “aggiungi 2 parmigiano al carrello”.</div>
+
+    <div id="inputBar">
+      <input id="input" placeholder="Scrivi qualcosa..." />
+      <button id="sendBtn" onclick="send()">Invia</button>
+    </div>
+  </div>
+
+  <script>
+    // ---------- CHAT ----------
+    const messages = document.getElementById("messages");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("sendBtn");
+
+    function addMessage(text, who){
+      const row = document.createElement("div");
+      row.className = "row " + (who === "user" ? "userRow" : "aiRow");
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble " + (who === "user" ? "userBubble" : "aiBubble");
+      bubble.textContent = text;
+
+      row.appendChild(bubble);
+      messages.appendChild(row);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    async function send(){
+      const text = input.value.trim();
+      if(!text) return;
+
+      addMessage(text, "user");
+      input.value = "";
+      input.focus();
+
+      sendBtn.disabled = true;
+
+      try{
+        const res = await fetch("/ai/chat", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ userRef: "local-dev", text })
+        });
+
+        const data = await res.json();
+        addMessage(data.message || data.error || "errore", "ai");
+      }catch(e){
+        addMessage("Errore di rete: " + (e?.message || e), "ai");
+      }finally{
+        sendBtn.disabled = false;
+      }
+    }
+
+    input.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") send();
+    });
+
+    // ---------- ANIMATED BACKGROUND (Aurora blobs) ----------
+    const canvas = document.getElementById("bg");
+    const ctx = canvas.getContext("2d");
+
+    function resize(){
+      canvas.width = Math.floor(window.innerWidth * devicePixelRatio);
+      canvas.height = Math.floor(window.innerHeight * devicePixelRatio);
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    const W = () => window.innerWidth;
+    const H = () => window.innerHeight;
+
+    // Blobs configuration
+    const blobs = [
+      { x: 0.25, y: 0.30, r: 260, dx: 0.00035, dy: 0.00022, a: 0.65 },
+      { x: 0.70, y: 0.40, r: 320, dx: -0.00028, dy: 0.00018, a: 0.55 },
+      { x: 0.55, y: 0.75, r: 360, dx: 0.00020, dy: -0.00026, a: 0.50 },
+    ];
+
+    function draw(t){
+      t = t || 0;
+      const time = t * 0.001;
+
+      // clear
+      ctx.clearRect(0,0,W(),H());
+
+      // background base
+      ctx.fillStyle = "#0b0f16";
+      ctx.fillRect(0,0,W(),H());
+
+      // additive blobs
+      ctx.globalCompositeOperation = "lighter";
+
+      for(const b of blobs){
+        const px = (b.x + Math.sin(time)*b.dx*2000 + Math.sin(time*0.7)*b.dx*1200) * W();
+        const py = (b.y + Math.cos(time)*b.dy*2000 + Math.cos(time*0.9)*b.dy*1200) * H();
+
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, b.r);
+        // Aurora-ish colors
+        grad.addColorStop(0.00, `rgba(37, 99, 235, ${b.a})`);   // blue
+        grad.addColorStop(0.35, `rgba(16, 185, 129, ${b.a*0.75})`); // green
+        grad.addColorStop(0.65, `rgba(168, 85, 247, ${b.a*0.65})`); // purple
+        grad.addColorStop(1.00, "rgba(0,0,0,0)");
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(px, py, b.r, 0, Math.PI*2);
+        ctx.fill();
+      }
+
+      // soft blur feel (cheap): draw a translucent dark veil
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.fillRect(0,0,W(),H());
+
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>

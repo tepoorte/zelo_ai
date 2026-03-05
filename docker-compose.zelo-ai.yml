@@ -1,0 +1,52 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    restart: unless-stopped
+
+  # one-shot: scarica il modello una volta (così al primo avvio non aspetti)
+  ollama_pull:
+    image: ollama/ollama:latest
+    depends_on:
+      - ollama
+    entrypoint: ["/bin/sh","-lc"]
+    command: >
+      "sleep 2 &&
+       ollama pull llama3.2 &&
+       echo 'Model pulled.'"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: "no"
+
+  zelo_ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: zelo_ai
+    depends_on:
+      - ollama
+    ports:
+      - "3041:3041"
+    environment:
+      - NODE_ENV=development
+      - PORT=3041
+      - AI_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2
+      # lascia pure i tuoi env meta/swissdata, non servono per il test base
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    command: ["npm","run","dev"]
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+
+  
