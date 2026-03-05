@@ -25,4 +25,6 @@ export const env = {
   swissdataBaseUrl: process.env.SWISSDATA_BASE_URL ?? "",
   swissdataApiKey: process.env.SWISSDATA_API_KEY ?? "",
   swissdataAppId: process.env.SWISSDATA_APP_ID ?? "",
+  swissdataShopId: process.env.SWISSDATA_SHOP_ID ?? "",
+  swissdataCountry: process.env.SWISSDATA_COUNTRY ?? "CHE",
 };

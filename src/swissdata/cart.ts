@@ -1,36 +1,37 @@
-// src/swissdata/cart.ts
+import { env } from "../config/env.js";
+import { swissdataClient } from "./client.js";
 
-export type CartItem = {
-  productId: string;
-  qty: number;
-};
+export async function getCurrentBasket(userRef: string) {
+  const api = swissdataClient(userRef);
 
-export type AddToCartInput = {
-  userRef: string;
-  items: CartItem[];
-};
+  const shopId = env.swissdataShopId;
+  const country = env.swissdataCountry;
 
-type Cart = {
-  userRef: string;
-  items: CartItem[];
-};
+  if (!shopId) throw new Error("Missing env SWISSDATA_SHOP_ID");
+  if (!country) throw new Error("Missing env SWISSDATA_COUNTRY (e.g. CHE)");
 
-const CARTS = new Map<string, Cart>();
+  const res = await api.get(`/shop/${shopId}/order/current-basket`, {
+    params: { country }, // apiKey è già dentro al client
+  });
 
-export async function getCart(userRef: string) {
-  const cart = CARTS.get(userRef) ?? { userRef, items: [] };
-  return { ok: true, cart };
+  return res.data;
 }
 
-export async function addToCart(input: AddToCartInput) {
-  const current = CARTS.get(input.userRef) ?? { userRef: input.userRef, items: [] };
+export async function addProductToBasket(
+  userRef: string,
+  basketId: string,
+  productId: string,
+  qty: number
+) {
+  const api = swissdataClient(userRef);
+  const shopId = env.swissdataShopId;
 
-  for (const it of input.items) {
-    const idx = current.items.findIndex(x => x.productId === it.productId);
-    if (idx >= 0) current.items[idx].qty += it.qty;
-    else current.items.push({ productId: it.productId, qty: it.qty });
-  }
+  if (!shopId) throw new Error("Missing env SWISSDATA_SHOP_ID");
 
-  CARTS.set(input.userRef, current);
-  return { ok: true, cart: current };
+  const res = await api.put(
+    `/shop/${shopId}/order/basket/${basketId}/add/${productId}/${qty}`,
+    {}
+  );
+
+  return res.data;
 }

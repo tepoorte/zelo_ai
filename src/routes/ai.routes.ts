@@ -51,22 +51,48 @@ export function aiRoutes() {
 */
 
 //-----------------------------------------------------------------------------
-
 import { Router } from "express";
 import { runAgent } from "../ai/agent.js";
 import { localNlpFallback } from "../ai/localFallback.js";
+import { login } from "../swissdata/auth.js";
+import { setSession, getSession } from "../swissdata/session.js";
 
 export function aiRoutes() {
   const r = Router();
 
-  // MOCK (no OpenAI): utile per test locali anche senza chiave
+  r.post("/login", async (req, res, next) => {
+    try {
+      const userRef = String(req.body?.userRef ?? "local-dev");
+      const username = String(req.body?.username ?? "");
+      const password = String(req.body?.password ?? "");
+      if (!username || !password) {
+        return res.status(400).json({ ok: false, error: "Missing username/password" });
+      }
+
+      const t = await login(userRef, username, password);
+
+      // salva sessione in RAM
+      setSession(userRef, { token: t.token, refresh: t.refresh, expires: t.expires });
+
+      // ritorna anche il token (per debug)
+      res.json({ ok: true, token: t.token, expires: t.expires });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  r.get("/whoami", (req, res) => {
+    const userRef = String(req.query.userRef ?? "local-dev");
+    const s = getSession(userRef);
+    res.json({ ok: true, userRef, hasToken: !!s?.token, expires: s?.expires ?? null });
+  });
+
   r.post("/test", (req, res) => {
     const text = String(req.body?.text ?? "");
     const parsed = localNlpFallback(text);
     res.json({ ok: true, input: text, ...parsed });
   });
 
-  // REALE (OpenAI): prova end-to-end dell’agent
   r.post("/chat", async (req, res, next) => {
     try {
       const userRef = String(req.body?.userRef ?? "anonymous");
