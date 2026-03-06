@@ -5,6 +5,7 @@ import { getMemory, addToMemory } from "./memory.js";
 import { searchProducts, type Product } from "../swissdata/products.js";
 import { getCurrentBasket, addProductToBasket } from "../swissdata/cart.js";
 import { matchIngredientToProduct } from "../domain/matcher.js";
+import { getPurchaseHistory } from "../swissdata/history.js";
 
 type PlannedAction =
   | { type: "search_products"; query: string; limit?: number }
@@ -104,7 +105,30 @@ IMPORTANT:
 - Si l'utilisateur veut ajouter des produits:
   {"intent":"ADD_ITEMS","actions":[{"type":"add_to_cart","items":[...]}]}
 - Si l'utilisateur corrige sa demande ("non finalement pas de cacahuètes"), tu peux ignorer l'article annulé dans la version finale du plan.
-- Si tu n'es pas sûr, retourne noop.
+- N'utilise noop que si aucune intention utile ne peut être extraite.
+
+RÈGLE GÉNÉRALE POUR LES DEMANDES VAGUES:
+- Si l'utilisateur demande d'ajouter quelque chose au panier, même de manière vague, essaie d'extraire une query produit simple et exploitable.
+- La query doit être le nom commun le plus utile pour rechercher le produit dans le catalogue.
+- Supprime les déterminants inutiles: "du", "de la", "des", "un", "une", "de", "d’", "d'".
+- Garde uniquement le coeur utile de la demande produit.
+- Si aucune quantité explicite n'est donnée, utilise qty=1.
+- Si aucune unité explicite n'est donnée, utilise unit="piece".
+- Ne retourne pas noop si une query produit raisonnable peut être déduite.
+
+EXEMPLES DE TRANSFORMATION GÉNÉRALE:
+- "Ajoute des courses à mon panier" -> query="courses", qty=1, unit="piece"
+- "Ajoute du lait à mon panier" -> query="lait", qty=1, unit="piece"
+- "Ajoute du pain à mon panier" -> query="pain", qty=1, unit="piece"
+- "Ajoute des tomates à mon panier" -> query="tomates", qty=1, unit="piece"
+- "Ajoute du lard à mon panier" -> query="lard", qty=1, unit="piece"
+- "Ajoute quelque chose pour l'apéro" -> query="apéro", qty=1, unit="piece"
+- "Ajoute de quoi faire des hot dog" -> query="hot dog", qty=1, unit="piece"
+
+RÈGLE POUR LES QUANTITÉS:
+- "150g de lard de Begnins" -> query="lard de Begnins", qty=150, unit="g"
+- "1 litre de lait normal" -> query="lait normal", qty=1, unit="litre"
+- "3 pains anglais" -> query="pains anglais", qty=3, unit="piece"
 
 Exemples:
 
@@ -148,6 +172,21 @@ Réponse:
       "type":"add_to_cart",
       "items":[
         {"query":"lait normal","qty":1,"unit":"litre"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Ajoute des courses à mon panier"
+Réponse:
+{
+  "intent":"ADD_ITEMS",
+  "actions":[
+    {
+      "type":"add_to_cart",
+      "items":[
+        {"query":"courses","qty":1,"unit":"piece"}
       ]
     }
   ]
@@ -248,9 +287,20 @@ async function resolveProduct(userRef: string, rawItem: string): Promise<Product
   }
 
   const candidates = await searchProducts(userRef, item, 20);
+  console.log("[RESOLVE] item =", item);
+  console.log("[RESOLVE] candidates =", candidates.map(c => ({
+    id: c.id,
+    name: c.name
+  })));
+
   if (!candidates.length) return null;
 
-  const best = matchIngredientToProduct(item, candidates);
+  const history = await getPurchaseHistory(userRef);
+  console.log("[RESOLVE] history =", history);
+
+  const best = matchIngredientToProduct(item, candidates, history);
+  console.log("[RESOLVE] best =", best ? { id: best.id, name: best.name } : null);
+
   return best ?? candidates[0] ?? null;
 }
 
@@ -350,6 +400,8 @@ export async function runAgentOllama(
   );
 
   const plan = safeJsonParse<Plan>(planText);
+  console.log("[PLAN RAW]", planText);
+console.log("[PLAN PARSED]", JSON.stringify(plan, null, 2));
 
   if (!plan || !Array.isArray(plan.actions)) {
     if (/(carrello|basket|panier|cart)/i.test(lower)) {
@@ -370,6 +422,7 @@ export async function runAgentOllama(
     }
 
     if (action.type === "add_to_cart") {
+      console.log("[ADD_TO_CART ACTION]", JSON.stringify(action, null, 2));
       const basket = await getCurrentBasket(action.userRef ?? userRef);
       const resolvedItems: any[] = [];
 
@@ -388,6 +441,7 @@ export async function runAgentOllama(
             ok: false,
             error: "Product not found",
           });
+          
           continue;
         }
 
@@ -423,6 +477,10 @@ export async function runAgentOllama(
           basket: updated,
         },
       });
+      console.log("[ADD_TO_CART RESULT]", JSON.stringify({
+  resolvedItems,
+  updated
+}, null, 2));
       continue;
     }
 
@@ -440,32 +498,38 @@ export async function runAgentOllama(
     return { message: formatCartFr(cartResult) };
   }
 
-  if (plan.intent === "ADD_ITEMS") {
-    const addResult = toolResults.find((x) => x.action?.type === "add_to_cart")?.result;
-    const basket = addResult?.basket;
+if (plan.intent === "ADD_ITEMS") {
+  const addResult = toolResults.find((x) => x.action?.type === "add_to_cart")?.result;
+  const basket = addResult?.basket;
 
-    const summaryLines: string[] = [];
+  const summaryLines: string[] = [];
 
-    if (Array.isArray(addResult?.resolvedItems)) {
-      for (const it of addResult.resolvedItems) {
-        if (it.ok) {
-          summaryLines.push(
-            `— ${it.requestedQty}${it.requestedUnit && it.requestedUnit !== "piece" ? it.requestedUnit : ""} de ${it.product?.name ?? it.query} → quantité panier: ${it.basketQty}`
-          );
-        } else {
-          summaryLines.push(`— ${it.query} : introuvable`);
-        }
+  if (Array.isArray(addResult?.resolvedItems)) {
+    for (const it of addResult.resolvedItems) {
+      if (it.ok) {
+        summaryLines.push(
+          `— ${it.requestedQty}${it.requestedUnit && it.requestedUnit !== "piece" ? it.requestedUnit : ""} de ${it.product?.name ?? it.query} → quantité panier: ${it.targetBasketQty ?? it.basketQty ?? "?"}`
+        );
+      } else {
+        summaryLines.push(`— ${it.query} : introuvable`);
       }
     }
+  }
 
+  if (!summaryLines.length) {
     return {
-      message:
-        `✅ J’ai traité votre demande :\n` +
-        summaryLines.join("\n") +
-        `\n\n` +
-        formatCartFr(basket),
+      message: "Je n’ai pas trouvé de produit suffisamment clair à ajouter. Essaie avec un nom plus précis, par exemple « Courses pour 2 » ou « Courses pour 4 »."
     };
   }
+
+  return {
+    message:
+      `✅ J’ai traité votre demande :\n` +
+      summaryLines.join("\n") +
+      `\n\n` +
+      (basket ? formatCartFr(basket) : "Le panier a été mis à jour, mais je n’ai pas pu relire son contenu.")
+  };
+}
 
   const message = await ollamaChat(
     [
