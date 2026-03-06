@@ -12,6 +12,8 @@
       --text: rgba(255,255,255,.92);
       --muted: rgba(255,255,255,.70);
       --blue:#2563eb;
+      --danger:#ef4444;
+      --success:#22c55e;
     }
 
     *{ box-sizing:border-box; }
@@ -24,7 +26,6 @@
       overflow:hidden;
     }
 
-    /* Animated background canvas */
     #bg{
       position:fixed;
       inset:0;
@@ -34,7 +35,6 @@
       display:block;
     }
 
-    /* subtle vignette + blur */
     .overlay{
       position:fixed;
       inset:0;
@@ -46,7 +46,6 @@
       pointer-events:none;
     }
 
-    /* Layout */
     .wrap{
       max-width: 980px;
       margin: 0 auto;
@@ -79,7 +78,24 @@
       color: var(--muted);
     }
 
-    /* Chat */
+    .topActions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .ghostBtn{
+      padding:10px 14px;
+      font-size:14px;
+      border-radius:12px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      cursor:pointer;
+    }
+
+    .ghostBtn:hover{ filter:brightness(1.05); }
+
     #messages{
       flex:1;
       overflow:auto;
@@ -117,7 +133,6 @@
       background: rgba(20, 24, 36, .75);
     }
 
-    /* Input bar */
     #inputBar{
       display:flex;
       gap:10px;
@@ -155,17 +170,110 @@
     #sendBtn:hover{ filter: brightness(1.05); }
     #sendBtn:disabled{ opacity:.6; cursor:not-allowed; }
 
-    /* small helper */
     .hint{
       margin-top:-6px;
       color: var(--muted);
       font-size: 12px;
     }
 
+    .hidden{ display:none !important; }
+
+    /* LOGIN OVERLAY */
+    #authOverlay{
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      z-index:10;
+      background: rgba(0,0,0,.42);
+      backdrop-filter: blur(8px);
+    }
+
+    .authCard{
+      width:100%;
+      max-width:440px;
+      border-radius:20px;
+      border:1px solid var(--stroke);
+      background: rgba(14, 18, 28, .92);
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+      padding:22px;
+    }
+
+    .authTitle{
+      margin:0 0 6px 0;
+      font-size:28px;
+      font-weight:700;
+    }
+
+    .authSub{
+      margin:0 0 18px 0;
+      color:var(--muted);
+      line-height:1.4;
+      font-size:14px;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin-bottom:14px;
+    }
+
+    .field label{
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .field input{
+      width:100%;
+      padding:12px 13px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.25);
+      color:var(--text);
+      outline:none;
+      font-size:15px;
+    }
+
+    .field input::placeholder{
+      color: rgba(255,255,255,.45);
+    }
+
+    .authActions{
+      display:flex;
+      gap:10px;
+      margin-top:8px;
+    }
+
+    .primaryBtn{
+      flex:1;
+      padding:12px 16px;
+      font-size:15px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: var(--blue);
+      color:white;
+      cursor:pointer;
+    }
+
+    .primaryBtn:disabled{ opacity:.6; cursor:not-allowed; }
+
+    .statusLine{
+      min-height:20px;
+      margin-top:12px;
+      font-size:13px;
+    }
+
+    .statusError{ color: #fca5a5; }
+    .statusOk{ color: #86efac; }
+
     @media (max-width: 720px){
       .wrap{ padding:16px; }
       h1{ font-size: 28px; }
       .bubble{ max-width: 86%; }
+      .authCard{ padding:18px; }
     }
   </style>
 </head>
@@ -174,27 +282,70 @@
   <canvas id="bg"></canvas>
   <div class="overlay"></div>
 
+  <!-- LOGIN OVERLAY -->
+  <div id="authOverlay">
+    <div class="authCard">
+      <h2 class="authTitle">Connexion Zelo AI</h2>
+      <p class="authSub">
+        Connecte-toi pour permettre à Zelo AI de lire et modifier ton panier réel.
+      </p>
+
+      <div class="field">
+        <label for="emailInput">Email</label>
+        <input id="emailInput" type="email" placeholder="public-contact-003@example.invalid" />
+      </div>
+
+      <div class="field">
+        <label for="passwordInput">Mot de passe</label>
+        <input id="passwordInput" type="password" placeholder="Ton mot de passe" />
+      </div>
+
+      <div class="authActions">
+        <button id="loginBtn" class="primaryBtn" onclick="login()">Se connecter</button>
+      </div>
+
+      <div id="authStatus" class="statusLine"></div>
+    </div>
+  </div>
+
   <div class="wrap">
     <header>
       <h1>Zelo AI</h1>
-      <span class="badge">local dev</span>
+      <div class="topActions">
+        <button id="logoutBtn" class="ghostBtn hidden" onclick="logout()">Déconnexion</button>
+        <span id="sessionBadge" class="badge">non connecté</span>
+      </div>
     </header>
 
     <div id="messages"></div>
 
-    <div class="hint">Prova: “voglio una caesar per 2 persone” oppure “aggiungi 2 parmigiano al carrello”.</div>
+    <div class="hint">
+      Prova: “montre-moi mon panier”, “ajoute 1 lard de begnins à mon panier”
+      oppure una domanda normale.
+    </div>
 
-    <div id="inputBar">
+    <div id="inputBar" class="hidden">
       <input id="input" placeholder="Scrivi qualcosa..." />
       <button id="sendBtn" onclick="send()">Invia</button>
     </div>
   </div>
 
   <script>
-    // ---------- CHAT ----------
+    const USER_REF = "local-dev";
+
     const messages = document.getElementById("messages");
     const input = document.getElementById("input");
     const sendBtn = document.getElementById("sendBtn");
+
+    const authOverlay = document.getElementById("authOverlay");
+    const emailInput = document.getElementById("emailInput");
+    const passwordInput = document.getElementById("passwordInput");
+    const loginBtn = document.getElementById("loginBtn");
+    const authStatus = document.getElementById("authStatus");
+
+    const inputBar = document.getElementById("inputBar");
+    const sessionBadge = document.getElementById("sessionBadge");
+    const logoutBtn = document.getElementById("logoutBtn");
 
     function addMessage(text, who){
       const row = document.createElement("div");
@@ -207,6 +358,104 @@
       row.appendChild(bubble);
       messages.appendChild(row);
       messages.scrollTop = messages.scrollHeight;
+    }
+
+    function setAuthStatus(text, type = ""){
+      authStatus.textContent = text || "";
+      authStatus.className = "statusLine";
+      if(type === "error") authStatus.classList.add("statusError");
+      if(type === "ok") authStatus.classList.add("statusOk");
+    }
+
+    function setLoggedInUI(email){
+      authOverlay.classList.add("hidden");
+      inputBar.classList.remove("hidden");
+      logoutBtn.classList.remove("hidden");
+      sessionBadge.textContent = email ? `connecté · ${email}` : "connecté";
+    }
+
+    function setLoggedOutUI(){
+      authOverlay.classList.remove("hidden");
+      inputBar.classList.add("hidden");
+      logoutBtn.classList.add("hidden");
+      sessionBadge.textContent = "non connecté";
+    }
+
+    function saveSession(email){
+      localStorage.setItem("zelo_ai_auth", JSON.stringify({
+        email,
+        userRef: USER_REF,
+        loggedIn: true
+      }));
+    }
+
+    function clearSession(){
+      localStorage.removeItem("zelo_ai_auth");
+    }
+
+    function restoreSession(){
+      try{
+        const raw = localStorage.getItem("zelo_ai_auth");
+        if(!raw) return false;
+        const session = JSON.parse(raw);
+        if(session?.loggedIn){
+          emailInput.value = session.email || "";
+          setLoggedInUI(session.email || "");
+          return true;
+        }
+      }catch{}
+      return false;
+    }
+
+    async function login(){
+      const username = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if(!username || !password){
+        setAuthStatus("Inserisci email e password.", "error");
+        return;
+      }
+
+      loginBtn.disabled = true;
+      setAuthStatus("Connexion en cours...");
+
+      try{
+        const res = await fetch("/ai/login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            userRef: USER_REF,
+            username,
+            password
+          })
+        });
+
+        const data = await res.json();
+
+        if(!res.ok || !data?.ok){
+          throw new Error(data?.error || "Échec de connexion");
+        }
+
+        saveSession(username);
+        setLoggedInUI(username);
+        setAuthStatus("Connexion réussie.", "ok");
+
+        if(messages.children.length === 0){
+          addMessage("Bonjour 👋 Je suis prêt. Tu peux me demander ton panier ou ajouter un produit.", "ai");
+        }
+      }catch(e){
+        setAuthStatus("Erreur: " + (e?.message || e), "error");
+      }finally{
+        loginBtn.disabled = false;
+      }
+    }
+
+    function logout(){
+      clearSession();
+      setLoggedOutUI();
+      setAuthStatus("");
+      passwordInput.value = "";
+      addMessage("Session fermée.", "ai");
     }
 
     async function send(){
@@ -223,7 +472,7 @@
         const res = await fetch("/ai/chat", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ userRef: "local-dev", text })
+          body: JSON.stringify({ userRef: USER_REF, text })
         });
 
         const data = await res.json();
@@ -239,7 +488,24 @@
       if(e.key === "Enter") send();
     });
 
-    // ---------- ANIMATED BACKGROUND (Aurora blobs) ----------
+    emailInput.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") login();
+    });
+
+    passwordInput.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") login();
+    });
+
+    // Boot UI
+    if(!restoreSession()){
+      setLoggedOutUI();
+    } else {
+      if(messages.children.length === 0){
+        addMessage("Bonjour 👋 Je suis prêt. Tu peux me demander ton panier ou ajouter un produit.", "ai");
+      }
+    }
+
+    // ---------- ANIMATED BACKGROUND ----------
     const canvas = document.getElementById("bg");
     const ctx = canvas.getContext("2d");
 
@@ -257,7 +523,6 @@
     const W = () => window.innerWidth;
     const H = () => window.innerHeight;
 
-    // Blobs configuration
     const blobs = [
       { x: 0.25, y: 0.30, r: 260, dx: 0.00035, dy: 0.00022, a: 0.65 },
       { x: 0.70, y: 0.40, r: 320, dx: -0.00028, dy: 0.00018, a: 0.55 },
@@ -268,14 +533,11 @@
       t = t || 0;
       const time = t * 0.001;
 
-      // clear
       ctx.clearRect(0,0,W(),H());
 
-      // background base
       ctx.fillStyle = "#0b0f16";
       ctx.fillRect(0,0,W(),H());
 
-      // additive blobs
       ctx.globalCompositeOperation = "lighter";
 
       for(const b of blobs){
@@ -283,10 +545,9 @@
         const py = (b.y + Math.cos(time)*b.dy*2000 + Math.cos(time*0.9)*b.dy*1200) * H();
 
         const grad = ctx.createRadialGradient(px, py, 0, px, py, b.r);
-        // Aurora-ish colors
-        grad.addColorStop(0.00, `rgba(37, 99, 235, ${b.a})`);   // blue
-        grad.addColorStop(0.35, `rgba(16, 185, 129, ${b.a*0.75})`); // green
-        grad.addColorStop(0.65, `rgba(168, 85, 247, ${b.a*0.65})`); // purple
+        grad.addColorStop(0.00, `rgba(37, 99, 235, ${b.a})`);
+        grad.addColorStop(0.35, `rgba(16, 185, 129, ${b.a*0.75})`);
+        grad.addColorStop(0.65, `rgba(168, 85, 247, ${b.a*0.65})`);
         grad.addColorStop(1.00, "rgba(0,0,0,0)");
 
         ctx.fillStyle = grad;
@@ -295,7 +556,6 @@
         ctx.fill();
       }
 
-      // soft blur feel (cheap): draw a translucent dark veil
       ctx.globalCompositeOperation = "source-over";
       ctx.fillStyle = "rgba(0,0,0,0.25)";
       ctx.fillRect(0,0,W(),H());

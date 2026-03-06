@@ -1,14 +1,24 @@
 // src/ai/agent.ollama.ts
 import { env } from "../config/env.js";
 import { systemPrompt } from "./prompts.js";
-
-import { searchProducts } from "../swissdata/products.js";
+import { getMemory, addToMemory } from "./memory.js";
+import { searchProducts, type Product } from "../swissdata/products.js";
 import { getCurrentBasket, addProductToBasket } from "../swissdata/cart.js";
+import { matchIngredientToProduct } from "../domain/matcher.js";
 
 type PlannedAction =
   | { type: "search_products"; query: string; limit?: number }
-  | { type: "add_to_cart"; userRef: string; items: Array<{ productId: string; qty: number }> }
-  | { type: "get_cart"; userRef: string }
+  | {
+      type: "add_to_cart";
+      userRef?: string;
+      items: Array<{
+        query: string;
+        qty: number;
+        unit?: string;
+        productId?: string;
+      }>;
+    }
+  | { type: "get_cart"; userRef?: string }
   | { type: "noop"; reason?: string };
 
 type Plan = {
@@ -20,9 +30,6 @@ type Plan = {
 const OLLAMA_URL = env.ollamaBaseUrl || "http://ollama:11434";
 const MODEL = env.ollamaModel || "llama3.2";
 
-/**
- * Chiamata generica a Ollama chat API
- */
 async function ollamaChat(messages: any[], temperature = 0.2): Promise<string> {
   const resp = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: "POST",
@@ -43,7 +50,6 @@ function safeJsonParse<T>(s: string): T | null {
   try {
     return JSON.parse(s) as T;
   } catch {
-    // fallback: estrai il primo blocco JSON tipo {...}
     const start = s.indexOf("{");
     const end = s.lastIndexOf("}");
     if (start >= 0 && end > start) {
@@ -58,44 +64,120 @@ function safeJsonParse<T>(s: string): T | null {
   }
 }
 
-/**
- * Prompt planner: deve produrre SOLO JSON
- */
 function plannerPrompt() {
   return `
-Sei l'AI di Zelo. Devi trasformare il messaggio utente in un "PLAN" JSON.
+Tu es l'IA de Zelo. Transforme le message utilisateur en PLAN JSON strict.
 
-REGOLE DI OUTPUT (OBBLIGATORIE):
-- Rispondi SOLO con JSON valido.
-- Niente markdown, niente commenti, niente testo fuori dal JSON.
-- Deve iniziare con "{" e finire con "}".
+RÈGLES DE SORTIE:
+- Réponds uniquement avec du JSON valide.
+- Aucun markdown.
+- Aucun texte avant ou après le JSON.
 
-Struttura:
-{"intent":"...","actions":[ ... ]}
+Structure:
+{
+  "intent": "...",
+  "actions": [ ... ]
+}
 
-actions ammessi:
+Actions autorisées:
 1) {"type":"search_products","query":"...","limit":5}
-2) {"type":"add_to_cart","userRef":"...","items":[{"productId":"...","qty":2}]}
+2) {
+     "type":"add_to_cart",
+     "userRef":"...",
+     "items":[
+       {
+         "query":"...",
+         "qty":150,
+         "unit":"g"
+       }
+     ]
+   }
 3) {"type":"get_cart","userRef":"..."}
 4) {"type":"noop","reason":"..."}
 
-INTENTI:
-- Se l'utente chiede di vedere il carrello (parole chiave: "carrello", "basket", "panier", "cart", "mostrami il carrello"):
-  -> intent="SHOW_CART"
-  -> actions=[{"type":"get_cart","userRef":"<UserRef>"}]
+IMPORTANT:
+- Pour add_to_cart, n'invente jamais de productId si l'utilisateur n'en donne pas.
+- Si l'utilisateur donne un nom produit, mets-le dans "query".
+- "unit" peut être par exemple: "g", "kg", "ml", "l", "litre", "litres", "piece".
+- Si l'utilisateur veut voir son panier:
+  {"intent":"SHOW_CART","actions":[{"type":"get_cart"}]}
+- Si l'utilisateur veut ajouter des produits:
+  {"intent":"ADD_ITEMS","actions":[{"type":"add_to_cart","items":[...]}]}
+- Si l'utilisateur corrige sa demande ("non finalement pas de cacahuètes"), tu peux ignorer l'article annulé dans la version finale du plan.
+- Si tu n'es pas sûr, retourne noop.
 
-- Se l'utente chiede una ricetta (es. "caesar per 2"):
-  - identifica ingredienti
-  - fai search_products per ogni ingrediente
-  - poi add_to_cart con quantità plausibili.
+Exemples:
 
-Se non sei sicuro -> noop.
+Message:
+"Ajoute 1 lard de Begnins à mon panier"
+Réponse:
+{
+  "intent":"ADD_ITEMS",
+  "actions":[
+    {
+      "type":"add_to_cart",
+      "items":[
+        {"query":"lard de Begnins","qty":1,"unit":"piece"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Ajoute 150g de lard de Begnins à mon panier"
+Réponse:
+{
+  "intent":"ADD_ITEMS",
+  "actions":[
+    {
+      "type":"add_to_cart",
+      "items":[
+        {"query":"lard de Begnins","qty":150,"unit":"g"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Ajoute 1 litre de lait normal à mon panier"
+Réponse:
+{
+  "intent":"ADD_ITEMS",
+  "actions":[
+    {
+      "type":"add_to_cart",
+      "items":[
+        {"query":"lait normal","qty":1,"unit":"litre"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Montre-moi mon panier"
+Réponse:
+{
+  "intent":"SHOW_CART",
+  "actions":[
+    {"type":"get_cart"}
+  ]
+}
 `;
 }
 
-/**
- * Format deterministico (FR) per SHOW_CART: niente output “misto”
- */
+function generalChatPrompt() {
+  return `
+You are Zelo AI, a friendly shopping and food assistant.
+
+Rules:
+- Reply naturally and helpfully.
+- If the user asks normal questions, answer normally.
+- If the question is about food, recipes, shopping, or products, stay practical.
+- Always reply in French.
+- Keep answers concise but useful.
+`;
+}
+
 function formatCartFr(basket: any): string {
   if (!basket) return "Je n’ai pas pu récupérer votre panier.";
 
@@ -120,6 +202,7 @@ function formatCartFr(basket: any): string {
       const qty = p?.quantity ?? p?.qty ?? 1;
       lines.push(`— ${qty} × ${name}`);
     }
+
     for (const it of manualItems) {
       const name = it?.name ?? "Article";
       const qty = it?.quantity ?? it?.qty ?? 1;
@@ -150,14 +233,114 @@ function formatCartFr(basket: any): string {
   return lines.join("\n");
 }
 
+function looksLikeProductId(value: string): boolean {
+  return /^[a-f0-9]{24}$/i.test(value.trim());
+}
+
+async function resolveProduct(userRef: string, rawItem: string): Promise<Product | null> {
+  const item = rawItem.trim();
+
+  if (looksLikeProductId(item)) {
+    return {
+      id: item,
+      name: item,
+    } as Product;
+  }
+
+  const candidates = await searchProducts(userRef, item, 20);
+  if (!candidates.length) return null;
+
+  const best = matchIngredientToProduct(item, candidates);
+  return best ?? candidates[0] ?? null;
+}
+
+function computeBasketQty(product: any, requestedQty: number, requestedUnit?: string): number {
+  const unit = String(requestedUnit || "piece").toLowerCase();
+
+  if (unit === "piece") {
+    return Math.max(1, requestedQty);
+  }
+
+  if (unit === "g" || unit === "kg") {
+    const requestedGrams = unit === "kg" ? requestedQty * 1000 : requestedQty;
+
+    if (
+      product?.priceType === "per-weight" &&
+      typeof product?.refWeight === "number" &&
+      String(product?.refWeightUnit || "").toLowerCase() === "g"
+    ) {
+      return Math.max(1, Math.ceil(requestedGrams / product.refWeight));
+    }
+
+    const size = String(product?.size || "").toLowerCase();
+    const gMatch = size.match(/(\d+)\s*g\b/);
+    if (gMatch) {
+      const grams = Number(gMatch[1]);
+      if (grams > 0) return Math.max(1, Math.ceil(requestedGrams / grams));
+    }
+
+    return 1;
+  }
+
+  if (unit === "l" || unit === "litre" || unit === "litres" || unit === "ml") {
+    const requestedMl = unit === "ml" ? requestedQty : requestedQty * 1000;
+
+    const size = String(product?.size || "").toLowerCase().replace(",", ".");
+
+    if (size.includes("1 litre") || size.includes("1l") || size.includes("1 l")) {
+      return Math.max(1, Math.ceil(requestedMl / 1000));
+    }
+
+    const mlMatch = size.match(/(\d+(?:\.\d+)?)\s*ml\b/);
+    if (mlMatch) {
+      const ml = Number(mlMatch[1]);
+      if (ml > 0) return Math.max(1, Math.ceil(requestedMl / ml));
+    }
+
+    const lMatch = size.match(/(\d+(?:\.\d+)?)\s*(?:l|litre|litres)\b/);
+    if (lMatch) {
+      const litres = Number(lMatch[1]);
+      if (litres > 0) return Math.max(1, Math.ceil(requestedMl / (litres * 1000)));
+    }
+
+    return Math.max(1, requestedQty);
+  }
+
+  return Math.max(1, requestedQty);
+}
+
+async function runGeneralChat(userRef: string, userText: string): Promise<{ message: string }> {
+  const mem = getMemory(userRef);
+
+  const messages = [
+    { role: "system", content: generalChatPrompt() },
+    ...mem.history.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user", content: userText },
+  ];
+
+  const reply = await ollamaChat(messages, 0.5);
+
+  addToMemory(userRef, "user", userText);
+  addToMemory(userRef, "assistant", reply || "Je ne sais pas quoi répondre pour le moment.");
+
+  return {
+    message: reply || "Je ne sais pas quoi répondre pour le moment.",
+  };
+}
+
 export async function runAgentOllama(
   userRef: string,
   userText: string
 ): Promise<{ message: string }> {
+  const lower = userText.toLowerCase();
 
-  /**
-   * STEP 1 — PLAN
-   */
+  // 1) SHOW CART deterministic
+  if (/(carrello|basket|panier|cart)/i.test(lower) && /(montre|mostra|show|voir)/i.test(lower)) {
+    const basket = await getCurrentBasket(userRef);
+    return { message: formatCartFr(basket) };
+  }
+
+  // 2) PLAN with Ollama for everything shopping-related
   const planText = await ollamaChat(
     [
       { role: "system", content: plannerPrompt() },
@@ -168,22 +351,15 @@ export async function runAgentOllama(
 
   const plan = safeJsonParse<Plan>(planText);
 
-  // fallback deterministico se Ollama non produce JSON ma l’utente chiede il carrello
-  const lower = userText.toLowerCase();
   if (!plan || !Array.isArray(plan.actions)) {
     if (/(carrello|basket|panier|cart)/i.test(lower)) {
-      const r = await getCurrentBasket(userRef);
-      return { message: formatCartFr(r) };
+      const basket = await getCurrentBasket(userRef);
+      return { message: formatCartFr(basket) };
     }
-    return {
-      message:
-        "Non sono riuscito a capire bene. Prova con: “voglio una caesar per 2 persone” oppure “aggiungi parmigiano al carrello”.",
-    };
+
+    return await runGeneralChat(userRef, userText);
   }
 
-  /**
-   * STEP 2 — EXECUTE TOOLS
-   */
   const toolResults: any[] = [];
 
   for (const action of plan.actions) {
@@ -194,12 +370,59 @@ export async function runAgentOllama(
     }
 
     if (action.type === "add_to_cart") {
-      const basket = await getCurrentBasket(userRef);
+      const basket = await getCurrentBasket(action.userRef ?? userRef);
+      const resolvedItems: any[] = [];
+
       for (const it of action.items) {
-        await addProductToBasket(userRef, basket.id, it.productId, it.qty);
+        let resolvedProduct: Product | null = null;
+
+        if (it.productId) {
+          resolvedProduct = { id: it.productId, name: it.productId } as Product;
+        } else {
+          resolvedProduct = await resolveProduct(userRef, it.query);
+        }
+
+        if (!resolvedProduct?.id) {
+          resolvedItems.push({
+            query: it.query,
+            ok: false,
+            error: "Product not found",
+          });
+          continue;
+        }
+
+        const basketQty = computeBasketQty(resolvedProduct, it.qty, it.unit);
+
+        const addResult = await addProductToBasket(
+          action.userRef ?? userRef,
+          basket.id,
+          resolvedProduct.id,
+          basketQty
+        );
+
+        resolvedItems.push({
+          query: it.query,
+          requestedQty: it.qty,
+          requestedUnit: it.unit ?? "piece",
+          basketQty,
+          product: {
+            id: resolvedProduct.id,
+            name: resolvedProduct.name,
+          },
+          ok: true,
+          result: addResult,
+        });
       }
-      const updated = await getCurrentBasket(userRef);
-      toolResults.push({ action, result: { ok: true, basket: updated } });
+
+      const updated = await getCurrentBasket(action.userRef ?? userRef);
+      toolResults.push({
+        action,
+        result: {
+          ok: true,
+          resolvedItems,
+          basket: updated,
+        },
+      });
       continue;
     }
 
@@ -212,15 +435,38 @@ export async function runAgentOllama(
     toolResults.push({ action, result: { ok: true } });
   }
 
-  // ✅ Se è SHOW_CART: risposta deterministica in FR (niente Ollama Step 3)
   if (plan.intent === "SHOW_CART") {
-    const cartResult = toolResults.find(x => x.action?.type === "get_cart")?.result;
+    const cartResult = toolResults.find((x) => x.action?.type === "get_cart")?.result;
     return { message: formatCartFr(cartResult) };
   }
 
-  /**
-   * STEP 3 — FINAL MESSAGE (lasciamo Ollama solo per ricette / add_to_cart)
-   */
+  if (plan.intent === "ADD_ITEMS") {
+    const addResult = toolResults.find((x) => x.action?.type === "add_to_cart")?.result;
+    const basket = addResult?.basket;
+
+    const summaryLines: string[] = [];
+
+    if (Array.isArray(addResult?.resolvedItems)) {
+      for (const it of addResult.resolvedItems) {
+        if (it.ok) {
+          summaryLines.push(
+            `— ${it.requestedQty}${it.requestedUnit && it.requestedUnit !== "piece" ? it.requestedUnit : ""} de ${it.product?.name ?? it.query} → quantité panier: ${it.basketQty}`
+          );
+        } else {
+          summaryLines.push(`— ${it.query} : introuvable`);
+        }
+      }
+    }
+
+    return {
+      message:
+        `✅ J’ai traité votre demande :\n` +
+        summaryLines.join("\n") +
+        `\n\n` +
+        formatCartFr(basket),
+    };
+  }
+
   const message = await ollamaChat(
     [
       { role: "system", content: systemPrompt() },
