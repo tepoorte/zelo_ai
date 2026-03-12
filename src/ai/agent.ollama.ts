@@ -2,10 +2,11 @@
 import { env } from "../config/env.js";
 import { systemPrompt } from "./prompts.js";
 import { getMemory, addToMemory } from "./memory.js";
-import { searchProducts, type Product } from "../swissdata/products.js";
+import { searchProducts, fetchFullProduct, type Product } from "../swissdata/products.js";
 import { getCurrentBasket, addProductToBasket } from "../swissdata/cart.js";
 import { matchIngredientToProduct } from "../domain/matcher.js";
 import { getPurchaseHistory } from "../swissdata/history.js";
+import { getPending, setPending, clearPending } from "./pending.js";
 
 type PlannedAction =
   | { type: "search_products"; query: string; limit?: number }
@@ -299,9 +300,16 @@ async function resolveProduct(userRef: string, rawItem: string): Promise<Product
   console.log("[RESOLVE] history =", history);
 
   const best = matchIngredientToProduct(item, candidates, history);
-  console.log("[RESOLVE] best =", best ? { id: best.id, name: best.name } : null);
+  console.log("[RESOLVE] best full =", JSON.stringify(best, null, 2));
 
-  return best ?? candidates[0] ?? null;
+  const selected = best ?? candidates[0] ?? null;
+  if (!selected?.id) return null;
+
+  const full = await fetchFullProduct(userRef, selected.id);
+  console.log("[RESOLVE] fetched full =", JSON.stringify(full, null, 2));
+
+  return full ?? selected;
+  //return best ?? candidates[0] ?? null;
 }
 
 function computeBasketQty(product: any, requestedQty: number, requestedUnit?: string): number {
@@ -359,6 +367,83 @@ function computeBasketQty(product: any, requestedQty: number, requestedUnit?: st
   return Math.max(1, requestedQty);
 }
 
+function formatOptionQuestion(product: Product): string {
+  const options = Array.isArray(product.availableOptions) ? product.availableOptions : [];
+
+  if (!options.length) {
+    return `J’ai trouvé “${product.name}”, mais je n’ai pas réussi à lire ses options.`;
+  }
+
+  const lines: string[] = [];
+  lines.push(`J’ai trouvé « ${product.name} ».`);
+  lines.push(`Il y a plusieurs options disponibles :`);
+  lines.push("");
+
+  options.forEach((opt, index) => {
+    const label = opt?.name || `Option ${index + 1}`;
+    const extra = opt?.shortDescription || opt?.description || "";
+    lines.push(`${index + 1}. ${label}${extra ? ` — ${extra}` : ""}`);
+  });
+
+  lines.push("");
+  lines.push("Quelles options veux-tu sélectionner ?");
+
+  return lines.join("\n");
+}
+
+function normalizeLooseText(input: string): string {
+  return String(input || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function resolveOptionsFromText(
+  userText: string,
+  availableOptions: Array<{ id: string; name: string; shortDescription?: string; description?: string }>
+) {
+  const text = normalizeLooseText(userText);
+
+  const selected: Array<{ id: string; name: string }> = [];
+
+  for (const opt of availableOptions) {
+    const haystacks = [
+      opt.name,
+      opt.shortDescription,
+      opt.description
+    ]
+      .filter(Boolean)
+      .map(v => normalizeLooseText(String(v)));
+
+    const matched = haystacks.some(h =>
+      h && (text.includes(h) || h.includes(text))
+    );
+
+    if (matched) {
+      selected.push({ id: opt.id, name: opt.name });
+      continue;
+    }
+
+    // match par mots
+    const optWords = normalizeLooseText(opt.name).split(" ").filter(Boolean);
+    const hasWordOverlap = optWords.some(w => w.length > 2 && text.includes(w));
+    if (hasWordOverlap) {
+      selected.push({ id: opt.id, name: opt.name });
+    }
+  }
+
+  // dédup
+  const seen = new Set<string>();
+  return selected.filter(x => {
+    if (seen.has(x.id)) return false;
+    seen.add(x.id);
+    return true;
+  });
+}
+
 async function runGeneralChat(userRef: string, userText: string): Promise<{ message: string }> {
   const mem = getMemory(userRef);
 
@@ -383,6 +468,42 @@ export async function runAgentOllama(
   userText: string
 ): Promise<{ message: string }> {
   const lower = userText.toLowerCase();
+
+    const pending = getPending(userRef);
+  if (pending && pending.type === "awaiting_options") {
+    const selected = resolveOptionsFromText(userText, pending.availableOptions);
+
+    if (!selected.length) {
+      return {
+        message:
+          `Je n’ai pas reconnu les options demandées pour « ${pending.productName} ».\n\n` +
+          formatOptionQuestion({
+            id: pending.productId,
+            name: pending.productName,
+            availableOptions: pending.availableOptions,
+          } as Product),
+      };
+    }
+
+    const basket = await getCurrentBasket(userRef);
+    await addProductToBasket(
+      userRef,
+      basket.id,
+      pending.productId,
+      pending.qty,
+      selected.map(x => x.id)
+    );
+
+    clearPending(userRef);
+
+    const updated = await getCurrentBasket(userRef);
+
+    return {
+      message:
+        `✅ J’ai ajouté « ${pending.productName} » avec les options : ${selected.map(x => x.name).join(", ")}.\n\n` +
+        formatCartFr(updated),
+    };
+  }
 
   // 1) SHOW CART deterministic
   if (/(carrello|basket|panier|cart)/i.test(lower) && /(montre|mostra|show|voir)/i.test(lower)) {
@@ -434,6 +555,7 @@ console.log("[PLAN PARSED]", JSON.stringify(plan, null, 2));
         } else {
           resolvedProduct = await resolveProduct(userRef, it.query);
         }
+        
 
         if (!resolvedProduct?.id) {
           resolvedItems.push({
@@ -445,6 +567,36 @@ console.log("[PLAN PARSED]", JSON.stringify(plan, null, 2));
           continue;
         }
 
+          if (Array.isArray(resolvedProduct.optionsIds) && resolvedProduct.optionsIds.length > 0) {
+  // Se abbiamo anche i dettagli leggibili delle opzioni, chiediamo bene.
+  if (Array.isArray(resolvedProduct.availableOptions) && resolvedProduct.availableOptions.length > 0) {
+    setPending(userRef, {
+      type: "awaiting_options",
+      productId: resolvedProduct.id,
+      productName: resolvedProduct.name,
+      qty: Math.max(1, computeBasketQty(resolvedProduct, it.qty, it.unit)),
+      unit: it.unit,
+      availableOptions: resolvedProduct.availableOptions.map(opt => ({
+        id: opt.id,
+        name: opt.name || "Option",
+        shortDescription: opt.shortDescription,
+        description: opt.description,
+      })),
+    });
+
+    return {
+      message: formatOptionQuestion(resolvedProduct),
+    };
+  }
+
+  // Sinon on bloque l'ajout automatique pour éviter une mauvaise commande.
+  return {
+    message:
+      `J’ai trouvé « ${resolvedProduct.name} », mais ce produit demande des options avant d’être ajouté.\n` +
+      `Je n’ajoute rien automatiquement pour éviter une mauvaise commande.`
+  };
+}
+        
         const basketQty = computeBasketQty(resolvedProduct, it.qty, it.unit);
 
         const addResult = await addProductToBasket(

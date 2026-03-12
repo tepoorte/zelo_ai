@@ -47,7 +47,7 @@
     }
 
     .wrap{
-      max-width: 980px;
+      max-width: 1280px;
       margin: 0 auto;
       padding: 28px;
       height: 100%;
@@ -96,8 +96,24 @@
 
     .ghostBtn:hover{ filter:brightness(1.05); }
 
+    .mainGrid{
+      flex:1;
+      min-height:0;
+      display:grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
+      gap:14px;
+    }
+
+    .chatColumn{
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
     #messages{
       flex:1;
+      min-height:0;
       overflow:auto;
       padding: 14px;
       border-radius: 18px;
@@ -177,6 +193,114 @@
     }
 
     .hidden{ display:none !important; }
+
+    /* Basket panel */
+    .sideColumn{
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .basketCard{
+      flex:1;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+
+    .basketHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:16px 16px 12px 16px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+
+    .basketTitle{
+      margin:0;
+      font-size:18px;
+    }
+
+    .basketMeta{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    #basketContent{
+      flex:1;
+      min-height:0;
+      overflow:auto;
+      padding:14px 16px 16px 16px;
+    }
+
+    .basketEmpty{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.5;
+    }
+
+    .basketSection{
+      margin-bottom:16px;
+    }
+
+    .basketSection h3{
+      margin:0 0 10px 0;
+      font-size:14px;
+      color:var(--muted);
+      font-weight:600;
+    }
+
+    .basketItem{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 12px;
+      margin-bottom:8px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      background: rgba(255,255,255,.03);
+    }
+
+    .basketItemName{
+      font-size:14px;
+      line-height:1.35;
+    }
+
+    .basketItemQty{
+      font-size:13px;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+
+    .basketTotals{
+      padding-top:8px;
+      border-top:1px solid rgba(255,255,255,.08);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .basketRow{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      font-size:14px;
+    }
+
+    .basketMuted{
+      color:var(--muted);
+    }
+
+    .basketStrong{
+      font-weight:700;
+    }
 
     /* LOGIN OVERLAY */
     #authOverlay{
@@ -269,6 +393,15 @@
     .statusError{ color: #fca5a5; }
     .statusOk{ color: #86efac; }
 
+    @media (max-width: 980px){
+      .mainGrid{
+        grid-template-columns: 1fr;
+      }
+      .sideColumn{
+        min-height: 280px;
+      }
+    }
+
     @media (max-width: 720px){
       .wrap{ padding:16px; }
       h1{ font-size: 28px; }
@@ -282,7 +415,6 @@
   <canvas id="bg"></canvas>
   <div class="overlay"></div>
 
-  <!-- LOGIN OVERLAY -->
   <div id="authOverlay">
     <div class="authCard">
       <h2 class="authTitle">Connexion Zelo AI</h2>
@@ -312,21 +444,40 @@
     <header>
       <h1>Zelo AI</h1>
       <div class="topActions">
+        <button id="refreshBasketBtn" class="ghostBtn hidden" onclick="refreshBasket()">Rafraîchir panier</button>
         <button id="logoutBtn" class="ghostBtn hidden" onclick="logout()">Déconnexion</button>
         <span id="sessionBadge" class="badge">non connecté</span>
       </div>
     </header>
 
-    <div id="messages"></div>
+    <div class="mainGrid">
+      <div class="chatColumn">
+        <div id="messages"></div>
 
-    <div class="hint">
-      Prova: “montre-moi mon panier”, “ajoute 1 lard de begnins à mon panier”
-      oppure una domanda normale.
-    </div>
+        <div class="hint">
+          Prova: “montre-moi mon panier”, “ajoute 1 lard de begnins à mon panier”
+          oppure una domanda normale.
+        </div>
 
-    <div id="inputBar" class="hidden">
-      <input id="input" placeholder="Scrivi qualcosa..." />
-      <button id="sendBtn" onclick="send()">Invia</button>
+        <div id="inputBar" class="hidden">
+          <input id="input" placeholder="Scrivi qualcosa..." />
+          <button id="sendBtn" onclick="send()">Invia</button>
+        </div>
+      </div>
+
+      <div class="sideColumn">
+        <div class="basketCard">
+          <div class="basketHeader">
+            <div>
+              <h2 class="basketTitle">Panier</h2>
+              <div id="basketMeta" class="basketMeta">non connecté</div>
+            </div>
+          </div>
+          <div id="basketContent">
+            <div class="basketEmpty">Connecte-toi pour voir ton panier en direct.</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -346,6 +497,10 @@
     const inputBar = document.getElementById("inputBar");
     const sessionBadge = document.getElementById("sessionBadge");
     const logoutBtn = document.getElementById("logoutBtn");
+    const refreshBasketBtn = document.getElementById("refreshBasketBtn");
+
+    const basketContent = document.getElementById("basketContent");
+    const basketMeta = document.getElementById("basketMeta");
 
     function addMessage(text, who){
       const row = document.createElement("div");
@@ -371,14 +526,19 @@
       authOverlay.classList.add("hidden");
       inputBar.classList.remove("hidden");
       logoutBtn.classList.remove("hidden");
+      refreshBasketBtn.classList.remove("hidden");
       sessionBadge.textContent = email ? `connecté · ${email}` : "connecté";
+      basketMeta.textContent = email ? `connecté · ${email}` : "connecté";
     }
 
     function setLoggedOutUI(){
       authOverlay.classList.remove("hidden");
       inputBar.classList.add("hidden");
       logoutBtn.classList.add("hidden");
+      refreshBasketBtn.classList.add("hidden");
       sessionBadge.textContent = "non connecté";
+      basketMeta.textContent = "non connecté";
+      basketContent.innerHTML = `<div class="basketEmpty">Connecte-toi pour voir ton panier en direct.</div>`;
     }
 
     function saveSession(email){
@@ -405,6 +565,121 @@
         }
       }catch{}
       return false;
+    }
+
+    function renderBasket(basket){
+      if(!basket){
+        basketContent.innerHTML = `<div class="basketEmpty">Impossible de charger le panier.</div>`;
+        return;
+      }
+
+      const products = Array.isArray(basket.products) ? basket.products : [];
+      const fees = Array.isArray(basket.fees) ? basket.fees : [];
+      const currency = basket.currency || "";
+
+      let html = "";
+
+      html += `<div class="basketSection">`;
+      html += `<h3>Articles</h3>`;
+
+      if(products.length === 0){
+        html += `<div class="basketEmpty">Aucun produit dans le panier pour l’instant.</div>`;
+      } else {
+        for(const p of products){
+          const name =
+            p?.name ||
+            p?.productName ||
+            p?.product?.name ||
+            p?.productId ||
+            "Produit";
+
+          const qty = p?.quantity ?? p?.qty ?? 1;
+
+          html += `
+            <div class="basketItem">
+              <div class="basketItemName">${escapeHtml(name)}</div>
+              <div class="basketItemQty">${qty} ×</div>
+            </div>
+          `;
+        }
+      }
+
+      html += `</div>`;
+
+      if(fees.length){
+        html += `<div class="basketSection"><h3>Frais</h3>`;
+        for(const f of fees){
+          const feeName =
+            f?.name?.fr ||
+            f?.name ||
+            "Frais";
+          const feePrice = Number(f?.paidPriceTTC ?? f?.paidPrice ?? 0).toFixed(2);
+
+          html += `
+            <div class="basketRow">
+              <span class="basketMuted">${escapeHtml(String(feeName))}</span>
+              <span>${feePrice} ${currency}</span>
+            </div>
+          `;
+        }
+        html += `</div>`;
+      }
+
+      html += `<div class="basketTotals">`;
+
+      if(basket.totalPriceTTC != null){
+        html += `
+          <div class="basketRow basketStrong">
+            <span>Total TTC</span>
+            <span>${Number(basket.totalPriceTTC).toFixed(2)} ${currency}</span>
+          </div>
+        `;
+      } else if(basket.totalPrice != null){
+        html += `
+          <div class="basketRow basketStrong">
+            <span>Total</span>
+            <span>${Number(basket.totalPrice).toFixed(2)} ${currency}</span>
+          </div>
+        `;
+      }
+
+      if(basket.estimatedDeliveryDate){
+        html += `
+          <div class="basketRow">
+            <span class="basketMuted">Livraison</span>
+            <span>${escapeHtml(String(basket.estimatedDeliveryDate))}</span>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+
+      basketContent.innerHTML = html;
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function refreshBasket(){
+      try{
+        const res = await fetch(`/ai/basket?userRef=${encodeURIComponent(USER_REF)}`);
+        const data = await res.json();
+
+        if(!res.ok || !data?.ok){
+          basketContent.innerHTML = `<div class="basketEmpty">Impossible de charger le panier.</div>`;
+          return;
+        }
+
+        renderBasket(data.basket);
+      }catch(e){
+        basketContent.innerHTML = `<div class="basketEmpty">Erreur réseau pendant le chargement du panier.</div>`;
+      }
     }
 
     async function login(){
@@ -443,6 +718,8 @@
         if(messages.children.length === 0){
           addMessage("Bonjour 👋 Je suis prêt. Tu peux me demander ton panier ou ajouter un produit.", "ai");
         }
+
+        await refreshBasket();
       }catch(e){
         setAuthStatus("Erreur: " + (e?.message || e), "error");
       }finally{
@@ -477,6 +754,8 @@
 
         const data = await res.json();
         addMessage(data.message || data.error || "errore", "ai");
+
+        await refreshBasket();
       }catch(e){
         addMessage("Errore di rete: " + (e?.message || e), "ai");
       }finally{
@@ -496,16 +775,15 @@
       if(e.key === "Enter") login();
     });
 
-    // Boot UI
     if(!restoreSession()){
       setLoggedOutUI();
     } else {
       if(messages.children.length === 0){
         addMessage("Bonjour 👋 Je suis prêt. Tu peux me demander ton panier ou ajouter un produit.", "ai");
       }
+      refreshBasket();
     }
 
-    // ---------- ANIMATED BACKGROUND ----------
     const canvas = document.getElementById("bg");
     const ctx = canvas.getContext("2d");
 

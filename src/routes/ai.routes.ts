@@ -56,6 +56,7 @@ import { runAgent } from "../ai/agent.js";
 import { localNlpFallback } from "../ai/localFallback.js";
 import { login } from "../swissdata/auth.js";
 import { setSession, getSession } from "../swissdata/session.js";
+import { getCurrentBasket } from "../swissdata/cart.js";
 
 export function aiRoutes() {
   const r = Router();
@@ -93,6 +94,15 @@ export function aiRoutes() {
     res.json({ ok: true, input: text, ...parsed });
   });
 
+    r.get("/basket", async (req, res, next) => {
+    try {
+      const userRef = String(req.query.userRef ?? "local-dev");
+      const basket = await getCurrentBasket(userRef);
+      res.json({ ok: true, basket });
+    } catch (e) {
+      next(e);
+    }
+  });
   r.post("/chat", async (req, res, next) => {
     try {
       const userRef = String(req.body?.userRef ?? "anonymous");
