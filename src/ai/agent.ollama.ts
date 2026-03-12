@@ -12,6 +12,7 @@ import {
 import { matchIngredientToProduct } from "../domain/matcher.js";
 import { getPurchaseHistory } from "../swissdata/history.js";
 import { getPending, setPending, clearPending } from "./pending.js";
+import { buildMealIngredients } from "./meal-builder.js";
 
 type PlannedAction =
   | { type: "search_products"; query: string; limit?: number }
@@ -27,6 +28,12 @@ type PlannedAction =
     }
   | { type: "get_cart"; userRef?: string }
   | { type: "clear_cart"; userRef?: string }
+  | {
+      type: "build_meal";
+      meal: string;
+      servings?: number;
+      userRef?: string;   // ⭐⭐⭐ AGGIUNGI QUESTO
+    }
   | { type: "noop"; reason?: string };
 
 type Plan = {
@@ -102,7 +109,8 @@ Actions autorisées:
    }
 3) {"type":"get_cart","userRef":"..."}
 4) {"type":"clear_cart","userRef":"..."}
-5) {"type":"noop","reason":"..."}
+5) {"type":"build_meal","meal":"...","servings":2}
+6) {"type":"noop","reason":"..."}
 
 IMPORTANT:
 - Pour add_to_cart, n'invente jamais de productId si l'utilisateur n'en donne pas.
@@ -116,6 +124,9 @@ IMPORTANT:
 - N'utilise noop que si aucune intention utile ne peut être extraite.
 - Si l'utilisateur veut vider complètement son panier:
   {"intent":"CLEAR_CART","actions":[{"type":"clear_cart"}]}
+- Si l'utilisateur demande "de quoi faire ..." ou veut préparer un plat / repas / usage,
+  utilise:
+  {"intent":"BUILD_MEAL","actions":[{"type":"build_meal","meal":"...","servings":2}]}
 
 RÈGLE GÉNÉRALE POUR LES DEMANDES VAGUES:
 - Si l'utilisateur demande d'ajouter quelque chose au panier, même de manière vague, essaie d'extraire une query produit simple et exploitable.
@@ -229,6 +240,26 @@ Réponse:
   "intent":"CLEAR_CART",
   "actions":[
     {"type":"clear_cart"}
+  ]
+}
+
+Message:
+"Je veux de quoi faire des hot dog"
+Réponse:
+{
+  "intent":"BUILD_MEAL",
+  "actions":[
+    {"type":"build_meal","meal":"hot dog","servings":2}
+  ]
+}
+
+Message:
+"De quoi faire une fondue"
+Réponse:
+{
+  "intent":"BUILD_MEAL",
+  "actions":[
+    {"type":"build_meal","meal":"fondue","servings":2}
   ]
 }
 `;
@@ -685,6 +716,101 @@ console.log("[PLAN PARSED]", JSON.stringify(plan, null, 2));
       continue;
     }
 
+
+    if (action.type === "build_meal") {
+  console.log("[BUILD_MEAL ACTION]", JSON.stringify(action, null, 2));
+
+  const basket = await getCurrentBasket(action.userRef ?? userRef);
+
+  const ingredients = await buildMealIngredients(
+    action.meal,
+    action.servings ?? 2
+  );
+
+  console.log("[BUILD_MEAL INGREDIENTS]", ingredients);
+
+  const resolvedItems: any[] = [];
+
+  for (const ing of ingredients) {
+    const resolvedProduct = await resolveProduct(userRef, ing.query);
+
+    if (!resolvedProduct?.id) {
+      resolvedItems.push({
+        query: ing.query,
+        ok: false,
+        error: "not_found",
+      });
+      continue;
+    }
+
+    // ⚠️ gestione opzioni (importantissimo)
+    if (
+      Array.isArray(resolvedProduct.availableOptions) &&
+      resolvedProduct.availableOptions.length > 0
+    ) {
+      setPending(userRef, {
+        type: "awaiting_options",
+        productId: resolvedProduct.id,
+        productName: resolvedProduct.name,
+        qty: Math.max(1, ing.qty ?? 1),
+        unit: ing.unit,
+        availableOptions: resolvedProduct.availableOptions.map((opt) => ({
+          id: opt.id,
+          name: opt.name || "Option",
+          shortDescription: opt.shortDescription,
+          description: opt.description,
+        })),
+      });
+
+      return {
+        message:
+          `Pour préparer « ${action.meal} », j’ai trouvé un produit avec options.\n\n` +
+          formatOptionQuestion(resolvedProduct),
+      };
+    }
+
+    const basketQty = computeBasketQty(
+      resolvedProduct,
+      ing.qty ?? 1,
+      ing.unit
+    );
+
+    await addProductToBasket(
+      action.userRef ?? userRef,
+      basket.id,
+      resolvedProduct.id,
+      basketQty
+    );
+
+    resolvedItems.push({
+      query: ing.query,
+      ok: true,
+      product: resolvedProduct.name,
+      basketQty,
+      role: ing.role,
+      optional: ing.optional,
+    });
+  }
+
+  const updated = await getCurrentBasket(action.userRef ?? userRef);
+
+  toolResults.push({
+    action,
+    result: {
+      ok: true,
+      meal: action.meal,
+      resolvedItems,
+      basket: updated,
+    },
+  });
+
+  continue;
+}
+
+
+
+
+
     toolResults.push({ action, result: { ok: true } });
   }
 
@@ -736,6 +862,39 @@ if (plan.intent === "ADD_ITEMS") {
       (basket ? formatCartFr(basket) : "Le panier a été mis à jour, mais je n’ai pas pu relire son contenu.")
   };
 }
+
+if (plan.intent === "BUILD_MEAL") {
+  const mealResult = toolResults.find(
+    (x) => x.action?.type === "build_meal"
+  )?.result;
+
+  if (!mealResult) {
+    return {
+      message: "Je n’ai pas réussi à préparer les ingrédients pour ce repas.",
+    };
+  }
+
+  const lines: string[] = [];
+
+  for (const it of mealResult.resolvedItems) {
+    if (it.ok) {
+      lines.push(
+        `— ${it.product} (${it.role || "ingrédient"})`
+      );
+    } else {
+      lines.push(`— ${it.query} : introuvable`);
+    }
+  }
+
+  return {
+    message:
+      `🍽️ J’ai ajouté des ingrédients pour préparer « ${mealResult.meal} » :\n` +
+      lines.join("\n") +
+      "\n\n" +
+      formatCartFr(mealResult.basket),
+  };
+}
+
 
   const message = await ollamaChat(
     [
