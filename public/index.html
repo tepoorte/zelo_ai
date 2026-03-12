@@ -149,6 +149,48 @@
       background: rgba(20, 24, 36, .75);
     }
 
+    .typingBubble{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      min-width:64px;
+    }
+
+    .typingDots{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      height:10px;
+    }
+
+    .typingDots span{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background: rgba(255,255,255,.75);
+      display:inline-block;
+      animation: typingBounce 1.2s infinite ease-in-out;
+    }
+
+    .typingDots span:nth-child(2){
+      animation-delay: .15s;
+    }
+
+    .typingDots span:nth-child(3){
+      animation-delay: .30s;
+    }
+
+    @keyframes typingBounce {
+      0%, 80%, 100% {
+        transform: scale(.7);
+        opacity: .45;
+      }
+      40% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
     #inputBar{
       display:flex;
       gap:10px;
@@ -515,6 +557,32 @@
       messages.scrollTop = messages.scrollHeight;
     }
 
+        function addTypingMessage(){
+      removeTypingMessage();
+
+      const row = document.createElement("div");
+      row.className = "row aiRow";
+      row.id = "typingRow";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble aiBubble typingBubble";
+
+      const dots = document.createElement("div");
+      dots.className = "typingDots";
+      dots.innerHTML = "<span></span><span></span><span></span>";
+
+      bubble.appendChild(dots);
+      row.appendChild(bubble);
+      messages.appendChild(row);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function removeTypingMessage(){
+      const el = document.getElementById("typingRow");
+      if (el) el.remove();
+    }
+
+
     function setAuthStatus(text, type = ""){
       authStatus.textContent = text || "";
       authStatus.className = "statusLine";
@@ -744,6 +812,7 @@
       input.focus();
 
       sendBtn.disabled = true;
+      addTypingMessage();
 
       try{
         const res = await fetch("/ai/chat", {
@@ -753,10 +822,13 @@
         });
 
         const data = await res.json();
+
+        removeTypingMessage();
         addMessage(data.message || data.error || "errore", "ai");
 
         await refreshBasket();
       }catch(e){
+        removeTypingMessage();
         addMessage("Errore di rete: " + (e?.message || e), "ai");
       }finally{
         sendBtn.disabled = false;

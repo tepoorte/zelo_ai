@@ -3,7 +3,12 @@ import { env } from "../config/env.js";
 import { systemPrompt } from "./prompts.js";
 import { getMemory, addToMemory } from "./memory.js";
 import { searchProducts, fetchFullProduct, type Product } from "../swissdata/products.js";
-import { getCurrentBasket, addProductToBasket } from "../swissdata/cart.js";
+import {
+  getCurrentBasket,
+  addProductToBasket,
+  removeProductFromBasket,
+  clearCurrentBasket
+} from "../swissdata/cart.js";
 import { matchIngredientToProduct } from "../domain/matcher.js";
 import { getPurchaseHistory } from "../swissdata/history.js";
 import { getPending, setPending, clearPending } from "./pending.js";
@@ -21,6 +26,7 @@ type PlannedAction =
       }>;
     }
   | { type: "get_cart"; userRef?: string }
+  | { type: "clear_cart"; userRef?: string }
   | { type: "noop"; reason?: string };
 
 type Plan = {
@@ -95,7 +101,8 @@ Actions autorisées:
      ]
    }
 3) {"type":"get_cart","userRef":"..."}
-4) {"type":"noop","reason":"..."}
+4) {"type":"clear_cart","userRef":"..."}
+5) {"type":"noop","reason":"..."}
 
 IMPORTANT:
 - Pour add_to_cart, n'invente jamais de productId si l'utilisateur n'en donne pas.
@@ -107,6 +114,8 @@ IMPORTANT:
   {"intent":"ADD_ITEMS","actions":[{"type":"add_to_cart","items":[...]}]}
 - Si l'utilisateur corrige sa demande ("non finalement pas de cacahuètes"), tu peux ignorer l'article annulé dans la version finale du plan.
 - N'utilise noop que si aucune intention utile ne peut être extraite.
+- Si l'utilisateur veut vider complètement son panier:
+  {"intent":"CLEAR_CART","actions":[{"type":"clear_cart"}]}
 
 RÈGLE GÉNÉRALE POUR LES DEMANDES VAGUES:
 - Si l'utilisateur demande d'ajouter quelque chose au panier, même de manière vague, essaie d'extraire une query produit simple et exploitable.
@@ -200,6 +209,26 @@ Réponse:
   "intent":"SHOW_CART",
   "actions":[
     {"type":"get_cart"}
+  ]
+}
+
+Message:
+"Vide mon panier"
+Réponse:
+{
+  "intent":"CLEAR_CART",
+  "actions":[
+    {"type":"clear_cart"}
+  ]
+}
+
+Message:
+"Supprime tout de mon panier"
+Réponse:
+{
+  "intent":"CLEAR_CART",
+  "actions":[
+    {"type":"clear_cart"}
   ]
 }
 `;
@@ -642,6 +671,20 @@ console.log("[PLAN PARSED]", JSON.stringify(plan, null, 2));
       continue;
     }
 
+        if (action.type === "clear_cart") {
+      const updated = await clearCurrentBasket(action.userRef ?? userRef);
+
+      toolResults.push({
+        action,
+        result: {
+          ok: true,
+          basket: updated,
+        },
+      });
+
+      continue;
+    }
+
     toolResults.push({ action, result: { ok: true } });
   }
 
@@ -649,6 +692,17 @@ console.log("[PLAN PARSED]", JSON.stringify(plan, null, 2));
     const cartResult = toolResults.find((x) => x.action?.type === "get_cart")?.result;
     return { message: formatCartFr(cartResult) };
   }
+  if (plan.intent === "CLEAR_CART") {
+  const clearResult = toolResults.find(
+    (x) => x.action?.type === "clear_cart"
+  )?.result;
+
+  return {
+    message:
+      `🧹 J’ai vidé votre panier.\n\n` +
+      formatCartFr(clearResult?.basket),
+  };
+}
 
 if (plan.intent === "ADD_ITEMS") {
   const addResult = toolResults.find((x) => x.action?.type === "add_to_cart")?.result;
