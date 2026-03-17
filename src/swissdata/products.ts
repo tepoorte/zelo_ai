@@ -76,3 +76,7 @@ export async function fetchFullProduct(
   const items = await getCatalog(userRef);
   return items.find((p) => p.id === productId) ?? null;
 }
+
+export async function getAllProducts(userRef: string): Promise<Product[]> {
+  return await getCatalog(userRef);
+}

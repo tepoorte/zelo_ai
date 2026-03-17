@@ -13,7 +13,8 @@ import { matchIngredientToProduct } from "../domain/matcher.js";
 import { getPurchaseHistory } from "../swissdata/history.js";
 import { getPending, setPending, clearPending } from "./pending.js";
 import { buildMealIngredients } from "./meal-builder.js";
-
+import { hasEnoughMealCoverage, suggestMealAlternatives } from "./meal-fallbacks.js";
+import { semanticProductMatch, semanticProductCandidates } from "./catalog-embeddings.js";
 type PlannedAction =
   | { type: "search_products"; query: string; limit?: number }
   | {
@@ -32,7 +33,7 @@ type PlannedAction =
       type: "build_meal";
       meal: string;
       servings?: number;
-      userRef?: string;   // ⭐⭐⭐ AGGIUNGI QUESTO
+      userRef?: string;   
     }
   | { type: "noop"; reason?: string };
 
@@ -504,6 +505,59 @@ function resolveOptionsFromText(
   });
 }
 
+function rerankMealCandidate(
+  query: string,
+  role: string | undefined,
+  candidates: Array<{ product: any; score: number; semantic: number; lexical: number }>
+) {
+  const q = query.toLowerCase();
+
+  const rescored = candidates.map((c) => {
+    let bonus = 0;
+    const name = String(c.product?.name || "").toLowerCase();
+    const desc = String(c.product?.shortDescription || c.product?.description || "").toLowerCase();
+    const text = `${name} ${desc}`;
+
+    // Role-aware soft boosts
+    if (role === "base") {
+      if (text.includes("pain")) bonus += 0.18;
+      if (text.includes("bun")) bonus += 0.18;
+      if (text.includes("mie")) bonus += 0.12;
+      if (text.includes("sucre")) bonus -= 0.20;
+      if (text.includes("croissant")) bonus -= 0.18;
+      if (text.includes("mini pain au sucre")) bonus -= 0.25;
+    }
+
+    if (role === "principal") {
+      if (q.includes("saucisse") && text.includes("saucisse")) bonus += 0.22;
+      if (q.includes("jambon") && text.includes("jambon")) bonus += 0.18;
+      if (q.includes("steak") && text.includes("steak")) bonus += 0.20;
+      if (q.includes("poulet") && text.includes("poulet")) bonus += 0.18;
+      if (text.includes("croissant")) bonus -= 0.10;
+      if (text.includes("plateau")) bonus -= 0.18;
+    }
+
+    if (role === "garniture" || role === "condiment") {
+      if (q.includes("fromage") && text.includes("fromage")) bonus += 0.16;
+      if (q.includes("moutarde") && text.includes("moutarde")) bonus += 0.18;
+      if (q.includes("ketchup") && text.includes("ketchup")) bonus += 0.18;
+    }
+
+    // generic penalties for prepared products when we want ingredients
+    if (text.includes("plateau")) bonus -= 0.10;
+    if (text.includes("menu")) bonus -= 0.15;
+
+    return {
+      ...c,
+      finalScore: c.score + bonus,
+    };
+  });
+
+  rescored.sort((a, b) => b.finalScore - a.finalScore);
+  return rescored[0] ?? null;
+}
+
+
 async function runGeneralChat(userRef: string, userText: string): Promise<{ message: string }> {
   const mem = getMemory(userRef);
 
@@ -718,94 +772,137 @@ console.log("[PLAN PARSED]", JSON.stringify(plan, null, 2));
 
 
     if (action.type === "build_meal") {
-  console.log("[BUILD_MEAL ACTION]", JSON.stringify(action, null, 2));
+      console.log("[BUILD_MEAL ACTION]", JSON.stringify(action, null, 2));
 
-  const basket = await getCurrentBasket(action.userRef ?? userRef);
+      const basket = await getCurrentBasket(action.userRef ?? userRef);
 
-  const ingredients = await buildMealIngredients(
-    action.meal,
-    action.servings ?? 2
-  );
+      const ingredients = await buildMealIngredients(
+        action.meal,
+        action.servings ?? 2
+      );
 
-  console.log("[BUILD_MEAL INGREDIENTS]", ingredients);
+      console.log("[BUILD_MEAL INGREDIENTS]", ingredients);
 
-  const resolvedItems: any[] = [];
+      const resolvedItems: any[] = [];
 
-  for (const ing of ingredients) {
-    const resolvedProduct = await resolveProduct(userRef, ing.query);
+      // 1) prima risolviamo tutto SENZA aggiungere al panier
+      for (const ing of ingredients) {
 
-    if (!resolvedProduct?.id) {
-      resolvedItems.push({
-        query: ing.query,
-        ok: false,
-        error: "not_found",
-      });
-      continue;
-    }
+        const candidates = await semanticProductCandidates(ing.query, 8);
+const best = rerankMealCandidate(ing.query, ing.role, candidates);
 
-    // ⚠️ gestione opzioni (importantissimo)
-    if (
-      Array.isArray(resolvedProduct.availableOptions) &&
-      resolvedProduct.availableOptions.length > 0
-    ) {
-      setPending(userRef, {
-        type: "awaiting_options",
-        productId: resolvedProduct.id,
-        productName: resolvedProduct.name,
-        qty: Math.max(1, ing.qty ?? 1),
-        unit: ing.unit,
-        availableOptions: resolvedProduct.availableOptions.map((opt) => ({
-          id: opt.id,
-          name: opt.name || "Option",
-          shortDescription: opt.shortDescription,
-          description: opt.description,
-        })),
-      });
-
-      return {
-        message:
-          `Pour préparer « ${action.meal} », j’ai trouvé un produit avec options.\n\n` +
-          formatOptionQuestion(resolvedProduct),
-      };
-    }
-
-    const basketQty = computeBasketQty(
-      resolvedProduct,
-      ing.qty ?? 1,
-      ing.unit
-    );
-
-    await addProductToBasket(
-      action.userRef ?? userRef,
-      basket.id,
-      resolvedProduct.id,
-      basketQty
-    );
-
-    resolvedItems.push({
-      query: ing.query,
-      ok: true,
-      product: resolvedProduct.name,
-      basketQty,
-      role: ing.role,
-      optional: ing.optional,
-    });
-  }
-
-  const updated = await getCurrentBasket(action.userRef ?? userRef);
-
-  toolResults.push({
-    action,
-    result: {
-      ok: true,
-      meal: action.meal,
-      resolvedItems,
-      basket: updated,
-    },
+if (!best || !best.product || best.finalScore < 0.62) {
+  resolvedItems.push({
+    query: ing.query,
+    role: ing.role,
+    optional: !!ing.optional,
+    ok: false,
+    error: "semantic_low_score",
+    score: best?.finalScore ?? -1,
   });
-
   continue;
 }
+
+const resolvedProduct = best.product;
+
+console.log("[MEAL RERANK]", {
+  query: ing.query,
+  role: ing.role,
+  chosen: resolvedProduct.name,
+  score: best.finalScore,
+  semantic: best.semantic,
+  lexical: best.lexical,
+});
+
+        if (
+          Array.isArray(resolvedProduct.optionsIds) &&
+          resolvedProduct.optionsIds.length > 0
+        ) {
+          resolvedItems.push({
+            query: ing.query,
+            role: ing.role,
+            optional: !!ing.optional,
+            ok: false,
+            error: "needs_options",
+            product: {
+              id: resolvedProduct.id,
+              name: resolvedProduct.name,
+            },
+            resolvedProduct,
+            requestedQty: ing.qty ?? 1,
+            requestedUnit: ing.unit ?? "piece",
+          });
+          continue;
+        }
+
+        const basketQty = computeBasketQty(
+          resolvedProduct,
+          ing.qty ?? 1,
+          ing.unit
+        );
+
+        resolvedItems.push({
+          query: ing.query,
+          role: ing.role,
+          optional: !!ing.optional,
+          ok: true,
+          requestedQty: ing.qty ?? 1,
+          requestedUnit: ing.unit ?? "piece",
+          basketQty,
+          product: {
+            id: resolvedProduct.id,
+            name: resolvedProduct.name,
+          },
+          resolvedProduct,
+        });
+      }
+
+      // 2) se non c'è copertura sufficiente, NON aggiungere niente: proponi alternative
+      const enoughCoverage = hasEnoughMealCoverage(action.meal, resolvedItems);
+
+      if (!enoughCoverage) {
+        const alternatives = suggestMealAlternatives(action.meal);
+
+        toolResults.push({
+          action,
+          result: {
+            ok: false,
+            meal: action.meal,
+            resolvedItems,
+            alternatives,
+            basket,
+          },
+        });
+
+        continue;
+      }
+
+      // 3) se c'è copertura, aggiungi solo i prodotti risolti e senza options
+      for (const item of resolvedItems) {
+        if (!item.ok) continue;
+
+        await addProductToBasket(
+          action.userRef ?? userRef,
+          basket.id,
+          item.product.id,
+          item.basketQty
+        );
+      }
+
+      const updated = await getCurrentBasket(action.userRef ?? userRef);
+
+      toolResults.push({
+        action,
+        result: {
+          ok: true,
+          meal: action.meal,
+          resolvedItems,
+          basket: updated,
+        },
+      });
+
+      continue;
+    }
 
 
 
@@ -874,15 +971,36 @@ if (plan.intent === "BUILD_MEAL") {
     };
   }
 
+  if (!mealResult.ok) {
+    const missingLines: string[] = [];
+
+    if (Array.isArray(mealResult.resolvedItems)) {
+      for (const it of mealResult.resolvedItems) {
+        if (!it.ok && !it.optional) {
+          missingLines.push(`— ${it.query}`);
+        }
+      }
+    }
+
+    const alternatives = Array.isArray(mealResult.alternatives)
+      ? mealResult.alternatives
+      : [];
+
+    return {
+      message:
+        `Je ne trouve pas tous les ingrédients nécessaires pour « ${mealResult.meal} ».\n` +
+        (missingLines.length ? `\nIl me manque notamment :\n${missingLines.join("\n")}\n` : "\n") +
+        (alternatives.length
+          ? `\nJe peux te proposer plutôt :\n${alternatives.map((a: string) => `— ${a}`).join("\n")}`
+          : ""),
+    };
+  }
+
   const lines: string[] = [];
 
   for (const it of mealResult.resolvedItems) {
     if (it.ok) {
-      lines.push(
-        `— ${it.product} (${it.role || "ingrédient"})`
-      );
-    } else {
-      lines.push(`— ${it.query} : introuvable`);
+      lines.push(`— ${it.product?.name ?? it.query}`);
     }
   }
 
@@ -890,7 +1008,7 @@ if (plan.intent === "BUILD_MEAL") {
     message:
       `🍽️ J’ai ajouté des ingrédients pour préparer « ${mealResult.meal} » :\n` +
       lines.join("\n") +
-      "\n\n" +
+      `\n\n` +
       formatCartFr(mealResult.basket),
   };
 }

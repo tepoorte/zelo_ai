@@ -19,7 +19,8 @@ services:
     command: >
       "sleep 2 &&
        ollama pull llama3.2 &&
-       echo 'Model pulled.'"
+       ollama pull nomic-embed-text &&
+       echo 'Models pulled.'"
     volumes:
       - ollama_data:/root/.ollama
     restart: "no"

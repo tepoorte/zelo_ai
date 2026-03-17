@@ -10,6 +10,7 @@ import { errorHandler } from "./middleware/error.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { aiRoutes } from "./routes/ai.routes.js";
 import { webhookRoutes } from "./routes/webhook.routes.js";
+import { buildCatalogEmbedding } from "./ai/catalog-embeddings.js";
 
 const app = express();
 app.use(morgan("dev"));
@@ -36,4 +37,8 @@ app.use(errorHandler);
 
 app.listen(env.port, "0.0.0.0", () => {
   console.log(`Zelo API listening on http://0.0.0.0:${env.port}`);
+    // 🚀 build embeddings catalogo (background)
+  buildCatalogEmbedding("local-dev")
+    .then(() => console.log("✅ Catalog embeddings ready"))
+    .catch(err => console.error("❌ Catalog embedding error:", err));
 });
