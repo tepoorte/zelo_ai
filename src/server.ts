@@ -37,7 +37,7 @@ app.use(errorHandler);
 
 app.listen(env.port, "0.0.0.0", () => {
   console.log(`Zelo API listening on http://0.0.0.0:${env.port}`);
-    // 🚀 build embeddings catalogo (background)
+    // build embeddings catalogo (background)
   buildCatalogEmbedding("local-dev")
     .then(() => console.log("✅ Catalog embeddings ready"))
     .catch(err => console.error("❌ Catalog embedding error:", err));

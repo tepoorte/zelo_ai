@@ -2,13 +2,25 @@ import { env } from "../config/env.js";
 
 const OLLAMA_URL = env.ollamaBaseUrl || "http://ollama:11434";
 const MODEL = env.ollamaModel || "llama3.2";
-
+/*
 type MealIngredient = {
   query: string;
   qty: number;
   unit?: string;
   role?: string;
   optional?: boolean;
+};
+*/
+type MealIngredient = {
+  query: string;
+  qty: number;
+  unit?: string;
+  role?: string;
+  description?: string;
+  usageContext?: string;
+  constraints?: string;
+  priority?: number;
+  isCore?: boolean;
 };
 
 type MealBuildResult = {
@@ -84,7 +96,6 @@ function overlapRatio(a: string, b: string): number {
 
 function cleanMealIngredients(meal: string, ingredients: MealIngredient[]): MealIngredient[] {
   const normalizedMeal = normalizeLoose(meal);
-
   const cleaned = ingredients
     .filter((x) => x?.query && typeof x.query === "string")
     .map((x) => ({
@@ -92,7 +103,13 @@ function cleanMealIngredients(meal: string, ingredients: MealIngredient[]): Meal
       qty: Number(x.qty ?? 1),
       unit: x.unit ? String(x.unit) : "piece",
       role: x.role ? String(x.role) : undefined,
-      optional: !!x.optional,
+      description: x.description ? String(x.description) : undefined,
+      usageContext: x.usageContext ? String(x.usageContext) : undefined,
+      constraints: x.constraints
+  ? String(x.constraints)
+  : "ne doit pas être un plat préparé, une boisson ou un dessert",
+      priority: typeof x.priority === "number" ? x.priority : Number(x.priority ?? 0.5),
+      isCore: !!x.isCore,
     }))
     .filter((x) => x.query.length > 1)
     .filter((x) => {
@@ -138,15 +155,19 @@ export async function buildMealIngredients(
     {
       role: "system",
 content: `
-Tu es un assistant courses intelligent.
+Tu es un assistant courses intelligent spécialisé dans la décomposition sémantique de repas.
 
 Ta mission:
-Transformer un repas ou usage en une liste d'ingrédients plausibles
-qui peuvent être cherchés dans un catalogue e-commerce alimentaire.
+Transformer un repas ou une intention culinaire en une liste d’ingrédients réels et achetables,
+décrits de manière suffisamment précise pour permettre un matching NLP vectoriel avec un catalogue e-commerce.
 
-RÈGLES:
-- Réponds uniquement avec du JSON valide.
-- Structure EXACTE:
+Tu ne connais PAS le catalogue.
+Tu dois donc décrire les ingrédients de façon sémantique, concrète et discriminante.
+
+Tu dois produire UNIQUEMENT du JSON valide.
+
+STRUCTURE EXACTE:
+
 {
   "meal": "...",
   "ingredients": [
@@ -155,65 +176,125 @@ RÈGLES:
       "qty": 1,
       "unit": "piece",
       "role": "...",
-      "optional": false
+      "description": "...",
+      "usageContext": "...",
+      "constraints": "...",
+      "priority": 1,
+      "isCore": true
     }
   ]
 }
 
 RÈGLES IMPORTANTES:
-- Ne répète PAS le nom du plat comme ingrédient, sauf si le plat est lui-même un produit directement achetable dans un catalogue.
-- Pour un plat composé, décompose-le en éléments concrets à acheter.
-- Utilise des noms simples et utiles pour une recherche catalogue.
-- 2 à 6 ingrédients max.
-- Mets les éléments indispensables en optional=false.
-- Les sauces, toppings, accompagnements peuvent être optional=true.
-- Ne mets jamais de productId.
-- Réponds en français.
-- Évite les accompagnements non essentiels si le cœur du plat n'est pas encore couvert.
-- Priorité: base du plat + protéine/élément principal + condiment principal éventuel.
+
+- Ne répète PAS le nom du plat comme ingrédient sauf si le plat est réellement vendu comme produit.
+- Décompose toujours un plat en éléments culinaires réels.
+- Utilise des noms simples et naturels (ex: "oeufs", "riz", "pain", "crème").
+- 3 à 6 ingrédients maximum.
+- Le champ "constraints" doit être spécifique à l’ingrédient.
+- N’utilise pas de contrainte générique.
+- Mentionne au moins 2 exclusions concrètes liées au faux matching probable.
+- La query doit être aussi spécifique que possible.
+- Préfère "spaghetti secs", "oeufs entiers", "fromage râpé affiné", "lardons fumés" plutôt que des termes trop larges.
+- Priorité:
+  - base du plat
+  - élément protéique ou central
+  - liant / sauce principale
+  - garnitures secondaires
+
+DESCRIPTION (champ critique):
+
+- Doit ressembler à une vraie description produit alimentaire.
+- Doit préciser:
+  - nature de l’ingrédient (viande crue, fromage râpé, pâte sèche…)
+  - forme ou état (tranches, entier, râpé, cru, cuit…)
+  - usage principal (cuisson, salade froide, pâtisserie…)
+- Doit aider à distinguer cet ingrédient d’autres produits proches.
+
+USAGE CONTEXT:
+
+- Décrit comment l’ingrédient est utilisé dans CE plat.
+- Exemple: "mélangé avec des pâtes chaudes", "utilisé cru en garniture", "fondu dans une sauce".
+
+NEGATIVE CONSTRAINTS (très important):
+
+- Décrit ce que l’ingrédient ne doit PAS être.
+- Sert à éviter les faux matchs sémantiques.
+- Exemple:
+  - "ne doit pas être une viande préparée ou un plat cuisiné"
+  - "ne doit pas contenir de boeuf"
+  - "ne doit pas être un dessert ou un produit sucré"
+  - "ne doit pas être une boisson"
+
+PRIORITY:
+
+- Score entre 0 et 1.
+- 1 = indispensable pour reconnaître le plat.
+- 0.4-0.7 = secondaire.
+
+ISCORE:
+
+- true si sans cet ingrédient le plat n’a plus son identité.
+
+AUTRES RÈGLES:
+
+- N’utilise PAS de classification rigide (pas de catégories techniques).
+- N’invente PAS d’ingrédients absurdes.
+- Évite les formulations marketing.
+- Évite les termes trop vagues (ex: "aliment", "produit").
+- Favorise la précision culinaire.
 
 EXEMPLES:
 
-Repas: hot dog
-Réponse:
-{
-  "meal": "hot dog",
-  "ingredients": [
-    { "query": "pain hot dog", "qty": 2, "unit": "piece", "role": "base", "optional": false },
-    { "query": "saucisse", "qty": 2, "unit": "piece", "role": "principal", "optional": false },
-    { "query": "moutarde", "qty": 1, "unit": "piece", "role": "condiment", "optional": true }
-  ]
-}
+Repas: carbonara
 
-Repas: burger
-Réponse:
 {
-  "meal": "burger",
+  "meal": "carbonara",
   "ingredients": [
-    { "query": "pain burger", "qty": 2, "unit": "piece", "role": "base", "optional": false },
-    { "query": "steak haché", "qty": 2, "unit": "piece", "role": "principal", "optional": false },
-    { "query": "fromage burger", "qty": 1, "unit": "piece", "role": "garniture", "optional": true }
-  ]
-}
-
-Repas: sandwich
-Réponse:
-{
-  "meal": "sandwich",
-  "ingredients": [
-    { "query": "pain de mie", "qty": 1, "unit": "piece", "role": "base", "optional": false },
-    { "query": "jambon", "qty": 1, "unit": "piece", "role": "principal", "optional": false },
-    { "query": "fromage", "qty": 1, "unit": "piece", "role": "garniture", "optional": true }
-  ]
-}
-
-Repas: fondue
-Réponse:
-{
-  "meal": "fondue",
-  "ingredients": [
-    { "query": "fondue", "qty": 1, "unit": "piece", "role": "principal", "optional": false },
-    { "query": "pain", "qty": 1, "unit": "piece", "role": "base", "optional": false }
+    {
+      "query": "spaghetti",
+      "qty": 2,
+      "unit": "portion",
+      "role": "base",
+      "description": "Pâtes alimentaires sèches longues à base de blé dur destinées à être cuites dans l’eau pour préparation de plats chauds.",
+      "usageContext": "mélangées avec une sauce chaude à base d'oeufs et de fromage",
+      "negativeConstraints": "ne doit pas être un plat préparé ni contenir déjà de la viande ou de la sauce",
+      "priority": 1,
+      "isCore": true
+    },
+    {
+      "query": "oeufs",
+      "qty": 2,
+      "unit": "piece",
+      "role": "liant",
+      "description": "Produit alimentaire brut issu de la ponte de poules, utilisé entier ou battu pour créer des sauces ou des préparations culinaires.",
+      "usageContext": "émulsionnés avec fromage et chaleur des pâtes pour former une sauce",
+      "negativeConstraints": "ne doit pas être de la viande ni un produit contenant du boeuf ou du tartare",
+      "priority": 1,
+      "isCore": true
+    },
+    {
+      "query": "fromage râpé affiné",
+      "qty": 1,
+      "unit": "portion",
+      "role": "garniture",
+      "description": "Fromage affiné sec destiné à être râpé ou utilisé déjà râpé pour incorporation dans des sauces ou plats de pâtes chauds.",
+      "usageContext": "mélangé à une sauce chaude pour pâtes et utilisé en finition",
+      "constraints": "ne doit pas être un pain garni au fromage, ni un snack, ni une préparation boulangère",
+      "priority": 0.8,
+      "isCore": true
+    },
+    {
+      "query": "lardons",
+      "qty": 1,
+      "unit": "portion",
+      "role": "protéine",
+      "description": "Petits morceaux de viande de porc salée ou fumée destinés à être poêlés pour garnir des plats chauds.",
+      "usageContext": "cuits puis mélangés aux pâtes",
+      "negativeConstraints": "ne doit pas être du jambon dans un sandwich ni un plat préparé",
+      "priority": 0.7,
+      "isCore": false
+    }
   ]
 }
 `,

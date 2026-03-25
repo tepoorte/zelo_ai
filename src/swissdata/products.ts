@@ -10,6 +10,11 @@ export type ProductOption = {
   countryPrices?: any;
 };
 
+export type ProductMetadata = {
+  key: string;
+  value: any;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -24,6 +29,11 @@ export type Product = {
   refWeight?: number;
   refWeightUnit?: string;
   defaultSupplier?: any;
+
+  unit?: string;
+  type?: string;
+  metadata?: ProductMetadata[];
+  categories?: string[];
 };
 
 async function getCatalog(userRef: string): Promise<Product[]> {
