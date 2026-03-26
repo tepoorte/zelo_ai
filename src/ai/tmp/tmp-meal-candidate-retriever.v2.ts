@@ -1,4 +1,4 @@
-import {
+/*import {
   cosineSimilarity,
   embedQueryV2,
 } from "./catalog-index.v2.js";
@@ -183,4 +183,4 @@ export async function retrieveMealCandidatesV2(
   return ranked
     .sort((a, b) => b.score - a.score)
     .slice(0, topK);
-}
+}*/

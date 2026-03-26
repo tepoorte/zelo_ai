@@ -1,6 +1,15 @@
 import { env } from "../config/env.js";
 import { swissdataClient } from "./client.js";
 
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type CatalogCacheEntry = {
+  expiresAt: number;
+  items: Product[];
+};
+
+const CATALOG_CACHE = new Map<string, CatalogCacheEntry>();
+
 export type ProductOption = {
   id: string;
   name?: string;
@@ -36,7 +45,14 @@ export type Product = {
   categories?: string[];
 };
 
-async function getCatalog(userRef: string): Promise<Product[]> {
+async function getCatalog(userRef: string, forceRefresh = false): Promise<Product[]> {
+  const cacheKey = userRef || "__anonymous__";
+  const cached = CATALOG_CACHE.get(cacheKey);
+
+  if (!forceRefresh && cached && cached.expiresAt > Date.now()) {
+    return cached.items;
+  }
+
   const shopId = env.swissdataShopId;
   const country = env.swissdataCountry;
 
@@ -52,7 +68,14 @@ async function getCatalog(userRef: string): Promise<Product[]> {
     },
   });
 
-  return Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
+  const items = Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
+
+  CATALOG_CACHE.set(cacheKey, {
+    items,
+    expiresAt: Date.now() + CATALOG_CACHE_TTL_MS,
+  });
+
+  return items;
 }
 
 export async function searchProducts(
@@ -89,4 +112,13 @@ export async function fetchFullProduct(
 
 export async function getAllProducts(userRef: string): Promise<Product[]> {
   return await getCatalog(userRef);
+}
+
+export function invalidateProductsCache(userRef?: string) {
+  if (userRef) {
+    CATALOG_CACHE.delete(userRef || "__anonymous__");
+    return;
+  }
+
+  CATALOG_CACHE.clear();
 }

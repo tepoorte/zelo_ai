@@ -1,6 +1,6 @@
-import { env } from "../config/env.js";
-import { addProductToBasket, getCurrentBasket } from "../swissdata/cart.js";
-import { getAllProducts } from "../swissdata/products.js";
+import { env } from "../../config/env.js";
+import { addProductToBasket, getCurrentBasket } from "../../swissdata/cart.js";
+import { getAllProducts } from "../../swissdata/products.js";
 
 type BasketLine = {
   productId: string;

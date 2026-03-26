@@ -1,4 +1,4 @@
-import { addProductToBasket, getCurrentBasket } from "../../swissdata/cart.js";
+/*import { addProductToBasket, getCurrentBasket } from "../../swissdata/cart.js";
 import { buildMealIngredientsV2 } from "../meal-builder.v2.js";
 import { buildCatalogIndexV2 } from "../catalog-index.v2.js";
 import {
@@ -188,4 +188,4 @@ export async function handleBuildMealActionV2(
     message,
     resolvedItems
   };
-}
+}*/

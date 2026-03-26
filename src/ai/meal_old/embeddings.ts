@@ -1,4 +1,4 @@
-import { env } from "../config/env.js";
+import { env } from "../../config/env.js";
 
 const OLLAMA_URL = env.ollamaBaseUrl || "http://ollama:11434";
 

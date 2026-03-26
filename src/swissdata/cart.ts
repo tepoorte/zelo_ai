@@ -1,5 +1,43 @@
 import { env } from "../config/env.js";
 import { swissdataClient } from "./client.js";
+import { getAllProducts } from "./products.js";
+
+export type SwissdataPaymentMethod =
+  | "credit-card"
+  | "twint"
+  | "invoice"
+  | "other";
+
+function enrichBasketProductsWithNames(basket: any, catalog: Array<{ id: string; name?: string }>) {
+  const products = Array.isArray(basket?.products) ? basket.products : [];
+  if (!products.length) return basket;
+
+  const namesById = new Map<string, string>();
+  for (const product of catalog) {
+    if (product?.id && product?.name) {
+      namesById.set(String(product.id), String(product.name));
+    }
+  }
+
+  basket.products = products.map((line: any) => {
+    if (line?.name || line?.productName || line?.product?.name) {
+      return line;
+    }
+
+    const productId = String(line?.productId ?? "");
+    const resolvedName = namesById.get(productId);
+
+    if (!resolvedName) return line;
+
+    return {
+      ...line,
+      name: resolvedName,
+      productName: resolvedName,
+    };
+  });
+
+  return basket;
+}
 
 export async function getCurrentBasket(userRef: string) {
   const api = swissdataClient(userRef);
@@ -14,7 +52,10 @@ export async function getCurrentBasket(userRef: string) {
     params: { country },
   });
 
-  return res.data;
+  const basket = res.data;
+  const catalog = await getAllProducts(userRef);
+
+  return enrichBasketProductsWithNames(basket, catalog);
 }
 
 export async function addProductToBasket(
@@ -75,4 +116,37 @@ export async function clearCurrentBasket(userRef: string) {
   }
 
   return await getCurrentBasket(userRef);
+}
+
+export async function placeCurrentBasketOrder(
+  userRef: string,
+  paymentMethod: SwissdataPaymentMethod = "invoice"
+) {
+  const api = swissdataClient(userRef);
+
+  const shopId = env.swissdataShopId;
+  const country = env.swissdataCountry;
+
+  if (!shopId) throw new Error("Missing env SWISSDATA_SHOP_ID");
+  if (!country) throw new Error("Missing env SWISSDATA_COUNTRY");
+
+  const basket = await getCurrentBasket(userRef);
+
+  if (!basket?.id) {
+    throw new Error("Basket not found");
+  }
+
+  await api.put(
+    `/shop/${shopId}/order/${basket.id}`,
+    { paymentMethod },
+    { params: { country } }
+  );
+
+  const res = await api.put(
+    `/shop/${shopId}/order/basket/${basket.id}/place-order`,
+    {},
+    { params: { country } }
+  );
+
+  return res.data;
 }

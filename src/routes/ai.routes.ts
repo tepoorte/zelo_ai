@@ -53,7 +53,7 @@ export function aiRoutes() {
 //-----------------------------------------------------------------------------
 import { Router } from "express";
 import { runAgent } from "../ai/agent.js";
-import { localNlpFallback } from "../ai/localFallback.js";
+import { localNlpFallback } from "../ai/meal_old/localFallback.js";
 import { login } from "../swissdata/auth.js";
 import { setSession, getSession } from "../swissdata/session.js";
 import { getCurrentBasket } from "../swissdata/cart.js";

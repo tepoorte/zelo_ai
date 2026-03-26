@@ -1,8 +1,14 @@
-import { getAllProducts, type Product } from "../swissdata/products.js";
+import { getAllProducts, type Product } from "../../swissdata/products.js";
 import { embed, cosine } from "./embeddings.js";
 
 import fs from "node:fs/promises";
 import path from "node:path";
+
+type CatalogSnapshot = {
+  userRef: string;
+  builtAt: string;
+  products: Product[];
+};
 
 type CachedProduct = {
   product: Product;
@@ -13,10 +19,26 @@ type CachedProduct = {
 };
 
 const CACHE_DIR = path.join(process.cwd(), ".cache");
+const CATALOG_SNAPSHOT_FILE = path.join(CACHE_DIR, "catalog-local-dev.json");
 const EMBEDDINGS_CACHE_FILE = path.join(CACHE_DIR, "catalog-embeddings-local-dev.json");
 
 async function ensureCacheDir() {
   await fs.mkdir(CACHE_DIR, { recursive: true });
+}
+
+async function loadCatalogSnapshotFromDisk(): Promise<CatalogSnapshot | null> {
+  try {
+    const raw = await fs.readFile(CATALOG_SNAPSHOT_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+
+    if (!Array.isArray(parsed?.products) || parsed.products.length === 0) {
+      return null;
+    }
+
+    return parsed as CatalogSnapshot;
+  } catch {
+    return null;
+  }
 }
 
 async function loadEmbeddingCacheFromDisk(): Promise<CachedProduct[] | null> {
@@ -32,11 +54,26 @@ async function loadEmbeddingCacheFromDisk(): Promise<CachedProduct[] | null> {
   }
 }
 
+async function saveCatalogSnapshotToDisk(snapshot: CatalogSnapshot) {
+  await ensureCacheDir();
+  await fs.writeFile(
+    CATALOG_SNAPSHOT_FILE,
+    JSON.stringify(snapshot, null, 2),
+    "utf-8"
+  );
+}
+
 async function saveEmbeddingCacheToDisk(data: CachedProduct[]) {
+  const compactData = data.map((item) => ({
+    ...item,
+    nameVector: compactVector(item.nameVector),
+    descriptionVector: compactVector(item.descriptionVector),
+  }));
+
   await ensureCacheDir();
   await fs.writeFile(
     EMBEDDINGS_CACHE_FILE,
-    JSON.stringify(data, null, 2),
+    JSON.stringify(compactData),
     "utf-8"
   );
 }
@@ -48,6 +85,35 @@ function productToNameText(p: Product): string {
 
 function productToDescriptionText(p: Product): string {
   return [p.description].filter(Boolean).join(" ");
+}
+
+function compactVector(values: number[], decimals = 5): number[] {
+  const factor = 10 ** decimals;
+  return values.map((value) => Math.round(value * factor) / factor);
+}
+
+async function buildEmbeddingEntries(products: Product[]): Promise<CachedProduct[]> {
+  const nextCache: CachedProduct[] = [];
+
+  for (const p of products) {
+    const nameText = productToNameText(p);
+    const descriptionText = productToDescriptionText(p);
+
+    const [nameVector, descriptionVector] = await Promise.all([
+      embed(nameText),
+      embed(descriptionText || nameText),
+    ]);
+
+    nextCache.push({
+      product: p,
+      nameText,
+      descriptionText,
+      nameVector,
+      descriptionVector,
+    });
+  }
+
+  return nextCache;
 }
 
 let catalogCache: CachedProduct[] = [];
@@ -84,42 +150,45 @@ function lexicalScore(query: string, productText: string): number {
 }
 */
 
-export async function buildCatalogEmbedding(userRef: string, forceRebuild = false) {
+export async function buildCatalogEmbedding(userRef: string, forceRebuild = true) {
   if (!forceRebuild) {
     const diskCache = await loadEmbeddingCacheFromDisk();
     if (diskCache?.length) {
       catalogCache = diskCache;
       ready = true;
-      console.log("✅ Catalog embeddings loaded from disk:", catalogCache.length);
+      console.log("✅ Catalog embeddings loaded from disk:", EMBEDDINGS_CACHE_FILE, catalogCache.length);
       return;
     }
   }
 
-  const products = await getAllProducts(userRef);
-  catalogCache = [];
+  let products: Product[] | null = null;
 
-  for (const p of products) {
-    const nameText = productToNameText(p);
-    const descriptionText = productToDescriptionText(p);
-
-    const [nameVector, descriptionVector] = await Promise.all([
-      embed(nameText),
-      embed(descriptionText || nameText),
-    ]);
-
-    catalogCache.push({
-      product: p,
-      nameText,
-      descriptionText,
-      nameVector,
-      descriptionVector,
-    });
+  if (!forceRebuild) {
+    const snapshot = await loadCatalogSnapshotFromDisk();
+    if (snapshot?.products?.length) {
+      products = snapshot.products;
+      console.log("✅ Catalog snapshot loaded from disk:", CATALOG_SNAPSHOT_FILE, products.length);
+    }
   }
+
+  if (!products) {
+    products = await getAllProducts(userRef);
+
+    await saveCatalogSnapshotToDisk({
+      userRef,
+      builtAt: new Date().toISOString(),
+      products,
+    });
+
+    console.log("✅ Catalog snapshot saved:", CATALOG_SNAPSHOT_FILE, products.length);
+  }
+
+  catalogCache = await buildEmbeddingEntries(products);
 
   await saveEmbeddingCacheToDisk(catalogCache);
 
   ready = true;
-  console.log("✅ Catalog embeddings built and saved:", catalogCache.length);
+  console.log("✅ Catalog embeddings built and saved:", EMBEDDINGS_CACHE_FILE, catalogCache.length);
 }
 
 export async function semanticProductCandidates(

@@ -1,5 +1,5 @@
 import { getPending, setPending, clearPending } from "../pending.js";
-import { getCurrentBasket, addProductToBasket, clearCurrentBasket } from "../../swissdata/cart.js";
+import { getCurrentBasket, addProductToBasket, clearCurrentBasket, placeCurrentBasketOrder } from "../../swissdata/cart.js";
 import { type Product } from "../../swissdata/products.js";
 import {
   formatCartFr,
@@ -7,6 +7,7 @@ import {
   computeBasketQty,
   formatOptionQuestion,
   resolveOptionsFromText,
+  userChoseNoOptions,
 } from "./cart-helpers.service.js";
 
 type AddOutcomePending = {
@@ -32,8 +33,9 @@ export async function tryResolvePendingOptions(
   }
 
   const selected = resolveOptionsFromText(userText, pending.availableOptions);
+  const choseNoOptions = userChoseNoOptions(userText);
 
-  if (!selected.length) {
+  if (!selected.length && !choseNoOptions) {
     return {
       message:
         `Je n’ai pas reconnu les options demandées pour « ${pending.productName} ».\n\n` +
@@ -52,7 +54,7 @@ export async function tryResolvePendingOptions(
     basket.id,
     pending.productId,
     pending.qty,
-    selected.map(x => x.id)
+    choseNoOptions ? [] : selected.map(x => x.id)
   );
 
   clearPending(userRef);
@@ -61,7 +63,11 @@ export async function tryResolvePendingOptions(
 
   return {
     message:
-      `✅ J’ai ajouté « ${pending.productName} » avec les options : ${selected.map(x => x.name).join(", ")}.\n\n` +
+      (
+        choseNoOptions
+          ? `✅ J’ai ajouté « ${pending.productName} » sans option.\n\n`
+          : `✅ J’ai ajouté « ${pending.productName} » avec les options : ${selected.map(x => x.name).join(", ")}.\n\n`
+      ) +
       formatCartFr(updated),
   };
 }
@@ -182,5 +188,13 @@ export async function handleClearCartAction(userRef: string, action?: { userRef?
   return {
     ok: true,
     basket: updated,
+  };
+}
+
+export async function handleExecCartAction(userRef: string, action?: { userRef?: string }) {
+  const order = await placeCurrentBasketOrder(action?.userRef ?? userRef);
+  return {
+    ok: true,
+    order,
   };
 }

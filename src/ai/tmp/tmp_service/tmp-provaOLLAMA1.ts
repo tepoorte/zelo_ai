@@ -1,5 +1,5 @@
-import { env } from "../../config/env.js";
-import { getAllProducts, type Product } from "../../swissdata/products.js";
+import { env } from "../../../config/env.js";
+import { getAllProducts, type Product } from "../../../swissdata/products.js";
 
 const OLLAMA_URL = env.ollamaBaseUrl || "http://ollama:11434";
 const MODEL = env.ollamaModel || "llama3.2";

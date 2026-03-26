@@ -1,4 +1,4 @@
-import { ensureCatalogIndexV2 } from "./catalog-index.v2.js";
+/*import { ensureCatalogIndexV2 } from "./catalog-index.v2.js";
 import { retrieveMealCandidatesV2 } from "./meal-candidate-retriever.v2.js";
 import {
   decideCandidateConfidenceV2,
@@ -80,4 +80,4 @@ export async function matchMealIngredientsV2(
     accepted: matches.filter((m) => !!m.accepted),
     missing: matches.filter((m) => !m.accepted),
   };
-}
+}*/

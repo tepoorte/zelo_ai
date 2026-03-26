@@ -14,6 +14,7 @@ type PlannedAction =
     }
   | { type: "get_cart"; userRef?: string }
   | { type: "clear_cart"; userRef?: string }
+  | { type: "exec_cart"; userRef?: string }
   | {
       type: "build_meal";
       meal: string;
@@ -59,8 +60,9 @@ Actions autorisées:
    }
 3) {"type":"get_cart","userRef":"..."}
 4) {"type":"clear_cart","userRef":"..."}
-5) {"type":"build_meal","meal":"...","servings":2}
-6) {"type":"noop","reason":"..."}
+5) {"type":"exec_cart","userRef":"..."}
+6) {"type":"build_meal","meal":"...","servings":2}
+7) {"type":"noop","reason":"..."}
 
 IMPORTANT:
 - Pour add_to_cart, n'invente jamais de productId si l'utilisateur n'en donne pas.
@@ -74,6 +76,8 @@ IMPORTANT:
 - N'utilise noop que si aucune intention utile ne peut être extraite.
 - Si l'utilisateur veut vider complètement son panier:
   {"intent":"CLEAR_CART","actions":[{"type":"clear_cart"}]}
+- Si l'utilisateur veut passer la commande, finaliser le panier, checkout ou confirmer l'achat:
+  {"intent":"EXEC_CART","actions":[{"type":"exec_cart"}]}
 - Si l'utilisateur demande "de quoi faire ..." ou veut préparer un plat / repas / usage,
   utilise:
   {"intent":"BUILD_MEAL","actions":[{"type":"build_meal","meal":"...","servings":2}]}
@@ -190,6 +194,26 @@ Réponse:
   "intent":"CLEAR_CART",
   "actions":[
     {"type":"clear_cart"}
+  ]
+}
+
+Message:
+"Passe la commande"
+Réponse:
+{
+  "intent":"EXEC_CART",
+  "actions":[
+    {"type":"exec_cart"}
+  ]
+}
+
+Message:
+"Passer la commande"
+Réponse:
+{
+  "intent":"EXEC_CART",
+  "actions":[
+    {"type":"exec_cart"}
   ]
 }
 

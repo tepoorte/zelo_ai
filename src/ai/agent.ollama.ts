@@ -17,11 +17,12 @@ import {
   handleAddToCartAction,
   handleShowCartAction,
   handleClearCartAction,
+  handleExecCartAction,
 } from "./services/cart.service.js";
-import { handleBuildMealAction } from "./services/meal.service.js";
+//import { handleBuildMealAction } from "./services/meal.service.js";
 //import { handleBuildMealActionV2 } from "./services/meal.service.v2.js";
 import { MealBuildEngineV2 } from "./MealBuildEngine.v2.js";
-import { MealBuildEngineV3 } from "./MealBuildEngineV3.js";
+//import { MealBuildEngineV3 } from "./MealBuildEngineV3.js";
 import { planUserIntent } from "./services/planner.service.js";
 
 
@@ -108,6 +109,12 @@ if (action.type === "clear_cart") {
   continue;
 }
 
+if (action.type === "exec_cart") {
+  const result = await handleExecCartAction(userRef, action);
+  toolResults.push({ action, result });
+  continue;
+}
+
 
     if (action.type === "build_meal") {
 
@@ -183,6 +190,30 @@ if (plan.intent === "ADD_ITEMS") {
       summaryLines.join("\n") +
       `\n\n` +
       (basket ? formatCartFr(basket) : "Le panier a été mis à jour, mais je n’ai pas pu relire son contenu.")
+  };
+}
+
+if (plan.intent === "EXEC_CART") {
+  const execResult = toolResults.find(
+    (x) => x.action?.type === "exec_cart"
+  )?.result;
+
+  if (!execResult?.ok) {
+    return {
+      message: "Je n’ai pas réussi à passer la commande.",
+    };
+  }
+
+  const orderId =
+    execResult?.order?.id ??
+    execResult?.order?._id ??
+    execResult?.order?.orderNb ??
+    null;
+
+  return {
+    message:
+      `✅ J’ai bien passé la commande.` +
+      (orderId ? `\nRéférence: ${orderId}` : ""),
   };
 }
 

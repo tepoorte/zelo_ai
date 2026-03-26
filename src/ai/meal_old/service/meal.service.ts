@@ -1,9 +1,9 @@
 import { buildMealIngredients } from "../meal-builder.js";
 import { hasEnoughMealCoverage, suggestMealAlternatives } from "../meal-fallbacks.js";
 import { semanticProductCandidates } from "../catalog-embeddings.js";
-import { addProductToBasket, getCurrentBasket } from "../../swissdata/cart.js";
-import { computeBasketQty } from "./cart-helpers.service.js";
-import { type Product } from "../../swissdata/products.js";
+import { addProductToBasket, getCurrentBasket } from "../../../swissdata/cart.js";
+import { computeBasketQty } from "../../services/cart-helpers.service.js";
+import { type Product } from "../../../swissdata/products.js";
 
 
 function normalizeLoose(text: string): string {

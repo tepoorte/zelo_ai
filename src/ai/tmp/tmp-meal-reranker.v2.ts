@@ -1,4 +1,4 @@
-import type {
+/*import type {
   MealIngredientV2,
   RankedCandidateV2,
 } from "./meal-types.v2.js";
@@ -179,4 +179,4 @@ export function decideCandidateConfidenceV2(
   if (ingredient.isCore && best.score >= 0.8 && strongLexical) return "GOOD";
 
   return "NONE";
-}
+}*/

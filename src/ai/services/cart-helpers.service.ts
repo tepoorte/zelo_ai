@@ -173,8 +173,11 @@ export function formatOptionQuestion(product: Product): string {
     lines.push(`${index + 1}. ${label}${extra ? ` — ${extra}` : ""}`);
   });
 
+  lines.push(`${options.length + 1}. Aucune`);
+
   lines.push("");
   lines.push("Quelles options veux-tu sélectionner ?");
+  lines.push("Écris « aucune » si tu ne veux sélectionner aucune option.");
 
   return lines.join("\n");
 }
@@ -231,4 +234,8 @@ export function resolveOptionsFromText(
     seen.add(x.id);
     return true;
   });
+}
+
+export function userChoseNoOptions(userText: string): boolean {
+  return normalizeLooseText(userText) === "aucune";
 }
