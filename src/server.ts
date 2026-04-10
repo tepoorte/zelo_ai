@@ -11,6 +11,8 @@ import { healthRouter } from "./routes/health.routes.js";
 import { aiRoutes } from "./routes/ai.routes.js";
 import { webhookRoutes } from "./routes/webhook.routes.js";
 import { buildCatalogEmbedding } from "./ai/meal_old/catalog-embeddings.js";
+import { whatsappMetaRoutes } from "./integrations/meta/whatsapp.routes.js";
+import { twilioWhatsAppRoutes } from "./integrations/twilio/whatsapp.routes.js";
 
 const app = express();
 app.use(morgan("dev"));
@@ -32,6 +34,8 @@ app.get("/", (_req, res) => {
 app.use("/health", healthRouter);   // healthRouter.get("/") -> /health
 app.use("/ai", aiRoutes());         // /ai/chat, /ai/test, ecc
 app.use("/webhooks", webhookRoutes());
+app.use("/integrations/meta/whatsapp", whatsappMetaRoutes());
+app.use("/integrations/twilio/whatsapp", twilioWhatsAppRoutes());
 
 app.use(errorHandler);
 

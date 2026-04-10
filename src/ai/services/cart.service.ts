@@ -9,6 +9,7 @@ import {
   resolveOptionsFromText,
   userChoseNoOptions,
 } from "./cart-helpers.service.js";
+import { timeAsync, timeSync } from "../../utils/perf.js";
 
 type AddOutcomePending = {
   pending: true;
@@ -32,8 +33,14 @@ export async function tryResolvePendingOptions(
     return null;
   }
 
-  const selected = resolveOptionsFromText(userText, pending.availableOptions);
-  const choseNoOptions = userChoseNoOptions(userText);
+  const selected = timeSync(
+    "pending.resolve_options_text",
+    () => resolveOptionsFromText(userText, pending.availableOptions)
+  );
+  const choseNoOptions = timeSync(
+    "pending.user_chose_no_options",
+    () => userChoseNoOptions(userText)
+  );
 
   if (!selected.length && !choseNoOptions) {
     return {
@@ -47,28 +54,54 @@ export async function tryResolvePendingOptions(
     };
   }
 
-  const basket = await getCurrentBasket(userRef);
+  const basket = await timeAsync(
+    "pending.get_current_basket_before_add",
+    async () => await getCurrentBasket(userRef)
+  );
 
-  await addProductToBasket(
-    userRef,
-    basket.id,
-    pending.productId,
-    pending.qty,
-    choseNoOptions ? [] : selected.map(x => x.id)
+  await timeAsync(
+    "pending.add_product_to_basket",
+    async () =>
+      await addProductToBasket(
+        userRef,
+        basket.id,
+        pending.productId,
+        pending.qty,
+        choseNoOptions ? [] : selected.map(x => x.id)
+      ),
+    { productId: pending.productId, qty: pending.qty }
   );
 
   clearPending(userRef);
 
-  const updated = await getCurrentBasket(userRef);
+  const updated = await timeAsync(
+    "pending.get_current_basket_after_add",
+    async () => await getCurrentBasket(userRef)
+  );
+
+  const baseMessage =
+    (
+      choseNoOptions
+        ? `✅ J’ai ajouté « ${pending.productName} » sans option.\n\n`
+        : `✅ J’ai ajouté « ${pending.productName} » avec les options : ${selected.map(x => x.name).join(", ")}.\n\n`
+    ) + formatCartFr(updated);
+
+  if (!pending.remainingItems?.length) {
+    return { message: baseMessage };
+  }
+
+  const followUpOutcome = await handleAddToCartAction(userRef, {
+    items: pending.remainingItems,
+  });
+
+  if (followUpOutcome.pending) {
+    return {
+      message: `${baseMessage}\n\n${followUpOutcome.message}`,
+    };
+  }
 
   return {
-    message:
-      (
-        choseNoOptions
-          ? `✅ J’ai ajouté « ${pending.productName} » sans option.\n\n`
-          : `✅ J’ai ajouté « ${pending.productName} » avec les options : ${selected.map(x => x.name).join(", ")}.\n\n`
-      ) +
-      formatCartFr(updated),
+    message: `${baseMessage}\n\n${formatCartFr(followUpOutcome.result.basket)}`,
   };
 }
 
@@ -87,16 +120,24 @@ export async function handleAddToCartAction(
   console.log("[ADD_TO_CART ACTION]", JSON.stringify(action, null, 2));
 
   const targetUserRef = action.userRef ?? userRef;
-  const basket = await getCurrentBasket(targetUserRef);
+  const basket = await timeAsync(
+    "add.get_current_basket_before_items",
+    async () => await getCurrentBasket(targetUserRef)
+  );
   const resolvedItems: any[] = [];
 
-  for (const it of action.items) {
+  for (let index = 0; index < action.items.length; index++) {
+    const it = action.items[index];
     let resolvedProduct: Product | null = null;
 
     if (it.productId) {
       resolvedProduct = { id: it.productId, name: it.productId } as Product;
     } else {
-      resolvedProduct = await resolveProduct(targetUserRef, it.query);
+      resolvedProduct = await timeAsync(
+        "add.resolve_product",
+        async () => await resolveProduct(targetUserRef, it.query),
+        { query: it.query }
+      );
     }
 
     if (!resolvedProduct?.id) {
@@ -116,6 +157,7 @@ export async function handleAddToCartAction(
           productName: resolvedProduct.name,
           qty: Math.max(1, computeBasketQty(resolvedProduct, it.qty, it.unit)),
           unit: it.unit,
+          remainingItems: action.items.slice(index + 1),
           availableOptions: resolvedProduct.availableOptions.map(opt => ({
             id: opt.id,
             name: opt.name || "Option",
@@ -138,13 +180,22 @@ export async function handleAddToCartAction(
       };
     }
 
-    const basketQty = computeBasketQty(resolvedProduct, it.qty, it.unit);
+    const basketQty = timeSync(
+      "add.compute_basket_qty",
+      () => computeBasketQty(resolvedProduct, it.qty, it.unit),
+      { query: it.query, requestedQty: it.qty, unit: it.unit ?? "piece" }
+    );
 
-    const addResult = await addProductToBasket(
-      targetUserRef,
-      basket.id,
-      resolvedProduct.id,
-      basketQty
+    const addResult = await timeAsync(
+      "add.add_product_to_basket",
+      async () =>
+        await addProductToBasket(
+          targetUserRef,
+          basket.id,
+          resolvedProduct.id,
+          basketQty
+        ),
+      { productId: resolvedProduct.id, basketQty }
     );
 
     resolvedItems.push({
@@ -161,7 +212,10 @@ export async function handleAddToCartAction(
     });
   }
 
-  const updated = await getCurrentBasket(targetUserRef);
+  const updated = await timeAsync(
+    "add.get_current_basket_after_items",
+    async () => await getCurrentBasket(targetUserRef)
+  );
 
   console.log("[ADD_TO_CART RESULT]", JSON.stringify({
     resolvedItems,

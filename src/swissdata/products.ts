@@ -1,5 +1,6 @@
 import { env } from "../config/env.js";
 import { swissdataClient } from "./client.js";
+import { timeAsync, timeSync } from "../utils/perf.js";
 
 const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -50,7 +51,11 @@ async function getCatalog(userRef: string, forceRefresh = false): Promise<Produc
   const cached = CATALOG_CACHE.get(cacheKey);
 
   if (!forceRefresh && cached && cached.expiresAt > Date.now()) {
-    return cached.items;
+    return timeSync(
+      "swissdata.catalog_cache_hit",
+      () => cached.items,
+      { count: cached.items.length }
+    );
   }
 
   const shopId = env.swissdataShopId;
@@ -61,12 +66,16 @@ async function getCatalog(userRef: string, forceRefresh = false): Promise<Produc
 
   const api = swissdataClient(userRef);
 
-  const res = await api.get(`/shop/${shopId}/product`, {
-    params: {
-      country,
-      autoFetch: "availableOptions,defaultSupplier",
-    },
-  });
+  const res = await timeAsync(
+    "swissdata.catalog_api",
+    async () =>
+      await api.get(`/shop/${shopId}/product`, {
+        params: {
+          country,
+          autoFetch: "availableOptions,defaultSupplier",
+        },
+      })
+  );
 
   const items = Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
 

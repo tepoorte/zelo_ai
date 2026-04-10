@@ -1,0 +1,48 @@
+version: "3.1"
+
+services:
+  ollama:
+    profiles: ["with-ollama"]
+    image: ollama/ollama:latest
+    container_name: zelo-ai-ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_KEEP_ALIVE=30m
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - ai
+
+  zelo_ai:
+    build:
+      context: ..
+      dockerfile: Dockerfile.server
+    container_name: zelo-ai-web
+    restart: unless-stopped
+    env_file:
+      - ./deploy.env
+    networks:
+      - ai
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${PROXYNET}"
+      - "traefik.http.routers.zelo-ai-http.entrypoints=http"
+      - "traefik.http.routers.zelo-ai-http.rule=Host(`${AI_HOST}`)"
+      - "traefik.http.routers.zelo-ai-http.middlewares=zelo-ai-https"
+      - "traefik.http.middlewares.zelo-ai-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.zelo-ai.entrypoints=https"
+      - "traefik.http.routers.zelo-ai.rule=Host(`${AI_HOST}`)"
+      - "traefik.http.routers.zelo-ai.tls=true"
+      - "traefik.http.routers.zelo-ai.tls.certresolver=p5"
+      - "traefik.http.services.zelo-ai.loadbalancer.server.port=3041"
+
+networks:
+  proxy:
+    name: ${PROXYNET}
+    external: true
+  ai:
+
+volumes:
+  ollama_data:

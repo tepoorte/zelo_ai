@@ -57,6 +57,7 @@ import { localNlpFallback } from "../ai/meal_old/localFallback.js";
 import { login } from "../swissdata/auth.js";
 import { setSession, getSession } from "../swissdata/session.js";
 import { getCurrentBasket } from "../swissdata/cart.js";
+import { withPerfTrace } from "../utils/perf.js";
 
 export function aiRoutes() {
   const r = Router();
@@ -109,7 +110,14 @@ export function aiRoutes() {
       const text = String(req.body?.text ?? "");
       if (!text) return res.status(400).json({ ok: false, error: "Missing text" });
 
-      const out = await runAgent(userRef, text);
+      const out = await withPerfTrace(
+        "ai.chat",
+        async () => await runAgent(userRef, text),
+        {
+          userRef,
+          textPreview: text.slice(0, 80),
+        }
+      );
       res.json({ ok: true, userRef, input: text, ...out });
     } catch (e) {
       next(e);

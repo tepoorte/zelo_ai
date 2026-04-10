@@ -8,6 +8,7 @@ services:
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_KEEP_ALIVE=30m
     restart: unless-stopped
 
   # one-shot: scarica il modello una volta (così al primo avvio non aspetti)
@@ -18,6 +19,7 @@ services:
     entrypoint: ["/bin/sh","-lc"]
     command: >
       "sleep 2 &&
+       ollama pull llama3.2:1b &&
        ollama pull llama3.2 &&
        ollama pull nomic-embed-text &&
        echo 'Models pulled.'"
@@ -40,6 +42,7 @@ services:
       - AI_PROVIDER=ollama
       - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_MODEL=llama3.2
+      - OLLAMA_PLANNER_MODEL=llama3.2:1b
       # lascia pure i tuoi env meta/swissdata, non servono per il test base
     volumes:
       - ./:/app

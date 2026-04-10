@@ -15,6 +15,7 @@ export const env = {
   // Ollama
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434",
   ollamaModel: process.env.OLLAMA_MODEL ?? "llama3.2",
+  ollamaPlannerModel: process.env.OLLAMA_PLANNER_MODEL ?? process.env.OLLAMA_MODEL ?? "llama3.2",
 
   // Meta
   metaVerifyToken: process.env.META_VERIFY_TOKEN ?? "",

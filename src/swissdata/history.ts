@@ -1,5 +1,6 @@
 import { env } from "../config/env.js";
 import { swissdataClient } from "./client.js";
+import { timeAsync } from "../utils/perf.js";
 
 export type PurchaseHistory = Record<string, number>;
 
@@ -10,12 +11,17 @@ export async function getPurchaseHistory(userRef: string): Promise<PurchaseHisto
   const shopId = env.swissdataShopId;
   const country = env.swissdataCountry;
 
-  const res = await api.get(`/shop/${shopId}/order`, {
-    params: {
-      country,
-      limit: 50
-    }
-  });
+  const res = await timeAsync(
+    "swissdata.history_api",
+    async () =>
+      await api.get(`/shop/${shopId}/order`, {
+        params: {
+          country,
+          limit: 50
+        }
+      }),
+    { limit: 50 }
+  );
 
   const orders = Array.isArray(res.data) ? res.data : [];
 

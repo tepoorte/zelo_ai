@@ -19,12 +19,16 @@ import {
   handleClearCartAction,
   handleExecCartAction,
 } from "./services/cart.service.js";
+import {
+  handleDiscoverMealIdeasAction,
+  tryResolvePendingMealDiscovery,
+} from "./services/meal-discovery.service.js";
 //import { handleBuildMealAction } from "./services/meal.service.js";
 //import { handleBuildMealActionV2 } from "./services/meal.service.v2.js";
 import { MealBuildEngineV2 } from "./MealBuildEngine.v2.js";
 //import { MealBuildEngineV3 } from "./MealBuildEngineV3.js";
 import { planUserIntent } from "./services/planner.service.js";
-
+import { timeAsync, perfMeta } from "../utils/perf.js";
 
 
 
@@ -38,22 +42,40 @@ export async function runAgentOllama(
   userRef: string,
   userText: string
 ): Promise<{ message: string }> {
+  perfMeta({ userRef, userTextPreview: userText.slice(0, 80) });
   const lower = userText.toLowerCase();
 
-const pendingReply = await tryResolvePendingOptions(userRef, userText);
+const pendingMealDiscoveryReply = await timeAsync(
+  "agent.pending_meal_discovery",
+  async () => await tryResolvePendingMealDiscovery(userRef, userText)
+);
+if (pendingMealDiscoveryReply) {
+  return pendingMealDiscoveryReply;
+}
+
+const pendingReply = await timeAsync(
+  "agent.pending_options",
+  async () => await tryResolvePendingOptions(userRef, userText)
+);
 if (pendingReply) {
   return pendingReply;
 }
 
   // 1) SHOW CART deterministic
 if (/(carrello|basket|panier|cart)/i.test(lower) && /(montre|mostra|show|voir)/i.test(lower)) {
-  const basket = await handleShowCartAction(userRef);
+  const basket = await timeAsync(
+    "agent.show_cart_deterministic",
+    async () => await handleShowCartAction(userRef)
+  );
   return { message: formatCartFr(basket) };
 }
 
   // 2) PLAN with Ollama for everything shopping-related
 
-  const plan = await planUserIntent(userRef, userText);
+  const plan = await timeAsync(
+    "agent.plan_user_intent",
+    async () => await planUserIntent(userRef, userText)
+  );
   
   /*const planText = await ollamaChat(
     [
@@ -66,24 +88,48 @@ if (/(carrello|basket|panier|cart)/i.test(lower) && /(montre|mostra|show|voir)/i
 
   if (!plan || !Array.isArray(plan.actions)) {
     if (/(carrello|basket|panier|cart)/i.test(lower)) {
-      const basket = await handleShowCartAction(userRef);
+      const basket = await timeAsync(
+        "agent.show_cart_fallback",
+        async () => await handleShowCartAction(userRef)
+      );
       return { message: formatCartFr(basket) };
     }
 
-    return await runGeneralChat(userRef, userText);
+    return await timeAsync(
+      "agent.general_chat",
+      async () => await runGeneralChat(userRef, userText)
+    );
+  }
+
+  if (
+    plan.intent === "NOOP" ||
+    plan.actions.some((action) => action.type === "noop")
+  ) {
+    return await timeAsync(
+      "agent.general_chat_noop",
+      async () => await runGeneralChat(userRef, userText)
+    );
   }
 
   const toolResults: any[] = [];
 
   for (const action of plan.actions) {
     if (action.type === "search_products") {
-      const r = await searchProducts(userRef, action.query, action.limit ?? 5);
+      const r = await timeAsync(
+        "agent.action.search_products",
+        async () => await searchProducts(userRef, action.query, action.limit ?? 5),
+        { query: action.query, limit: action.limit ?? 5 }
+      );
       toolResults.push({ action, result: r });
       continue;
     }
 
 if (action.type === "add_to_cart") {
-  const addOutcome = await handleAddToCartAction(userRef, action);
+  const addOutcome = await timeAsync(
+    "agent.action.add_to_cart",
+    async () => await handleAddToCartAction(userRef, action),
+    { items: action.items.length }
+  );
 
   if (addOutcome.pending === true) {
     return { message: addOutcome.message };
@@ -98,19 +144,37 @@ if (action.type === "add_to_cart") {
 }
 
 if (action.type === "get_cart") {
-  const r = await handleShowCartAction(userRef, action);
+  const r = await timeAsync(
+    "agent.action.get_cart",
+    async () => await handleShowCartAction(userRef, action)
+  );
   toolResults.push({ action, result: r });
   continue;
 }
 
 if (action.type === "clear_cart") {
-  const result = await handleClearCartAction(userRef, action);
+  const result = await timeAsync(
+    "agent.action.clear_cart",
+    async () => await handleClearCartAction(userRef, action)
+  );
   toolResults.push({ action, result });
   continue;
 }
 
 if (action.type === "exec_cart") {
-  const result = await handleExecCartAction(userRef, action);
+  const result = await timeAsync(
+    "agent.action.exec_cart",
+    async () => await handleExecCartAction(userRef, action)
+  );
+  toolResults.push({ action, result });
+  continue;
+}
+
+if (action.type === "discover_meal_ideas") {
+  const result = await timeAsync(
+    "agent.action.discover_meal_ideas",
+    async () => await handleDiscoverMealIdeasAction(userRef)
+  );
   toolResults.push({ action, result });
   continue;
 }
@@ -122,11 +186,15 @@ if (action.type === "exec_cart") {
         //const result = await handleBuildMealActionV2(userRef, action);
 
 
-        const result = await MealBuildEngineV2.handleBuildMeal(userRef, {
+        const result = await timeAsync(
+  "agent.action.build_meal",
+  async () => await MealBuildEngineV2.handleBuildMeal(userRef, {
   type: "build_meal",
   meal: action.meal,
   servings: action.servings
-});
+}),
+  { meal: action.meal, servings: action.servings }
+);
 
    //const result = await MealBuildEngineV3.handleBuildMeal(userRef, action);
   toolResults.push({
@@ -214,6 +282,18 @@ if (plan.intent === "EXEC_CART") {
     message:
       `✅ J’ai bien passé la commande.` +
       (orderId ? `\nRéférence: ${orderId}` : ""),
+  };
+}
+
+if (plan.intent === "DISCOVER_MEALS") {
+  const discoverResult = toolResults.find(
+    (x) => x.action?.type === "discover_meal_ideas"
+  )?.result;
+
+  return {
+    message:
+      discoverResult?.message ??
+      "Je peux vous proposer quelques idees par categorie alimentaire.",
   };
 }
 

@@ -3,15 +3,33 @@ import { env } from "../../config/env.js";
 const OLLAMA_URL = env.ollamaBaseUrl || "http://ollama:11434";
 const MODEL = env.ollamaModel || "llama3.2";
 
-export async function ollamaChat(messages: any[], temperature = 0.2): Promise<string> {
+type OllamaChatConfig = {
+  model?: string;
+  format?: "json";
+  keepAlive?: string;
+  numPredict?: number;
+  numCtx?: number;
+};
+
+export async function ollamaChat(
+  messages: any[],
+  temperature = 0.2,
+  config: OllamaChatConfig = {}
+): Promise<string> {
   const resp = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      model: MODEL,
+      model: config.model || MODEL,
       messages,
       stream: false,
-      options: { temperature },
+      keep_alive: config.keepAlive || "30m",
+      ...(config.format ? { format: config.format } : {}),
+      options: {
+        temperature,
+        ...(typeof config.numPredict === "number" ? { num_predict: config.numPredict } : {}),
+        ...(typeof config.numCtx === "number" ? { num_ctx: config.numCtx } : {}),
+      },
     }),
   });
 

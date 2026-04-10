@@ -1,6 +1,7 @@
 import { searchProducts, fetchFullProduct, type Product } from "../../swissdata/products.js";
 import { matchIngredientToProduct } from "../../domain/matcher.js";
 import { getPurchaseHistory } from "../../swissdata/history.js";
+import { timeAsync, timeSync } from "../../utils/perf.js";
 
 export function formatCartFr(basket: any): string {
   if (!basket) return "Je n’ai pas pu récupérer votre panier.";
@@ -14,7 +15,7 @@ export function formatCartFr(basket: any): string {
   lines.push("🧺 Voici votre panier :");
 
   if (products.length === 0 && manualItems.length === 0) {
-    lines.push("— Aucun produit dans le panier pour l’instant.");
+    lines.push("• Aucun produit dans le panier pour l’instant.");
   } else {
     for (const p of products) {
       const name =
@@ -24,13 +25,13 @@ export function formatCartFr(basket: any): string {
         p?.productId ??
         "Produit";
       const qty = p?.quantity ?? p?.qty ?? 1;
-      lines.push(`— ${qty} × ${name}`);
+      lines.push(`• ${qty} × ${name}`);
     }
 
     for (const it of manualItems) {
       const name = it?.name ?? "Article";
       const qty = it?.quantity ?? it?.qty ?? 1;
-      lines.push(`— ${qty} × ${name} (manuel)`);
+      lines.push(`• ${qty} × ${name} (manuel)`);
     }
   }
 
@@ -39,7 +40,7 @@ export function formatCartFr(basket: any): string {
     lines.push("Frais :");
     for (const f of fees) {
       const price = Number(f?.paidPriceTTC ?? f?.paidPrice ?? 0);
-      lines.push(`— ${f?.name ?? "Frais"} : ${price.toFixed(2)} ${currency}`);
+      lines.push(`• ${f?.name ?? "Frais"} : ${price.toFixed(2)} ${currency}`);
     }
   }
 
@@ -72,7 +73,11 @@ export async function resolveProduct(userRef: string, rawItem: string): Promise<
     } as Product;
   }
 
-  const candidates = await searchProducts(userRef, item, 20);
+  const candidates = await timeAsync(
+    "resolve.search_products",
+    async () => await searchProducts(userRef, item, 20),
+    { query: item }
+  );
   console.log("[RESOLVE] item =", item);
   console.log("[RESOLVE] candidates =", candidates.map(c => ({
     id: c.id,
@@ -81,16 +86,27 @@ export async function resolveProduct(userRef: string, rawItem: string): Promise<
 
   if (!candidates.length) return null;
 
-  const history = await getPurchaseHistory(userRef);
+  const history = await timeAsync(
+    "resolve.purchase_history",
+    async () => await getPurchaseHistory(userRef)
+  );
   console.log("[RESOLVE] history =", history);
 
-  const best = matchIngredientToProduct(item, candidates, history);
+  const best = timeSync(
+    "resolve.match_ingredient_to_product",
+    () => matchIngredientToProduct(item, candidates, history),
+    { candidates: candidates.length }
+  );
   console.log("[RESOLVE] best full =", JSON.stringify(best, null, 2));
 
   const selected = best ?? candidates[0] ?? null;
   if (!selected?.id) return null;
 
-  const full = await fetchFullProduct(userRef, selected.id);
+  const full = await timeAsync(
+    "resolve.fetch_full_product",
+    async () => await fetchFullProduct(userRef, selected.id),
+    { productId: selected.id }
+  );
   console.log("[RESOLVE] fetched full =", JSON.stringify(full, null, 2));
 
   return full ?? selected;
