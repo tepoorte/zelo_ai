@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Zélo AI</title>
+  <style>
+    :root{
+      --bg:#0b0f16;
+      --card: rgba(18, 23, 34, .65);
+      --stroke: rgba(255,255,255,.10);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.70);
+      --blue:#2563eb;
+      --danger:#ef4444;
+      --success:#22c55e;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background: var(--bg);
+      overflow:hidden;
+    }
+
+    #bg{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:-2;
+      display:block;
+    }
+
+    .overlay{
+      position:fixed;
+      inset:0;
+      background:
+        radial-gradient(1200px 700px at 30% 20%, rgba(255,255,255,.06), transparent 55%),
+        radial-gradient(900px 600px at 70% 70%, rgba(255,255,255,.05), transparent 60%),
+        radial-gradient(1200px 900px at 50% 50%, rgba(0,0,0,.15), rgba(0,0,0,.65));
+      z-index:-1;
+      pointer-events:none;
+    }
+
+    .wrap{
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px;
+      height: 100%;
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    h1{
+      margin:0;
+      font-size: 34px;
+      letter-spacing:.2px;
+      color: var(--success);
+    }
+
+    .badge{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+    }
+
+    .topActions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .ghostBtn{
+      padding:10px 14px;
+      font-size:14px;
+      border-radius:12px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      cursor:pointer;
+    }
+
+    .ghostBtn:hover{ filter:brightness(1.05); }
+
+    .mainGrid{
+      flex:1;
+      min-height:0;
+      display:grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
+      gap:14px;
+    }
+
+    .chatColumn{
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    #messages{
+      flex:1;
+      min-height:0;
+      overflow:auto;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    .row{
+      display:flex;
+      margin: 10px 0;
+    }
+
+    .bubble{
+      max-width: 72%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      border: 1px solid rgba(255,255,255,.10);
+    }
+
+    .userRow{ justify-content:flex-end; }
+    .userBubble{
+      background: rgba(37, 99, 235, .90);
+      border-color: rgba(37, 99, 235, .55);
+    }
+
+    .aiRow{ justify-content:flex-start; }
+    .aiBubble{
+      background: rgba(20, 24, 36, .75);
+    }
+
+    .typingBubble{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      min-width:64px;
+    }
+
+    .typingDots{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      height:10px;
+    }
+
+    .typingDots span{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background: rgba(255,255,255,.75);
+      display:inline-block;
+      animation: typingBounce 1.2s infinite ease-in-out;
+    }
+
+    .typingDots span:nth-child(2){
+      animation-delay: .15s;
+    }
+
+    .typingDots span:nth-child(3){
+      animation-delay: .30s;
+    }
+
+    @keyframes typingBounce {
+      0%, 80%, 100% {
+        transform: scale(.7);
+        opacity: .45;
+      }
+      40% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    #inputBar{
+      display:flex;
+      gap:10px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    #input{
+      flex:1;
+      padding: 12px 12px;
+      font-size: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      outline: none;
+    }
+
+    #input::placeholder{ color: rgba(255,255,255,.55); }
+
+    #sendBtn{
+      padding: 12px 16px;
+      font-size: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: var(--blue);
+      color: white;
+      cursor:pointer;
+    }
+
+    #sendBtn:hover{ filter: brightness(1.05); }
+    #sendBtn:disabled{ opacity:.6; cursor:not-allowed; }
+
+    .hint{
+      margin-top:-6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .hidden{ display:none !important; }
+
+    /* Basket panel */
+    .sideColumn{
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .basketCard{
+      flex:1;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+
+    .basketHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:16px 16px 12px 16px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+
+    .basketTitle{
+      margin:0;
+      font-size:18px;
+      color: var(--danger);
+    }
+
+    .basketMeta{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    #basketContent{
+      flex:1;
+      min-height:0;
+      overflow:auto;
+      padding:14px 16px 16px 16px;
+    }
+
+    .basketEmpty{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.5;
+    }
+
+    .basketSection{
+      margin-bottom:16px;
+    }
+
+    .basketSection h3{
+      margin:0 0 10px 0;
+      font-size:14px;
+      color:var(--muted);
+      font-weight:600;
+    }
+
+    .basketItem{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 12px;
+      margin-bottom:8px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      background: rgba(255,255,255,.03);
+    }
+
+    .basketItemName{
+      font-size:14px;
+      line-height:1.35;
+    }
+
+    .basketItemQty{
+      font-size:13px;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+
+    .basketTotals{
+      padding-top:8px;
+      border-top:1px solid rgba(255,255,255,.08);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .basketRow{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      font-size:14px;
+    }
+
+    .basketMuted{
+      color:var(--muted);
+    }
+
+    .basketStrong{
+      font-weight:700;
+    }
+
+    /* LOGIN OVERLAY */
+    #authOverlay{
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      z-index:10;
+      background: rgba(0,0,0,.42);
+      backdrop-filter: blur(8px);
+    }
+
+    .authCard{
+      width:100%;
+      max-width:440px;
+      border-radius:20px;
+      border:1px solid var(--stroke);
+      background: rgba(14, 18, 28, .92);
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+      padding:22px;
+    }
+
+    .authTitle{
+      margin:0 0 6px 0;
+      font-size:28px;
+      font-weight:700;
+    }
+
+    .authSub{
+      margin:0 0 18px 0;
+      color:var(--muted);
+      line-height:1.4;
+      font-size:14px;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin-bottom:14px;
+    }
+
+    .field label{
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .field input{
+      width:100%;
+      padding:12px 13px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.25);
+      color:var(--text);
+      outline:none;
+      font-size:15px;
+    }
+
+    .field input::placeholder{
+      color: rgba(255,255,255,.45);
+    }
+
+    .authActions{
+      display:flex;
+      gap:10px;
+      margin-top:8px;
+    }
+
+    .primaryBtn{
+      flex:1;
+      padding:12px 16px;
+      font-size:15px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: var(--blue);
+      color:white;
+      cursor:pointer;
+    }
+
+    .primaryBtn:disabled{ opacity:.6; cursor:not-allowed; }
+
+    .statusLine{
+      min-height:20px;
+      margin-top:12px;
+      font-size:13px;
+    }
+
+    .statusError{ color: #fca5a5; }
+    .statusOk{ color: #86efac; }
+
+    @media (max-width: 980px){
+      .mainGrid{
+        grid-template-columns: 1fr;
+      }
+      .sideColumn{
+        min-height: 280px;
+      }
+    }
+
+    @media (max-width: 720px){
+      .wrap{ padding:16px; }
+      h1{ font-size: 28px; }
+      .bubble{ max-width: 86%; }
+      .authCard{ padding:18px; }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="bg"></canvas>
+  <div class="overlay"></div>
+
+  <div id="authOverlay">
+    <div class="authCard">
+      <h2 class="authTitle">Connexion Zelo AI</h2>
+      <p class="authSub">
+        Connecte-toi pour permettre à Zelo AI de lire et modifier ton panier réel.
+      </p>
+
+      <div class="field">
+        <label for="emailInput">Email</label>
+        <input id="emailInput" type="email" placeholder="public-contact-003@example.invalid" />
+      </div>
+
+      <div class="field">
+        <label for="passwordInput">Mot de passe</label>
+        <input id="passwordInput" type="password" placeholder="Ton mot de passe" />
+      </div>
+
+      <div class="authActions">
+        <button id="loginBtn" class="primaryBtn" onclick="login()">Se connecter</button>
+      </div>
+
+      <div id="authStatus" class="statusLine"></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <h1>Zélo AI</h1>
+      <div class="topActions">
+        <button id="refreshBasketBtn" class="ghostBtn hidden" onclick="refreshBasket()">Rafraîchir panier</button>
+        <button id="logoutBtn" class="ghostBtn hidden" onclick="logout()">Déconnexion</button>
+        <span id="sessionBadge" class="badge">non connecté</span>
+      </div>
+    </header>
+
+    <div class="mainGrid">
+      <div class="chatColumn">
+        <div id="messages"></div>
+
+        <div class="hint">
+          Essay: “montre-moi mon panier”, “ajoute 1 lard de begnins à mon panier”
+          ou une question quelconque.
+        </div>
+
+        <div id="inputBar" class="hidden">
+          <input id="input" placeholder="Écris quelque chose..." />
+          <button id="sendBtn" onclick="send()">Envoyer</button>
+        </div>
+      </div>
+
+      <div class="sideColumn">
+        <div class="basketCard">
+          <div class="basketHeader">
+            <div>
+              <h2 class="basketTitle">Panier</h2>
+              <div id="basketMeta" class="basketMeta">non connecté</div>
+            </div>
+          </div>
+          <div id="basketContent">
+            <div class="basketEmpty">Connecte-toi pour voir ton panier en direct.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const USER_REF = "local-dev";
+
+    const messages = document.getElementById("messages");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("sendBtn");
+
+    const authOverlay = document.getElementById("authOverlay");
+    const emailInput = document.getElementById("emailInput");
+    const passwordInput = document.getElementById("passwordInput");
+    const loginBtn = document.getElementById("loginBtn");
+    const authStatus = document.getElementById("authStatus");
+
+    const inputBar = document.getElementById("inputBar");
+    const sessionBadge = document.getElementById("sessionBadge");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const refreshBasketBtn = document.getElementById("refreshBasketBtn");
+
+    const basketContent = document.getElementById("basketContent");
+    const basketMeta = document.getElementById("basketMeta");
+
+    function addMessage(text, who){
+      const row = document.createElement("div");
+      row.className = "row " + (who === "user" ? "userRow" : "aiRow");
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble " + (who === "user" ? "userBubble" : "aiBubble");
+      bubble.textContent = text;
+
+      row.appendChild(bubble);
+      messages.appendChild(row);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+        function addTypingMessage(){
+      removeTypingMessage();
+
+      const row = document.createElement("div");
+      row.className = "row aiRow";
+      row.id = "typingRow";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble aiBubble typingBubble";
+
+      const dots = document.createElement("div");
+      dots.className = "typingDots";
+      dots.innerHTML = "<span></span><span></span><span></span>";
+
+      bubble.appendChild(dots);
+      row.appendChild(bubble);
+      messages.appendChild(row);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function removeTypingMessage(){
+      const el = document.getElementById("typingRow");
+      if (el) el.remove();
+    }
+
+
+    function setAuthStatus(text, type = ""){
+      authStatus.textContent = text || "";
+      authStatus.className = "statusLine";
+      if(type === "error") authStatus.classList.add("statusError");
+      if(type === "ok") authStatus.classList.add("statusOk");
+    }
+
+    function setLoggedInUI(email){
+      authOverlay.classList.add("hidden");
+      inputBar.classList.remove("hidden");
+      logoutBtn.classList.remove("hidden");
+      refreshBasketBtn.classList.remove("hidden");
+      sessionBadge.textContent = email ? `connecté · ${email}` : "connecté";
+      basketMeta.textContent = email ? `connecté · ${email}` : "connecté";
+    }
+
+    function setLoggedOutUI(){
+      authOverlay.classList.remove("hidden");
+      inputBar.classList.add("hidden");
+      logoutBtn.classList.add("hidden");
+      refreshBasketBtn.classList.add("hidden");
+      sessionBadge.textContent = "non connecté";
+      basketMeta.textContent = "non connecté";
+      basketContent.innerHTML = `<div class="basketEmpty">Connecte-toi pour voir ton panier en direct.</div>`;
+    }
+
+    function saveSession(email){
+      localStorage.setItem("zelo_ai_auth", JSON.stringify({
+        email,
+        userRef: USER_REF,
+        loggedIn: true
+      }));
+    }
+
+    function clearSession(){
+      localStorage.removeItem("zelo_ai_auth");
+    }
+
+    function restoreSession(){
+      try{
+        const raw = localStorage.getItem("zelo_ai_auth");
+        if(!raw) return false;
+        const session = JSON.parse(raw);
+        if(session?.loggedIn){
+          emailInput.value = session.email || "";
+          setLoggedInUI(session.email || "");
+          return true;
+        }
+      }catch{}
+      return false;
+    }
+
+    function renderBasket(basket){
+      if(!basket){
+        basketContent.innerHTML = `<div class="basketEmpty">Impossible de charger le panier.</div>`;
+        return;
+      }
+
+      const products = Array.isArray(basket.products) ? basket.products : [];
+      const fees = Array.isArray(basket.fees) ? basket.fees : [];
+      const currency = basket.currency || "";
+
+      let html = "";
+
+      html += `<div class="basketSection">`;
+      html += `<h3>Articles</h3>`;
+
+      if(products.length === 0){
+        html += `<div class="basketEmpty">Aucun produit dans le panier pour l’instant.</div>`;
+      } else {
+        for(const p of products){
+          const name =
+            p?.name ||
+            p?.productName ||
+            p?.product?.name ||
+            p?.productId ||
+            "Produit";
+
+          const qty = p?.quantity ?? p?.qty ?? 1;
+
+          html += `
+            <div class="basketItem">
+              <div class="basketItemName">${escapeHtml(name)}</div>
+              <div class="basketItemQty">${qty} ×</div>
+            </div>
+          `;
+        }
+      }
+
+      html += `</div>`;
+
+      if(fees.length){
+        html += `<div class="basketSection"><h3>Frais</h3>`;
+        for(const f of fees){
+          const feeName =
+            f?.name?.fr ||
+            f?.name ||
+            "Frais";
+          const feePrice = Number(f?.paidPriceTTC ?? f?.paidPrice ?? 0).toFixed(2);
+
+          html += `
+            <div class="basketRow">
+              <span class="basketMuted">${escapeHtml(String(feeName))}</span>
+              <span>${feePrice} ${currency}</span>
+            </div>
+          `;
+        }
+        html += `</div>`;
+      }
+
+      html += `<div class="basketTotals">`;
+
+      if(basket.totalPriceTTC != null){
+        html += `
+          <div class="basketRow basketStrong">
+            <span>Total TTC</span>
+            <span>${Number(basket.totalPriceTTC).toFixed(2)} ${currency}</span>
+          </div>
+        `;
+      } else if(basket.totalPrice != null){
+        html += `
+          <div class="basketRow basketStrong">
+            <span>Total</span>
+            <span>${Number(basket.totalPrice).toFixed(2)} ${currency}</span>
+          </div>
+        `;
+      }
+
+      if(basket.estimatedDeliveryDate){
+        html += `
+          <div class="basketRow">
+            <span class="basketMuted">Livraison</span>
+            <span>${escapeHtml(String(basket.estimatedDeliveryDate))}</span>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+
+      basketContent.innerHTML = html;
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function refreshBasket(){
+      try{
+        const res = await fetch(`/ai/basket?userRef=${encodeURIComponent(USER_REF)}`);
+        const data = await res.json();
+
+        if(!res.ok || !data?.ok){
+          basketContent.innerHTML = `<div class="basketEmpty">Impossible de charger le panier.</div>`;
+          return;
+        }
+
+        renderBasket(data.basket);
+      }catch(e){
+        basketContent.innerHTML = `<div class="basketEmpty">Erreur réseau pendant le chargement du panier.</div>`;
+      }
+    }
+
+    async function login(){
+      const username = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if(!username || !password){
+        setAuthStatus("Inserisci email e password.", "error");
+        return;
+      }
+
+      loginBtn.disabled = true;
+      setAuthStatus("Connexion en cours...");
+
+      try{
+        const res = await fetch("/ai/login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            userRef: USER_REF,
+            username,
+            password
+          })
+        });
+
+        const data = await res.json();
+
+        if(!res.ok || !data?.ok){
+          throw new Error(data?.error || "Échec de connexion");
+        }
+
+        saveSession(username);
+        setLoggedInUI(username);
+        setAuthStatus("Connexion réussie.", "ok");
+
+        if(messages.children.length === 0){
+          addMessage("Bonjour 👋 Je suis prêt. Tu peux me demander ton panier ou ajouter un produit.", "ai");
+        }
+
+        await refreshBasket();
+      }catch(e){
+        setAuthStatus("Erreur: " + (e?.message || e), "error");
+      }finally{
+        loginBtn.disabled = false;
+      }
+    }
+
+    function logout(){
+      clearSession();
+      setLoggedOutUI();
+      setAuthStatus("");
+      passwordInput.value = "";
+      addMessage("Session fermée.", "ai");
+    }
+
+    async function send(){
+      const text = input.value.trim();
+      if(!text) return;
+
+      addMessage(text, "user");
+      input.value = "";
+      input.focus();
+
+      sendBtn.disabled = true;
+      addTypingMessage();
+
+      try{
+        const res = await fetch("/ai/chat", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ userRef: USER_REF, text })
+        });
+
+        const data = await res.json();
+
+        removeTypingMessage();
+        addMessage(data.message || data.error || "errore", "ai");
+
+        await refreshBasket();
+      }catch(e){
+        removeTypingMessage();
+        addMessage("Errore di rete: " + (e?.message || e), "ai");
+      }finally{
+        sendBtn.disabled = false;
+      }
+    }
+
+    input.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") send();
+    });
+
+    emailInput.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") login();
+    });
+
+    passwordInput.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") login();
+    });
+
+    if(!restoreSession()){
+      setLoggedOutUI();
+    } else {
+      if(messages.children.length === 0){
+        addMessage("Bonjour 👋 Je suis prêt. Tu peux me demander ton panier ou ajouter un produit.", "ai");
+      }
+      refreshBasket();
+    }
+
+    const canvas = document.getElementById("bg");
+    const ctx = canvas.getContext("2d");
+
+    function resize(){
+      canvas.width = Math.floor(window.innerWidth * devicePixelRatio);
+      canvas.height = Math.floor(window.innerHeight * devicePixelRatio);
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    const W = () => window.innerWidth;
+    const H = () => window.innerHeight;
+
+    const blobs = [
+      { x: 0.25, y: 0.30, r: 260, dx: 0.00035, dy: 0.00022, a: 0.65 },
+      { x: 0.70, y: 0.40, r: 320, dx: -0.00028, dy: 0.00018, a: 0.55 },
+      { x: 0.55, y: 0.75, r: 360, dx: 0.00020, dy: -0.00026, a: 0.50 },
+    ];
+
+    function draw(t){
+      t = t || 0;
+      const time = t * 0.001;
+
+      ctx.clearRect(0,0,W(),H());
+
+      ctx.fillStyle = "#0b0f16";
+      ctx.fillRect(0,0,W(),H());
+
+      ctx.globalCompositeOperation = "lighter";
+
+      for(const b of blobs){
+        const px = (b.x + Math.sin(time)*b.dx*2000 + Math.sin(time*0.7)*b.dx*1200) * W();
+        const py = (b.y + Math.cos(time)*b.dy*2000 + Math.cos(time*0.9)*b.dy*1200) * H();
+
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, b.r);
+        grad.addColorStop(0.00, `rgba(37, 99, 235, ${b.a})`);
+        grad.addColorStop(0.35, `rgba(16, 185, 129, ${b.a*0.75})`);
+        grad.addColorStop(0.65, `rgba(168, 85, 247, ${b.a*0.65})`);
+        grad.addColorStop(1.00, "rgba(0,0,0,0)");
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(px, py, b.r, 0, Math.PI*2);
+        ctx.fill();
+      }
+
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.fillRect(0,0,W(),H());
+
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>

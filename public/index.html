@@ -1,29 +1,48 @@
 <!doctype html>
-<html lang="it">
+<html lang="fr">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Zélo AI</title>
+  <title>Zelo AI Super</title>
   <style>
+    @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap");
+
     :root{
-      --bg:#0b0f16;
-      --card: rgba(18, 23, 34, .65);
-      --stroke: rgba(255,255,255,.10);
-      --text: rgba(255,255,255,.92);
-      --muted: rgba(255,255,255,.70);
-      --blue:#2563eb;
-      --danger:#ef4444;
-      --success:#22c55e;
+      --bg:#06131b;
+      --bg-soft:#0d1f2a;
+      --panel:rgba(6, 18, 28, 0.68);
+      --panel-strong:rgba(7, 14, 25, 0.88);
+      --line:rgba(188, 245, 255, 0.14);
+      --line-strong:rgba(188, 245, 255, 0.26);
+      --text:#edf7ff;
+      --muted:rgba(237, 247, 255, 0.66);
+      --blue:#2f7cff;
+      --teal:#19d3b3;
+      --coral:#ff8f6b;
+      --gold:#ffd166;
+      --danger:#ff6b6b;
+      --success:#5df29b;
+      --radius-xl:28px;
+      --radius-lg:20px;
+      --radius-md:14px;
+      --shadow:0 24px 80px rgba(0,0,0,0.34);
+      --card-glow:0 0 0 1px rgba(255,255,255,0.05), 0 30px 80px rgba(0,0,0,0.35);
     }
 
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
     body{
       margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family:"Space Grotesk", system-ui, sans-serif;
+      background:var(--bg);
       color:var(--text);
-      background: var(--bg);
-      overflow:hidden;
+      overflow-x:hidden;
+      overflow-y:auto;
+    }
+
+    button,
+    input{
+      font:inherit;
     }
 
     #bg{
@@ -31,290 +50,771 @@
       inset:0;
       width:100%;
       height:100%;
-      z-index:-2;
+      z-index:-3;
       display:block;
     }
 
-    .overlay{
+    .veil{
       position:fixed;
       inset:0;
+      z-index:-2;
       background:
-        radial-gradient(1200px 700px at 30% 20%, rgba(255,255,255,.06), transparent 55%),
-        radial-gradient(900px 600px at 70% 70%, rgba(255,255,255,.05), transparent 60%),
-        radial-gradient(1200px 900px at 50% 50%, rgba(0,0,0,.15), rgba(0,0,0,.65));
-      z-index:-1;
+        radial-gradient(900px 600px at 15% 15%, rgba(25, 211, 179, 0.14), transparent 60%),
+        radial-gradient(1000px 700px at 80% 18%, rgba(47, 124, 255, 0.18), transparent 60%),
+        radial-gradient(1100px 900px at 50% 85%, rgba(255, 143, 107, 0.12), transparent 65%),
+        linear-gradient(180deg, rgba(3, 10, 20, 0.25), rgba(3, 10, 20, 0.72));
       pointer-events:none;
     }
 
+    .grain{
+      position:fixed;
+      inset:-50%;
+      z-index:-1;
+      opacity:.06;
+      pointer-events:none;
+      background-image:
+        radial-gradient(circle at 25% 25%, #fff 0.7px, transparent 0.8px),
+        radial-gradient(circle at 75% 75%, #fff 0.7px, transparent 0.8px);
+      background-size:28px 28px, 34px 34px;
+      animation: grainShift 16s linear infinite;
+    }
+
+    @keyframes grainShift {
+      from { transform: translate(0, 0); }
+      to { transform: translate(6%, 4%); }
+    }
+
     .wrap{
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 28px;
-      height: 100%;
-      display:flex;
-      flex-direction:column;
-      gap: 14px;
+      max-width:1440px;
+      min-height:100%;
+      height:auto;
+      margin:0 auto;
+      padding:22px;
+      display:grid;
+      grid-template-rows:auto auto minmax(0, 1fr);
+      gap:14px;
     }
 
-    header{
-      display:flex;
+    .livingCard{
+      position:relative;
+      overflow:hidden;
+      border:1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
+        var(--panel);
+      box-shadow:var(--card-glow);
+      backdrop-filter:blur(18px);
+      transform-style:preserve-3d;
+      transition:
+        transform .25s ease,
+        border-color .25s ease,
+        box-shadow .25s ease,
+        background .25s ease;
+    }
+
+    .livingCard::before{
+      content:"";
+      position:absolute;
+      inset:auto -10% -45% -10%;
+      height:60%;
+      background:radial-gradient(circle, rgba(255,255,255,0.12), transparent 65%);
+      opacity:0;
+      transform:translateY(24px);
+      transition:opacity .28s ease, transform .28s ease;
+      pointer-events:none;
+    }
+
+    .livingCard:hover{
+      border-color:var(--line-strong);
+      box-shadow:0 0 0 1px rgba(255,255,255,0.06), 0 36px 90px rgba(0,0,0,0.45);
+    }
+
+    .livingCard:hover::before{
+      opacity:1;
+      transform:translateY(0);
+    }
+
+    .magnetic{
+      transition:
+        transform .18s ease,
+        border-radius .22s ease,
+        filter .2s ease,
+        box-shadow .2s ease,
+        background .2s ease;
+      will-change:transform;
+    }
+
+    .magnetic:hover{
+      filter:brightness(1.05);
+    }
+
+    .hidden{
+      display:none !important;
+    }
+
+    .topbar{
+      border-radius:30px;
+      padding:18px 20px;
+      display:grid;
+      grid-template-columns:minmax(0, 1.3fr) auto;
+      gap:16px;
       align-items:center;
-      justify-content:space-between;
-      gap:12px;
     }
 
-    h1{
-      margin:0;
-      font-size: 34px;
-      letter-spacing:.2px;
-      color: var(--success);
+    .brandBlock{
+      display:grid;
+      gap:10px;
+      min-width:0;
     }
 
-    .badge{
-      font-size:12px;
-      padding:6px 10px;
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      width:max-content;
+      padding:8px 12px;
       border-radius:999px;
-      border:1px solid var(--stroke);
-      background: rgba(255,255,255,.05);
-      color: var(--muted);
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.04);
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .eyebrowDot{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:var(--success);
+      box-shadow:0 0 14px rgba(93, 242, 155, 0.85);
+    }
+
+    .heroTitle{
+      margin:0;
+      font-size:clamp(34px, 5vw, 72px);
+      line-height:.92;
+      letter-spacing:-.04em;
+    }
+
+    .heroTitle em{
+      font-family:"Instrument Serif", serif;
+      font-style:italic;
+      font-weight:400;
+      color:#aee8ff;
+    }
+
+    .heroSub{
+      max-width:760px;
+      margin:0;
+      color:var(--muted);
+      font-size:15px;
+      line-height:1.55;
     }
 
     .topActions{
       display:flex;
-      align-items:center;
+      align-items:flex-start;
       gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
     }
 
-    .ghostBtn{
-      padding:10px 14px;
-      font-size:14px;
-      border-radius:12px;
-      border:1px solid var(--stroke);
-      background: rgba(255,255,255,.05);
-      color: var(--text);
+    .actionBtn{
+      border:1px solid rgba(255,255,255,0.1);
+      color:var(--text);
+      background:rgba(255,255,255,0.04);
+      border-radius:16px;
+      padding:11px 16px;
       cursor:pointer;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);
     }
 
-    .ghostBtn:hover{ filter:brightness(1.05); }
+    .actionBtn.primary{
+      background:linear-gradient(135deg, rgba(47,124,255,0.9), rgba(25,211,179,0.76));
+      color:white;
+      border-color:rgba(255,255,255,0.18);
+    }
 
-    .mainGrid{
-      flex:1;
-      min-height:0;
+    .sessionPill{
+      padding:11px 15px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.04);
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .signalGrid{
       display:grid;
-      grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:12px;
+      min-height:0;
+    }
+
+    .signalCard{
+      border-radius:24px;
+      padding:18px;
+      min-height:140px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
       gap:14px;
     }
 
-    .chatColumn{
+    .signalLabel{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:rgba(237,247,255,0.52);
+    }
+
+    .signalValue{
+      font-size:28px;
+      line-height:1;
+      margin:0;
+    }
+
+    .signalMeta{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.45;
+      margin:0;
+    }
+
+    .intentBadge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      width:max-content;
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:12px;
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.08);
+      color:var(--text);
+    }
+
+    .intentGlow{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:var(--teal);
+      box-shadow:0 0 14px rgba(25,211,179,0.72);
+    }
+
+    .ideaRail{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .ideaChip{
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.04);
+      color:var(--text);
+      border-radius:999px;
+      padding:9px 13px;
+      font-size:12px;
+      cursor:pointer;
+    }
+
+    .mainGrid{
+      min-height:0;
+      display:grid;
+      grid-template-columns:minmax(0, 1.65fr) minmax(320px, .95fr);
+      gap:14px;
+    }
+
+    .chatColumn,
+    .sideColumn{
       min-height:0;
       display:flex;
       flex-direction:column;
       gap:14px;
     }
 
-    #messages{
-      flex:1;
+    .chatShell,
+    .basketShell{
+      border-radius:var(--radius-xl);
       min-height:0;
+    }
+
+    .chatShell{
+      display:grid;
+      grid-template-rows:auto minmax(0, 1fr) auto;
+      gap:12px;
+      padding:18px;
+    }
+
+    .chatHeader{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+    }
+
+    .chatTitle{
+      margin:0;
+      font-size:22px;
+      letter-spacing:-.03em;
+    }
+
+    .chatSub{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.45;
+      max-width:620px;
+    }
+
+    .chatStage{
+      position:relative;
+      min-height:0;
+      padding:10px;
+      border-radius:24px;
+      border:1px solid rgba(255,255,255,0.06);
+      background:rgba(0,0,0,0.18);
+      overflow:hidden;
+    }
+
+    .chatStage::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at var(--spot-x, 50%) var(--spot-y, 50%), rgba(174, 232, 255, 0.1), transparent 35%),
+        linear-gradient(180deg, rgba(255,255,255,0.03), transparent 40%);
+      pointer-events:none;
+    }
+
+    #messages{
+      position:relative;
+      z-index:1;
+      height:100%;
       overflow:auto;
-      padding: 14px;
-      border-radius: 18px;
-      border: 1px solid var(--stroke);
-      background: var(--card);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      padding:8px 10px 12px;
+      mask-image:linear-gradient(180deg, transparent 0%, rgba(0,0,0,1) 3%, rgba(0,0,0,1) 96%, transparent 100%);
     }
 
     .row{
       display:flex;
-      margin: 10px 0;
+      margin:12px 0;
+      opacity:0;
+      transform:translateY(14px);
+      animation:messageIn .35s ease forwards;
     }
 
-    .bubble{
-      max-width: 72%;
-      padding: 12px 14px;
-      border-radius: 14px;
-      line-height: 1.35;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      border: 1px solid rgba(255,255,255,.10);
+    @keyframes messageIn{
+      to{
+        opacity:1;
+        transform:translateY(0);
+      }
     }
 
     .userRow{ justify-content:flex-end; }
-    .userBubble{
-      background: rgba(37, 99, 235, .90);
-      border-color: rgba(37, 99, 235, .55);
+    .aiRow{ justify-content:flex-start; }
+
+    .bubble{
+      max-width:min(74%, 740px);
+      border-radius:22px;
+      padding:14px 16px;
+      border:1px solid rgba(255,255,255,0.1);
+      line-height:1.45;
+      white-space:pre-wrap;
+      word-break:break-word;
+      box-shadow:0 20px 40px rgba(0,0,0,0.12);
     }
 
-    .aiRow{ justify-content:flex-start; }
+    .userBubble{
+      background:linear-gradient(135deg, rgba(47,124,255,0.96), rgba(34,197,94,0.72));
+      color:white;
+      border-color:rgba(255,255,255,0.15);
+      border-bottom-right-radius:8px;
+    }
+
     .aiBubble{
-      background: rgba(20, 24, 36, .75);
+      background:rgba(14, 24, 37, 0.86);
+      border-bottom-left-radius:8px;
     }
 
     .typingBubble{
       display:inline-flex;
       align-items:center;
-      gap:6px;
-      min-width:64px;
+      justify-content:center;
+      min-width:76px;
+      gap:8px;
     }
 
     .typingDots{
-      display:inline-flex;
+      display:flex;
       align-items:center;
       gap:6px;
-      height:10px;
+      height:12px;
     }
 
     .typingDots span{
       width:8px;
       height:8px;
       border-radius:999px;
-      background: rgba(255,255,255,.75);
-      display:inline-block;
-      animation: typingBounce 1.2s infinite ease-in-out;
+      background:rgba(237,247,255,0.82);
+      animation:typingBounce 1.2s infinite ease-in-out;
     }
 
-    .typingDots span:nth-child(2){
-      animation-delay: .15s;
+    .typingDots span:nth-child(2){ animation-delay:.12s; }
+    .typingDots span:nth-child(3){ animation-delay:.24s; }
+
+    @keyframes typingBounce{
+      0%, 80%, 100% { transform:translateY(0) scale(.7); opacity:.4; }
+      40% { transform:translateY(-4px) scale(1); opacity:1; }
     }
 
-    .typingDots span:nth-child(3){
-      animation-delay: .30s;
+    .composer{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:12px;
+      padding:12px;
+      border-radius:26px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(8,17,27,0.78);
+      box-shadow:0 25px 60px rgba(0,0,0,0.28);
+      transition:border-color .2s ease, transform .2s ease, box-shadow .2s ease;
     }
 
-    @keyframes typingBounce {
-      0%, 80%, 100% {
-        transform: scale(.7);
-        opacity: .45;
-      }
-      40% {
-        transform: scale(1);
-        opacity: 1;
-      }
+    .composer:focus-within{
+      border-color:rgba(174,232,255,0.24);
+      box-shadow:0 28px 70px rgba(0,0,0,0.34), 0 0 0 1px rgba(174,232,255,0.08);
+      transform:translateY(-2px);
     }
 
-    #inputBar{
+    .composerMain{
       display:flex;
+      flex-direction:column;
       gap:10px;
-      padding: 12px;
-      border-radius: 16px;
-      border: 1px solid var(--stroke);
-      background: var(--card);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      min-width:0;
     }
 
-    #input{
-      flex:1;
-      padding: 12px 12px;
-      font-size: 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.25);
-      color: var(--text);
-      outline: none;
-    }
-
-    #input::placeholder{ color: rgba(255,255,255,.55); }
-
-    #sendBtn{
-      padding: 12px 16px;
-      font-size: 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: var(--blue);
-      color: white;
-      cursor:pointer;
-    }
-
-    #sendBtn:hover{ filter: brightness(1.05); }
-    #sendBtn:disabled{ opacity:.6; cursor:not-allowed; }
-
-    .hint{
-      margin-top:-6px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .hidden{ display:none !important; }
-
-    /* Basket panel */
-    .sideColumn{
-      min-height:0;
-      display:flex;
-      flex-direction:column;
-    }
-
-    .basketCard{
-      flex:1;
-      min-height:0;
-      display:flex;
-      flex-direction:column;
-      border-radius: 18px;
-      border: 1px solid var(--stroke);
-      background: var(--card);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 10px 30px rgba(0,0,0,.35);
-      overflow:hidden;
-    }
-
-    .basketHeader{
+    .composerTop{
       display:flex;
       align-items:center;
       justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .composerLabel{
+      display:flex;
+      align-items:center;
       gap:10px;
-      padding:16px 16px 12px 16px;
-      border-bottom:1px solid rgba(255,255,255,.08);
+      font-size:13px;
+      color:var(--muted);
     }
 
-    .basketTitle{
-      margin:0;
-      font-size:18px;
-      color: var(--danger);
+    .pulseDot{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:var(--teal);
+      box-shadow:0 0 14px rgba(25,211,179,0.75);
+      animation:pulseDot 1.8s infinite ease;
     }
 
-    .basketMeta{
+    @keyframes pulseDot{
+      0%, 100% { transform:scale(1); opacity:1; }
+      50% { transform:scale(.7); opacity:.45; }
+    }
+
+    .composerHint{
       font-size:12px;
       color:var(--muted);
     }
 
+    #input{
+      width:100%;
+      border:1px solid rgba(255,255,255,0.1);
+      outline:none;
+      background:rgba(0,0,0,0.26);
+      color:var(--text);
+      font-size:18px;
+      padding:14px 16px;
+      min-height:56px;
+      border-radius:18px;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+      transition:border-color .2s ease, background .2s ease, transform .2s ease, box-shadow .2s ease;
+    }
+
+    #input::placeholder{
+      color:rgba(237,247,255,0.4);
+    }
+
+    #input:focus{
+      border-color:rgba(174,232,255,0.28);
+      background:rgba(0,0,0,0.34);
+      transform:translateY(-1px);
+      box-shadow:0 0 0 1px rgba(174,232,255,0.08), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .suggestionRail{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .predictionBoard{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:10px;
+      margin-top:2px;
+    }
+
+    .predictionCell{
+      padding:12px 14px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.03);
+      min-height:104px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:8px;
+    }
+
+    .predictionLabel{
+      display:block;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:rgba(237,247,255,0.48);
+    }
+
+    .predictionValue{
+      display:block;
+      font-size:20px;
+      line-height:1.05;
+      letter-spacing:-.04em;
+      color:var(--text);
+    }
+
+    .predictionValue.small{
+      font-size:15px;
+      line-height:1.3;
+      letter-spacing:-.02em;
+    }
+
+    .predictionNote{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
+
+    .predictionMiniBar{
+      width:100%;
+      height:8px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.08);
+      overflow:hidden;
+      margin-top:2px;
+    }
+
+    .predictionFill{
+      width:0%;
+      height:100%;
+      border-radius:999px;
+      background:linear-gradient(90deg, rgba(47,124,255,0.9), rgba(25,211,179,0.86));
+      transition:width .2s ease, background .2s ease;
+    }
+
+    .suggestion{
+      border:none;
+      background:rgba(255,255,255,0.05);
+      color:var(--text);
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:12px;
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,0.07);
+    }
+
+    .sendCluster{
+      display:flex;
+      align-items:center;
+    }
+
+    #sendBtn{
+      min-width:170px;
+      min-height:112px;
+      border:none;
+      border-radius:28px;
+      cursor:pointer;
+      color:white;
+      background:
+        radial-gradient(circle at 25% 20%, rgba(255,255,255,0.2), transparent 30%),
+        linear-gradient(145deg, rgba(47,124,255,0.98), rgba(25,211,179,0.82));
+      box-shadow:0 24px 60px rgba(16, 85, 163, 0.38);
+      padding:18px 20px;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+      justify-content:space-between;
+      text-align:left;
+      position:relative;
+      overflow:hidden;
+    }
+
+    #sendBtn::after{
+      content:"";
+      position:absolute;
+      inset:auto -20% -35% auto;
+      width:120px;
+      height:120px;
+      border-radius:999px;
+      background:radial-gradient(circle, rgba(255,255,255,0.16), transparent 70%);
+      pointer-events:none;
+    }
+
+    .sendEyebrow{
+      font-size:11px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      opacity:.75;
+    }
+
+    .sendLabel{
+      font-size:24px;
+      line-height:.95;
+      letter-spacing:-.04em;
+      font-weight:700;
+    }
+
+    .sendSub{
+      font-size:12px;
+      opacity:.84;
+      max-width:140px;
+      line-height:1.3;
+    }
+
+    #sendBtn.is-busy{
+      background:
+        radial-gradient(circle at 25% 20%, rgba(255,255,255,0.22), transparent 30%),
+        linear-gradient(145deg, rgba(255,143,107,0.96), rgba(255,209,102,0.84));
+      box-shadow:0 24px 60px rgba(155, 83, 17, 0.36);
+      border-radius:34px 22px 34px 22px;
+    }
+
+    .basketShell{
+      display:grid;
+      grid-template-rows:auto auto minmax(0, 1fr);
+      gap:12px;
+      padding:18px;
+    }
+
+    .basketTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .basketTitle{
+      margin:0;
+      font-size:22px;
+      letter-spacing:-.03em;
+      color:#ffc7b5;
+    }
+
+    .basketMeta{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .basketLive{
+      align-self:flex-start;
+      padding:10px 12px;
+      border-radius:16px;
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.08);
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .basketStats{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:10px;
+    }
+
+    .statTile{
+      padding:12px 14px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.03);
+    }
+
+    .statTile span{
+      display:block;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:rgba(237,247,255,0.48);
+      margin-bottom:6px;
+    }
+
+    .statTile strong{
+      font-size:18px;
+      letter-spacing:-.04em;
+    }
+
     #basketContent{
-      flex:1;
       min-height:0;
       overflow:auto;
-      padding:14px 16px 16px 16px;
+      padding-right:2px;
     }
 
     .basketEmpty{
       color:var(--muted);
       font-size:14px;
-      line-height:1.5;
+      line-height:1.6;
+      padding:14px 0;
     }
 
     .basketSection{
-      margin-bottom:16px;
+      margin-bottom:18px;
     }
 
     .basketSection h3{
-      margin:0 0 10px 0;
-      font-size:14px;
-      color:var(--muted);
-      font-weight:600;
+      margin:0 0 10px;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:rgba(237,247,255,0.48);
     }
 
     .basketItem{
-      display:flex;
-      justify-content:space-between;
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) auto;
       gap:12px;
-      padding:10px 12px;
-      margin-bottom:8px;
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:12px;
-      background: rgba(255,255,255,.03);
+      align-items:center;
+      padding:13px 14px;
+      margin-bottom:10px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+      transform:translateZ(0);
+      transition:transform .2s ease, border-color .2s ease, background .2s ease;
+    }
+
+    .basketItem:hover{
+      transform:translateY(-2px);
+      border-color:rgba(174,232,255,0.18);
+      background:
+        linear-gradient(180deg, rgba(47,124,255,0.08), rgba(255,255,255,0.02));
     }
 
     .basketItemName{
       font-size:14px;
-      line-height:1.35;
+      line-height:1.4;
     }
 
     .basketItemQty{
@@ -324,8 +824,8 @@
     }
 
     .basketTotals{
-      padding-top:8px;
-      border-top:1px solid rgba(255,255,255,.08);
+      padding-top:10px;
+      border-top:1px solid rgba(255,255,255,0.08);
       display:flex;
       flex-direction:column;
       gap:8px;
@@ -336,6 +836,7 @@
       justify-content:space-between;
       gap:12px;
       font-size:14px;
+      line-height:1.35;
     }
 
     .basketMuted{
@@ -346,125 +847,248 @@
       font-weight:700;
     }
 
-    /* LOGIN OVERLAY */
     #authOverlay{
       position:fixed;
       inset:0;
+      z-index:20;
       display:flex;
       align-items:center;
       justify-content:center;
-      padding:24px;
-      z-index:10;
-      background: rgba(0,0,0,.42);
-      backdrop-filter: blur(8px);
+      padding:26px;
+      background:rgba(3, 7, 14, 0.48);
+      backdrop-filter:blur(12px);
     }
 
     .authCard{
-      width:100%;
-      max-width:440px;
-      border-radius:20px;
-      border:1px solid var(--stroke);
-      background: rgba(14, 18, 28, .92);
-      box-shadow: 0 20px 60px rgba(0,0,0,.45);
-      padding:22px;
+      width:min(540px, 100%);
+      border-radius:34px;
+      padding:24px;
+      display:grid;
+      gap:18px;
+      background:
+        radial-gradient(circle at top right, rgba(47,124,255,0.18), transparent 30%),
+        radial-gradient(circle at bottom left, rgba(25,211,179,0.14), transparent 35%),
+        rgba(7, 14, 25, 0.92);
+    }
+
+    .authHeader{
+      display:grid;
+      gap:10px;
+    }
+
+    .authKicker{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      width:max-content;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.04);
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
     }
 
     .authTitle{
-      margin:0 0 6px 0;
-      font-size:28px;
-      font-weight:700;
+      margin:0;
+      font-size:clamp(34px, 7vw, 58px);
+      line-height:.95;
+      letter-spacing:-.05em;
+    }
+
+    .authTitle em{
+      font-family:"Instrument Serif", serif;
+      font-style:italic;
+      font-weight:400;
+      color:#bde7ff;
     }
 
     .authSub{
-      margin:0 0 18px 0;
+      margin:0;
       color:var(--muted);
-      line-height:1.4;
-      font-size:14px;
+      line-height:1.55;
+      font-size:15px;
+    }
+
+    .authDeck{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:10px;
+    }
+
+    .authMini{
+      border-radius:18px;
+      padding:12px 14px;
+      border:1px solid rgba(255,255,255,0.07);
+      background:rgba(255,255,255,0.03);
+    }
+
+    .authMini span{
+      display:block;
+      font-size:11px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:rgba(237,247,255,0.48);
+      margin-bottom:6px;
+    }
+
+    .authMini strong{
+      font-size:15px;
+      line-height:1.3;
     }
 
     .field{
-      display:flex;
-      flex-direction:column;
+      display:grid;
       gap:8px;
-      margin-bottom:14px;
     }
 
     .field label{
-      font-size:13px;
       color:var(--muted);
+      font-size:13px;
     }
 
     .field input{
       width:100%;
-      padding:12px 13px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.25);
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,0.1);
+      background:rgba(255,255,255,0.04);
       color:var(--text);
       outline:none;
-      font-size:15px;
+      padding:14px 16px;
+      transition:border-color .2s ease, transform .2s ease, box-shadow .2s ease;
     }
 
-    .field input::placeholder{
-      color: rgba(255,255,255,.45);
+    .field input:focus{
+      transform:translateY(-1px);
+      border-color:rgba(174,232,255,0.28);
+      box-shadow:0 0 0 1px rgba(174,232,255,0.08);
     }
 
     .authActions{
       display:flex;
-      gap:10px;
-      margin-top:8px;
+      gap:12px;
+      align-items:center;
     }
 
     .primaryBtn{
       flex:1;
-      padding:12px 16px;
-      font-size:15px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.12);
-      background: var(--blue);
-      color:white;
+      min-height:62px;
+      border:none;
+      border-radius:22px;
       cursor:pointer;
+      color:white;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 26%),
+        linear-gradient(135deg, rgba(47,124,255,0.98), rgba(25,211,179,0.82));
+      box-shadow:0 24px 60px rgba(16, 85, 163, 0.38);
+      font-size:18px;
+      font-weight:700;
     }
 
-    .primaryBtn:disabled{ opacity:.6; cursor:not-allowed; }
+    .primaryBtn:disabled{ opacity:.68; cursor:not-allowed; }
 
     .statusLine{
-      min-height:20px;
-      margin-top:12px;
+      min-height:22px;
       font-size:13px;
+      color:var(--muted);
     }
 
-    .statusError{ color: #fca5a5; }
-    .statusOk{ color: #86efac; }
+    .statusError{ color:#ffc1c1; }
+    .statusOk{ color:#9df0c8; }
 
-    @media (max-width: 980px){
-      .mainGrid{
-        grid-template-columns: 1fr;
+    ::-webkit-scrollbar{
+      width:10px;
+      height:10px;
+    }
+
+    ::-webkit-scrollbar-thumb{
+      background:rgba(255,255,255,0.12);
+      border-radius:999px;
+      border:2px solid transparent;
+      background-clip:padding-box;
+    }
+
+    @media (max-width: 1180px){
+      .signalGrid{
+        grid-template-columns:1fr;
       }
-      .sideColumn{
-        min-height: 280px;
+
+      .mainGrid{
+        grid-template-columns:1fr;
+      }
+
+      .basketStats{
+        grid-template-columns:repeat(3, minmax(0, 1fr));
       }
     }
 
     @media (max-width: 720px){
-      .wrap{ padding:16px; }
-      h1{ font-size: 28px; }
-      .bubble{ max-width: 86%; }
-      .authCard{ padding:18px; }
+      body{ overflow:auto; }
+      .wrap{
+        height:auto;
+        min-height:100%;
+        padding:14px;
+      }
+      .topbar{
+        grid-template-columns:1fr;
+      }
+      .topActions{
+        justify-content:flex-start;
+      }
+      .signalGrid,
+      .authDeck,
+      .basketStats,
+      .predictionBoard{
+        grid-template-columns:1fr;
+      }
+      .composer{
+        grid-template-columns:1fr;
+      }
+      .sendCluster{
+        width:100%;
+      }
+      #sendBtn{
+        width:100%;
+        min-height:84px;
+      }
+      .bubble{
+        max-width:90%;
+      }
+      .authCard{
+        padding:18px;
+      }
     }
   </style>
 </head>
 
 <body>
   <canvas id="bg"></canvas>
-  <div class="overlay"></div>
+  <div class="veil"></div>
+  <div class="grain"></div>
 
   <div id="authOverlay">
-    <div class="authCard">
-      <h2 class="authTitle">Connexion Zelo AI</h2>
-      <p class="authSub">
-        Connecte-toi pour permettre à Zelo AI de lire et modifier ton panier réel.
-      </p>
+    <div class="authCard livingCard">
+      <div class="authHeader">
+        <div class="authKicker"><span class="eyebrowDot"></span> Portail vivant</div>
+        <h2 class="authTitle">Connexion <em>Zelo AI</em></h2>
+        <p class="authSub">
+          Entre dans une interface qui réagit à toi. Zelo lit ton panier réel, comprend ton intention
+          et transforme chaque action en mouvement, en signal et en réponse immédiate.
+        </p>
+      </div>
+
+      <div class="authDeck">
+        <div class="authMini">
+          <span>Mode</span>
+          <strong>Panier en direct, commandes et demandes naturelles</strong>
+        </div>
+        <div class="authMini">
+          <span>Expérience</span>
+          <strong>Surface liquide, composants magnétiques et suggestions instantanées</strong>
+        </div>
+      </div>
 
       <div class="field">
         <label for="emailInput">Email</label>
@@ -477,7 +1101,7 @@
       </div>
 
       <div class="authActions">
-        <button id="loginBtn" class="primaryBtn" onclick="login()">Se connecter</button>
+        <button id="loginBtn" class="primaryBtn magnetic" onclick="login()">Se connecter</button>
       </div>
 
       <div id="authStatus" class="statusLine"></div>
@@ -485,52 +1109,201 @@
   </div>
 
   <div class="wrap">
-    <header>
-      <h1>Zélo AI</h1>
+    <header class="topbar livingCard">
+      <div class="brandBlock">
+        <div class="eyebrow"><span class="eyebrowDot"></span> Interface augmentée</div>
+        <h1 class="heroTitle">Une surface qui <em>répond</em>, pas juste une page.</h1>
+        <p class="heroSub">
+          Zelo AI n’attend pas le clic final: il anticipe, suggère, glisse vers toi et met le panier en scène
+          comme un organisme vivant. Ici, même l’interface donne l’impression d’avoir une intention.
+        </p>
+      </div>
+
       <div class="topActions">
-        <button id="refreshBasketBtn" class="ghostBtn hidden" onclick="refreshBasket()">Rafraîchir panier</button>
-        <button id="logoutBtn" class="ghostBtn hidden" onclick="logout()">Déconnexion</button>
-        <span id="sessionBadge" class="badge">non connecté</span>
+        <span id="sessionBadge" class="sessionPill">non connecté</span>
+        <button id="refreshBasketBtn" class="actionBtn magnetic hidden" onclick="refreshBasket()">Rafraîchir</button>
+        <button id="logoutBtn" class="actionBtn magnetic hidden" onclick="logout()">Déconnexion</button>
       </div>
     </header>
 
-    <div class="mainGrid">
-      <div class="chatColumn">
-        <div id="messages"></div>
-
-        <div class="hint">
-          Essay: “montre-moi mon panier”, “ajoute 1 lard de begnins à mon panier”
-          ou une question quelconque.
+    <section class="signalGrid">
+      <article class="signalCard livingCard">
+        <div>
+          <div class="signalLabel">Lecture instantanée</div>
+          <h2 class="signalValue" id="signalValue">Conversation libre</h2>
         </div>
+        <p class="signalMeta" id="signalMeta">
+          La surface observe ce que tu écris et adapte ses signaux avant même l’envoi.
+        </p>
+      </article>
 
-        <div id="inputBar" class="hidden">
-          <input id="input" placeholder="Écris quelque chose..." />
-          <button id="sendBtn" onclick="send()">Envoy</button>
+      <article class="signalCard livingCard">
+        <div>
+          <div class="signalLabel">Intention dominante</div>
+          <div class="intentBadge">
+            <span class="intentGlow" id="intentGlow"></span>
+            <span id="intentBadgeText">Générale</span>
+          </div>
         </div>
-      </div>
+        <p class="signalMeta" id="intentNarrative">
+          Pose une question, demande un repas, ajoute un produit ou ouvre le panier.
+        </p>
+      </article>
 
-      <div class="sideColumn">
-        <div class="basketCard">
-          <div class="basketHeader">
+      <article class="signalCard livingCard">
+        <div>
+          <div class="signalLabel">Actions éclair</div>
+          <div class="ideaRail" id="heroIdeaRail"></div>
+        </div>
+        <p class="signalMeta">
+          Ces raccourcis changent selon l’humeur de la conversation. Hover, clique, glisse.
+        </p>
+      </article>
+    </section>
+
+    <main class="mainGrid">
+      <section class="chatColumn">
+        <div class="chatShell livingCard">
+          <div class="chatHeader">
             <div>
-              <h2 class="basketTitle">Panier</h2>
-              <div id="basketMeta" class="basketMeta">non connecté</div>
+              <h2 class="chatTitle">Canal principal</h2>
+              <p class="chatSub" id="liveSubtitle">
+                Une zone de dialogue qui réagit à l’intention. Plus tu approches, plus elle s’ouvre.
+              </p>
+            </div>
+            <div class="intentBadge">
+              <span class="intentGlow"></span>
+              <span id="presenceLabel">Signal calme</span>
             </div>
           </div>
+
+          <div class="chatStage" id="chatStage">
+            <div id="messages"></div>
+          </div>
+
+          <div id="inputBar" class="composer hidden">
+            <div class="composerMain">
+              <div class="composerTop">
+                <div class="composerLabel">
+                  <span class="pulseDot"></span>
+                  <span id="composerLead">Écris librement. Le système te suit en direct.</span>
+                </div>
+                <div class="composerHint" id="composerHint">
+                  Exemples: panier, ajout, repas, question générale.
+                </div>
+              </div>
+
+              <input id="input" placeholder="Écris quelque chose..." />
+
+              <div class="suggestionRail" id="suggestionRail"></div>
+
+              <div class="predictionBoard">
+                <div class="predictionCell">
+                  <span class="predictionLabel">Action probable</span>
+                  <strong class="predictionValue" id="predictionAction">NOOP</strong>
+                  <span class="predictionNote" id="predictionReason">
+                    Aucune action claire détectée pour l’instant.
+                  </span>
+                </div>
+
+                <div class="predictionCell">
+                  <span class="predictionLabel">Lecture canonique</span>
+                  <strong class="predictionValue small" id="predictionCanonical">Réponse générale</strong>
+                  <span class="predictionNote" id="predictionPlannerTarget">
+                    Cible future: planner/general
+                  </span>
+                </div>
+
+                <div class="predictionCell">
+                  <span class="predictionLabel">Confiance</span>
+                  <strong class="predictionValue" id="predictionConfidence">0%</strong>
+                  <div class="predictionMiniBar">
+                    <div class="predictionFill" id="predictionFill"></div>
+                  </div>
+                  <span class="predictionNote" id="predictionFamily">
+                    Famille détectée: générale
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="sendCluster">
+              <button id="sendBtn" class="magnetic" onclick="send()">
+                <span class="sendEyebrow" id="sendEyebrow">Action</span>
+                <span class="sendLabel" id="sendLabel">Envoyer</span>
+                <span class="sendSub" id="sendSub">L’interface se recompose selon ton intention.</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="sideColumn">
+        <div class="basketShell livingCard">
+          <div class="basketTop">
+            <div>
+              <h2 class="basketTitle">Panier vivant</h2>
+              <div id="basketMeta" class="basketMeta">non connecté</div>
+            </div>
+            <div class="basketLive" id="basketLive">En veille</div>
+          </div>
+
+          <div class="basketStats">
+            <div class="statTile">
+              <span>Articles</span>
+              <strong id="statItems">0</strong>
+            </div>
+            <div class="statTile">
+              <span>Total</span>
+              <strong id="statTotal">0.00</strong>
+            </div>
+            <div class="statTile">
+              <span>Livraison</span>
+              <strong id="statDelivery">—</strong>
+            </div>
+          </div>
+
           <div id="basketContent">
             <div class="basketEmpty">Connecte-toi pour voir ton panier en direct.</div>
           </div>
         </div>
-      </div>
-    </div>
+      </aside>
+    </main>
   </div>
 
+  <script src="/predictor/intent-classifier.js"></script>
   <script>
     const USER_REF = "local-dev";
+
+    const QUICK_ACTIONS = {
+      general: [
+        "bonjour",
+        "comment ca va ?",
+        "quel temps fait-il aujourd'hui ?"
+      ],
+      cart: [
+        "montre-moi mon panier",
+        "vide mon panier",
+        "passe la commande"
+      ],
+      add: [
+        "ajoute 1 lard de begnins à mon panier",
+        "ajoute 1 pain anglais à mon panier",
+        "ajoute 1 panier budget 50 à mon panier"
+      ],
+      meal: [
+        "de quoi faire une fondue",
+        "de quoi faire une carbonara",
+        "qu'est-ce que tu me proposes aujourd'hui ?"
+      ]
+    };
 
     const messages = document.getElementById("messages");
     const input = document.getElementById("input");
     const sendBtn = document.getElementById("sendBtn");
+    const sendLabel = document.getElementById("sendLabel");
+    const sendSub = document.getElementById("sendSub");
+    const sendEyebrow = document.getElementById("sendEyebrow");
 
     const authOverlay = document.getElementById("authOverlay");
     const emailInput = document.getElementById("emailInput");
@@ -545,6 +1318,93 @@
 
     const basketContent = document.getElementById("basketContent");
     const basketMeta = document.getElementById("basketMeta");
+    const basketLive = document.getElementById("basketLive");
+    const statItems = document.getElementById("statItems");
+    const statTotal = document.getElementById("statTotal");
+    const statDelivery = document.getElementById("statDelivery");
+
+    const signalValue = document.getElementById("signalValue");
+    const signalMeta = document.getElementById("signalMeta");
+    const intentBadgeText = document.getElementById("intentBadgeText");
+    const intentGlow = document.getElementById("intentGlow");
+    const intentNarrative = document.getElementById("intentNarrative");
+    const heroIdeaRail = document.getElementById("heroIdeaRail");
+    const suggestionRail = document.getElementById("suggestionRail");
+    const composerLead = document.getElementById("composerLead");
+    const composerHint = document.getElementById("composerHint");
+    const liveSubtitle = document.getElementById("liveSubtitle");
+    const presenceLabel = document.getElementById("presenceLabel");
+    const chatStage = document.getElementById("chatStage");
+    const predictionAction = document.getElementById("predictionAction");
+    const predictionReason = document.getElementById("predictionReason");
+    const predictionCanonical = document.getElementById("predictionCanonical");
+    const predictionPlannerTarget = document.getElementById("predictionPlannerTarget");
+    const predictionConfidence = document.getElementById("predictionConfidence");
+    const predictionFill = document.getElementById("predictionFill");
+    const predictionFamily = document.getElementById("predictionFamily");
+
+    const intentPalette = {
+      general: { label: "Générale", color: "#19d3b3" },
+      cart: { label: "Panier", color: "#2f7cff" },
+      add: { label: "Ajout", color: "#ffd166" },
+      meal: { label: "Repas", color: "#ff8f6b" }
+    };
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    const predictorState = {
+      ready: false,
+      loading: false,
+      classifier: null
+    };
+
+    function getDefaultPrediction(text){
+      const hasText = Boolean(String(text || "").trim());
+      return {
+        family: "general",
+        actionKey: "noop",
+        actionLabel: "NOOP",
+        confidence: hasText ? 12 : 0,
+        canonical: hasText ? "Analyse locale en cours" : "Reponse generale",
+        planner: "planner/general",
+        reason: hasText
+          ? "Le modele local de prediction se charge. La lecture detaillee arrive dans un instant."
+          : "Aucune action claire detectee pour l'instant."
+      };
+    }
+
+    async function initPredictor(){
+      if (predictorState.ready || predictorState.loading) {
+        return;
+      }
+
+      predictorState.loading = true;
+
+      try {
+        predictorState.classifier = await window.ZeloIntentClassifier.create("/predictor/intent-training.json");
+        predictorState.ready = true;
+      } catch (error) {
+        console.warn("predictor init failed", error);
+      } finally {
+        predictorState.loading = false;
+        applyIntentState(input?.value || "");
+      }
+    }
+
+    function predictIntentContext(text){
+      if (!predictorState.ready || !predictorState.classifier) {
+        return getDefaultPrediction(text);
+      }
+
+      return predictorState.classifier.predict(text);
+    }
 
     function addMessage(text, who){
       const row = document.createElement("div");
@@ -559,7 +1419,7 @@
       messages.scrollTop = messages.scrollHeight;
     }
 
-        function addTypingMessage(){
+    function addTypingMessage(){
       removeTypingMessage();
 
       const row = document.createElement("div");
@@ -584,7 +1444,6 @@
       if (el) el.remove();
     }
 
-
     function setAuthStatus(text, type = ""){
       authStatus.textContent = text || "";
       authStatus.className = "statusLine";
@@ -599,6 +1458,10 @@
       refreshBasketBtn.classList.remove("hidden");
       sessionBadge.textContent = email ? `connecté · ${email}` : "connecté";
       basketMeta.textContent = email ? `connecté · ${email}` : "connecté";
+      basketLive.textContent = "Signal en direct";
+      presenceLabel.textContent = "Surface active";
+      liveSubtitle.textContent = "La zone réagit en temps réel: suggestions, mouvement et panier synchronisé.";
+      setTimeout(() => input?.focus(), 40);
     }
 
     function setLoggedOutUI(){
@@ -608,7 +1471,11 @@
       refreshBasketBtn.classList.add("hidden");
       sessionBadge.textContent = "non connecté";
       basketMeta.textContent = "non connecté";
+      basketLive.textContent = "En veille";
       basketContent.innerHTML = `<div class="basketEmpty">Connecte-toi pour voir ton panier en direct.</div>`;
+      statItems.textContent = "0";
+      statTotal.textContent = "0.00";
+      statDelivery.textContent = "—";
     }
 
     function saveSession(email){
@@ -637,9 +1504,190 @@
       return false;
     }
 
+    function getIntentCopy(intent, text, prediction){
+      const hasText = Boolean(String(text || "").trim());
+
+      if (!hasText) {
+        return {
+          signalValue: "Conversation libre",
+          signalMeta: "Pose une question, ouvre ton panier ou décris un repas: l’interface change avant l’envoi.",
+          narrative: "Aucune action détectée pour l’instant. La surface reste ouverte et accueillante.",
+          lead: "Écris librement. Le système te suit en direct.",
+          hint: "Exemples: panier, ajout, repas, question générale.",
+          sendEyebrow: "Action",
+          sendLabel: "Envoyer",
+          sendSub: "L’interface se recompose selon ton intention.",
+          subtitle: "Une zone de dialogue qui réagit à l’intention. Plus tu approches, plus elle s’ouvre."
+        };
+      }
+
+      if (intent === "meal") {
+        const isDiscovery = prediction?.actionKey === "discover_meals";
+        return {
+          signalValue: isDiscovery ? "Découverte repas" : "Composition repas",
+          signalMeta: isDiscovery
+            ? "Le texte ressemble à une demande d’inspiration du jour."
+            : "Le texte ressemble à une demande “de quoi faire…”. La surface prépare un mode cuisine.",
+          narrative: isDiscovery
+            ? "Le frontend lit déjà un mode “suggestions” avant l’envoi. Plus tard, on pourra le brancher sur un planner dédié."
+            : "Zelo pourrait passer par le moteur repas et transformer une envie en ingrédients réels.",
+          lead: "Tu sembles vouloir construire un repas.",
+          hint: isDiscovery
+            ? "Exemples: qu'est-ce que tu me proposes aujourd'hui ?"
+            : "Exemples: de quoi faire une fondue, une carbonara, ou un dîner simple.",
+          sendEyebrow: isDiscovery ? "Idées" : "Repas",
+          sendLabel: isDiscovery ? "Explorer" : "Composer",
+          sendSub: isDiscovery
+            ? "Je prépare un contexte inspiration / suggestions."
+            : "Je traduis une envie en panier exploitable.",
+          subtitle: isDiscovery
+            ? "La surface lit déjà une demande d’inspiration. Plus tard, on pourra la router vers un planner spécialisé."
+            : "Le canal s’oriente vers la cuisine: il cherche une structure, pas juste une réponse."
+        };
+      }
+
+      if (intent === "add") {
+        return {
+          signalValue: "Ajout ciblé",
+          signalMeta: "Le texte ressemble à une action d’ajout, même si le verbe n’est pas forcément explicite.",
+          narrative: "Le frontend essaie déjà de sentir une intention d’ajout avant le clic: désir, quantité, produit probable, panier implicite.",
+          lead: "Produit ou besoin détecté. On prépare déjà le contexte d’ajout.",
+          hint: "Précise quantité et format si possible: 1, 150g, 1 litre, etc.",
+          sendEyebrow: "Produit",
+          sendLabel: "Ajouter",
+          sendSub: "Je prépare un futur planner centré ajout.",
+          subtitle: "Ici, l’interface agit déjà comme un classificateur d’ajout: elle essaie de comprendre le geste avant l’envoi."
+        };
+      }
+
+      if (intent === "cart") {
+        const isClear = prediction?.actionKey === "clear_cart";
+        const isExec = prediction?.actionKey === "exec_cart";
+        return {
+          signalValue: isClear ? "Vidage panier" : isExec ? "Commande finale" : "Panier / commande",
+          signalMeta: isClear
+            ? "Le texte suggère que le panier doit devenir vide."
+            : isExec
+              ? "Le texte ressemble à une validation finale."
+              : "Le texte parle du panier, de la commande ou d’une action de contrôle.",
+          narrative: isClear
+            ? "Même sans écrire exactement “vide mon panier”, la couche frontend essaie de comprendre une intention de panier vide."
+            : isExec
+              ? "Le frontend lit déjà un signal de checkout avant l’envoi."
+              : "Zelo peut montrer, vider, rafraîchir ou tenter de finaliser l’état courant du panier.",
+          lead: isClear
+            ? "On lit une intention de vider le panier."
+            : isExec
+              ? "On lit une intention de finalisation."
+              : "Tu interagis avec le coeur transactionnel.",
+          hint: "Montre, vide, rafraîchis ou passe la commande.",
+          sendEyebrow: "Panier",
+          sendLabel: isClear ? "Vider" : isExec ? "Commander" : "Piloter",
+          sendSub: "Je prépare un contexte transactionnel spécialisé.",
+          subtitle: "La zone bascule en mode opérationnel: elle essaie déjà d’identifier le sous-geste exact du panier."
+        };
+      }
+
+      return {
+        signalValue: "Réponse naturelle",
+        signalMeta: "Le texte ressemble à une conversation générale. La surface maintient un contexte social plutôt qu’un geste shopping.",
+        narrative: "Pas d’action panier évidente: le frontend classe déjà ça comme dialogue naturel avant le clic.",
+        lead: "Conversation détectée. On reste en mode fluide.",
+        hint: "Essaie aussi une question générale, une formule sociale ou une curiosité légère.",
+        sendEyebrow: "Dialogue",
+        sendLabel: "Répondre",
+        sendSub: "Je prépare un futur planner de conversation générale.",
+        subtitle: "La surface reste conversationnelle quand rien de concret n’a besoin d’être manipulé."
+      };
+    }
+
+    function renderHeroIdeas(intent){
+      heroIdeaRail.innerHTML = "";
+      const items = QUICK_ACTIONS[intent] || QUICK_ACTIONS.general;
+      for (const item of items) {
+        const button = document.createElement("button");
+        button.className = "ideaChip magnetic";
+        button.type = "button";
+        button.textContent = item;
+        button.onclick = () => injectPrompt(item);
+        heroIdeaRail.appendChild(button);
+      }
+      applyMagnetism(heroIdeaRail.querySelectorAll(".magnetic"));
+    }
+
+    function renderSuggestions(intent){
+      suggestionRail.innerHTML = "";
+      const items = QUICK_ACTIONS[intent] || QUICK_ACTIONS.general;
+      for (const item of items) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "suggestion magnetic";
+        button.textContent = item;
+        button.onclick = () => injectPrompt(item, true);
+        suggestionRail.appendChild(button);
+      }
+      applyMagnetism(suggestionRail.querySelectorAll(".magnetic"));
+    }
+
+    function applyIntentState(text){
+      const prediction = predictIntentContext(text);
+      const intent = prediction.family;
+      const palette = intentPalette[intent];
+      const copy = getIntentCopy(intent, text, prediction);
+
+      signalValue.textContent = copy.signalValue;
+      signalMeta.textContent = copy.signalMeta;
+      intentNarrative.textContent = copy.narrative;
+      composerLead.textContent = copy.lead;
+      composerHint.textContent = copy.hint;
+      sendEyebrow.textContent = copy.sendEyebrow;
+      sendLabel.textContent = copy.sendLabel;
+      sendSub.textContent = copy.sendSub;
+      liveSubtitle.textContent = copy.subtitle;
+      presenceLabel.textContent = intent === "general" ? "Signal calme" : "Signal orienté";
+
+      intentBadgeText.textContent = `${palette.label} · ${prediction.actionLabel}`;
+      intentGlow.style.background = palette.color;
+      intentGlow.style.boxShadow = `0 0 14px ${hexToGlow(palette.color)}`;
+      signalValue.style.color = palette.color;
+
+      predictionAction.textContent = prediction.actionLabel;
+      predictionReason.textContent = prediction.reason;
+      predictionCanonical.textContent = prediction.canonical;
+      predictionPlannerTarget.textContent = `Cible future: ${prediction.planner}`;
+      predictionConfidence.textContent = `${prediction.confidence}%`;
+      predictionFill.style.width = `${prediction.confidence}%`;
+      predictionFill.style.background = `linear-gradient(90deg, ${palette.color}, rgba(25,211,179,0.86))`;
+      predictionFamily.textContent = `Famille détectée: ${palette.label.toLowerCase()}`;
+
+      renderHeroIdeas(intent);
+      renderSuggestions(intent);
+    }
+
+    function injectPrompt(text, focus = false){
+      input.value = text;
+      applyIntentState(text);
+      if (focus) {
+        input.focus();
+      }
+    }
+
+    function hexToGlow(color){
+      if (color.startsWith("#") && color.length === 7) {
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, 0.72)`;
+      }
+      return "rgba(255,255,255,0.72)";
+    }
+
     function renderBasket(basket){
       if(!basket){
         basketContent.innerHTML = `<div class="basketEmpty">Impossible de charger le panier.</div>`;
+        statItems.textContent = "0";
+        statTotal.textContent = "0.00";
+        statDelivery.textContent = "—";
         return;
       }
 
@@ -725,29 +1773,33 @@
       html += `</div>`;
 
       basketContent.innerHTML = html;
-    }
-
-    function escapeHtml(str){
-      return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+      statItems.textContent = String(products.reduce((acc, item) => acc + Number(item?.quantity ?? item?.qty ?? 1), 0));
+      statTotal.textContent = basket.totalPriceTTC != null
+        ? Number(basket.totalPriceTTC).toFixed(2)
+        : basket.totalPrice != null
+          ? Number(basket.totalPrice).toFixed(2)
+          : "0.00";
+      statDelivery.textContent = basket.estimatedDeliveryDate
+        ? String(basket.estimatedDeliveryDate).slice(0, 10)
+        : "—";
     }
 
     async function refreshBasket(){
       try{
+        basketLive.textContent = "Synchronisation…";
         const res = await fetch(`/ai/basket?userRef=${encodeURIComponent(USER_REF)}`);
         const data = await res.json();
 
         if(!res.ok || !data?.ok){
+          basketLive.textContent = "Hors ligne";
           basketContent.innerHTML = `<div class="basketEmpty">Impossible de charger le panier.</div>`;
           return;
         }
 
+        basketLive.textContent = "Panier en direct";
         renderBasket(data.basket);
       }catch(e){
+        basketLive.textContent = "Erreur réseau";
         basketContent.innerHTML = `<div class="basketEmpty">Erreur réseau pendant le chargement du panier.</div>`;
       }
     }
@@ -757,11 +1809,12 @@
       const password = passwordInput.value;
 
       if(!username || !password){
-        setAuthStatus("Inserisci email e password.", "error");
+        setAuthStatus("Entre ton email et ton mot de passe.", "error");
         return;
       }
 
       loginBtn.disabled = true;
+      loginBtn.textContent = "Connexion en cours…";
       setAuthStatus("Connexion en cours...");
 
       try{
@@ -786,7 +1839,7 @@
         setAuthStatus("Connexion réussie.", "ok");
 
         if(messages.children.length === 0){
-          addMessage("Bonjour 👋 Je suis prêt. Tu peux me demander ton panier ou ajouter un produit.", "ai");
+          addMessage("Bonjour. La surface est active, votre panier réel aussi. On commence ?", "ai");
         }
 
         await refreshBasket();
@@ -794,6 +1847,7 @@
         setAuthStatus("Erreur: " + (e?.message || e), "error");
       }finally{
         loginBtn.disabled = false;
+        loginBtn.textContent = "Se connecter";
       }
     }
 
@@ -802,7 +1856,7 @@
       setLoggedOutUI();
       setAuthStatus("");
       passwordInput.value = "";
-      addMessage("Session fermée.", "ai");
+      addMessage("Session fermée. La surface revient en veille.", "ai");
     }
 
     async function send(){
@@ -811,9 +1865,14 @@
 
       addMessage(text, "user");
       input.value = "";
+      applyIntentState("");
       input.focus();
 
       sendBtn.disabled = true;
+      sendBtn.classList.add("is-busy");
+      sendLabel.textContent = "En cours";
+      sendSub.textContent = "Le composant mute en signal de traitement.";
+      basketLive.textContent = "Analyse…";
       addTypingMessage();
 
       try{
@@ -826,19 +1885,25 @@
         const data = await res.json();
 
         removeTypingMessage();
-        addMessage(data.message || data.error || "errore", "ai");
+        addMessage(data.message || data.error || "erreur", "ai");
 
         await refreshBasket();
       }catch(e){
         removeTypingMessage();
-        addMessage("Errore di rete: " + (e?.message || e), "ai");
+        addMessage("Erreur de réseau: " + (e?.message || e), "ai");
       }finally{
         sendBtn.disabled = false;
+        sendBtn.classList.remove("is-busy");
+        applyIntentState("");
       }
     }
 
     input.addEventListener("keydown", (e) => {
       if(e.key === "Enter") send();
+    });
+
+    input.addEventListener("input", () => {
+      applyIntentState(input.value);
     });
 
     emailInput.addEventListener("keydown", (e) => {
@@ -849,17 +1914,48 @@
       if(e.key === "Enter") login();
     });
 
-    if(!restoreSession()){
-      setLoggedOutUI();
-    } else {
-      if(messages.children.length === 0){
-        addMessage("Bonjour 👋 Je suis prêt. Tu peux me demander ton panier ou ajouter un produit.", "ai");
-      }
-      refreshBasket();
+    function applyMagnetism(elements){
+      elements.forEach((element) => {
+        if (element.dataset.magnetized === "1") return;
+        element.dataset.magnetized = "1";
+
+        element.addEventListener("mousemove", (event) => {
+          const rect = element.getBoundingClientRect();
+          const x = event.clientX - rect.left - rect.width / 2;
+          const y = event.clientY - rect.top - rect.height / 2;
+          const moveX = Math.max(-14, Math.min(14, x * 0.18));
+          const moveY = Math.max(-12, Math.min(12, y * 0.18));
+          element.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.01)`;
+          element.style.borderRadius = `${18 + Math.abs(moveX) * 0.3}px`;
+        });
+
+        element.addEventListener("mouseleave", () => {
+          element.style.transform = "";
+          element.style.borderRadius = "";
+        });
+      });
+    }
+
+    function attachCardDrift(){
+      document.querySelectorAll(".livingCard").forEach((card) => {
+        card.addEventListener("mousemove", (event) => {
+          const rect = card.getBoundingClientRect();
+          const x = (event.clientX - rect.left) / rect.width;
+          const y = (event.clientY - rect.top) / rect.height;
+          const rx = (0.5 - y) * 4;
+          const ry = (x - 0.5) * 5;
+          card.style.transform = `perspective(1200px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-2px)`;
+        });
+        card.addEventListener("mouseleave", () => {
+          card.style.transform = "";
+        });
+      });
     }
 
     const canvas = document.getElementById("bg");
     const ctx = canvas.getContext("2d");
+    const pointer = { x: window.innerWidth * 0.5, y: window.innerHeight * 0.5, active: false };
+    const ripples = [];
 
     function resize(){
       canvas.width = Math.floor(window.innerWidth * devicePixelRatio);
@@ -869,52 +1965,136 @@
       ctx.setTransform(1,0,0,1,0,0);
       ctx.scale(devicePixelRatio, devicePixelRatio);
     }
-    window.addEventListener("resize", resize);
-    resize();
 
-    const W = () => window.innerWidth;
-    const H = () => window.innerHeight;
+    function waveY(x, time, offset, amplitude, frequency){
+      return Math.sin(x * frequency + time * 0.6 + offset) * amplitude;
+    }
 
-    const blobs = [
-      { x: 0.25, y: 0.30, r: 260, dx: 0.00035, dy: 0.00022, a: 0.65 },
-      { x: 0.70, y: 0.40, r: 320, dx: -0.00028, dy: 0.00018, a: 0.55 },
-      { x: 0.55, y: 0.75, r: 360, dx: 0.00020, dy: -0.00026, a: 0.50 },
-    ];
+    function drawRibbon(time, baseY, color, thickness, phase){
+      ctx.beginPath();
+      ctx.moveTo(0, baseY);
+      for (let x = 0; x <= window.innerWidth; x += 18) {
+        const influenceX = (pointer.x - x) / window.innerWidth;
+        const influenceY = pointer.active ? (pointer.y - baseY) * 0.015 : 0;
+        const y = baseY +
+          waveY(x, time, phase, thickness, 0.008) +
+          waveY(x, time, phase * 0.6, thickness * 0.55, 0.016) +
+          influenceX * 18 +
+          influenceY;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(window.innerWidth, window.innerHeight + 100);
+      ctx.lineTo(0, window.innerHeight + 100);
+      ctx.closePath();
 
-    function draw(t){
-      t = t || 0;
-      const time = t * 0.001;
+      const gradient = ctx.createLinearGradient(0, baseY - 120, 0, baseY + 240);
+      gradient.addColorStop(0, color);
+      gradient.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
 
-      ctx.clearRect(0,0,W(),H());
+    function drawBlob(time, anchorX, anchorY, radius, colors, driftX, driftY){
+      const px = anchorX + Math.sin(time * driftX) * 90 + (pointer.x - window.innerWidth * 0.5) * 0.04;
+      const py = anchorY + Math.cos(time * driftY) * 70 + (pointer.y - window.innerHeight * 0.5) * 0.03;
+      const grad = ctx.createRadialGradient(px, py, 0, px, py, radius);
+      grad.addColorStop(0, colors[0]);
+      grad.addColorStop(.4, colors[1]);
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(px, py, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-      ctx.fillStyle = "#0b0f16";
-      ctx.fillRect(0,0,W(),H());
+    function drawRipples(){
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const ripple = ripples[i];
+        ripple.radius += 3.8;
+        ripple.life -= 0.015;
+        if (ripple.life <= 0) {
+          ripples.splice(i, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(174, 232, 255, ${ripple.life * 0.28})`;
+        ctx.lineWidth = 2 + (1 - ripple.life) * 6;
+        ctx.stroke();
+      }
+    }
+
+    function draw(timeMs){
+      const time = timeMs * 0.001;
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      ctx.fillStyle = "#06131b";
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
       ctx.globalCompositeOperation = "lighter";
+      drawBlob(time, window.innerWidth * 0.22, window.innerHeight * 0.24, 260, [
+        "rgba(25, 211, 179, 0.22)",
+        "rgba(25, 211, 179, 0.06)"
+      ], 0.9, 0.7);
+      drawBlob(time, window.innerWidth * 0.74, window.innerHeight * 0.2, 320, [
+        "rgba(47, 124, 255, 0.26)",
+        "rgba(47, 124, 255, 0.08)"
+      ], 0.6, 0.9);
+      drawBlob(time, window.innerWidth * 0.62, window.innerHeight * 0.78, 360, [
+        "rgba(255, 143, 107, 0.18)",
+        "rgba(255, 143, 107, 0.05)"
+      ], 0.8, 0.5);
 
-      for(const b of blobs){
-        const px = (b.x + Math.sin(time)*b.dx*2000 + Math.sin(time*0.7)*b.dx*1200) * W();
-        const py = (b.y + Math.cos(time)*b.dy*2000 + Math.cos(time*0.9)*b.dy*1200) * H();
+      drawRibbon(time, window.innerHeight * 0.26, "rgba(47, 124, 255, 0.15)", 42, 0.2);
+      drawRibbon(time, window.innerHeight * 0.52, "rgba(25, 211, 179, 0.13)", 36, 1.2);
+      drawRibbon(time, window.innerHeight * 0.78, "rgba(255, 143, 107, 0.1)", 34, 2.4);
 
-        const grad = ctx.createRadialGradient(px, py, 0, px, py, b.r);
-        grad.addColorStop(0.00, `rgba(37, 99, 235, ${b.a})`);
-        grad.addColorStop(0.35, `rgba(16, 185, 129, ${b.a*0.75})`);
-        grad.addColorStop(0.65, `rgba(168, 85, 247, ${b.a*0.65})`);
-        grad.addColorStop(1.00, "rgba(0,0,0,0)");
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(px, py, b.r, 0, Math.PI*2);
-        ctx.fill();
-      }
-
+      drawRipples();
       ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = "rgba(0,0,0,0.25)";
-      ctx.fillRect(0,0,W(),H());
 
       requestAnimationFrame(draw);
     }
+
+    window.addEventListener("resize", resize);
+    window.addEventListener("mousemove", (event) => {
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+      pointer.active = true;
+      chatStage.style.setProperty("--spot-x", `${(event.clientX / window.innerWidth) * 100}%`);
+      chatStage.style.setProperty("--spot-y", `${(event.clientY / window.innerHeight) * 100}%`);
+    });
+
+    window.addEventListener("mouseleave", () => {
+      pointer.active = false;
+    });
+
+    window.addEventListener("click", (event) => {
+      ripples.push({
+        x: event.clientX,
+        y: event.clientY,
+        radius: 0,
+        life: 1
+      });
+    });
+
+    resize();
     requestAnimationFrame(draw);
+
+    initPredictor();
+    applyIntentState("");
+    applyMagnetism(document.querySelectorAll(".magnetic"));
+    attachCardDrift();
+
+    if(!restoreSession()){
+      setLoggedOutUI();
+    } else {
+      if(messages.children.length === 0){
+        addMessage("Bonjour. La surface est active, votre panier réel aussi. On commence ?", "ai");
+      }
+      refreshBasket();
+      setTimeout(() => input?.focus(), 40);
+    }
   </script>
 </body>
 </html>
