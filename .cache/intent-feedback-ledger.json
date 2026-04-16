@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "updatedAt": "2026-04-16T10:00:05.014Z",
+  "events": [
+    {
+      "id": "b57624e0-2d89-4be3-aa2a-fd4dba06387e",
+      "kind": "correction",
+      "text": "comment je vais a la gare a pie?",
+      "normalizedText": "comment je vais a la gare a pie",
+      "predictedAction": "add_items",
+      "correctAction": "noop",
+      "createdAt": "2026-04-14T15:48:51.556Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "54c35eac-7283-4944-bc6f-e36a886bdf77",
+      "kind": "correction",
+      "text": "Non, je veux le pain balance coupé en tranche",
+      "normalizedText": "non je veux le pain balance coupe en tranche",
+      "predictedAction": "clear_cart",
+      "correctAction": "add_items",
+      "createdAt": "2026-04-15T12:50:49.346Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "5210bdc7-8b6b-4351-9daf-fd4be4a06c23",
+      "kind": "correction",
+      "text": "Enlève le pain balance du panier",
+      "normalizedText": "enleve le pain balance du panier",
+      "predictedAction": "add_items",
+      "correctAction": "clear_cart",
+      "createdAt": "2026-04-15T12:52:23.755Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "02926c18-a8ee-4f87-a744-4703e11fc451",
+      "kind": "correction",
+      "text": "A. Lait Bio pasteurisé",
+      "normalizedText": "a lait bio pasteurise",
+      "predictedAction": "noop",
+      "correctAction": "add_items",
+      "createdAt": "2026-04-16T09:49:24.545Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "c1e08bfc-3c98-4272-a7ee-8b81de9ca841",
+      "kind": "correction",
+      "text": "aide moi",
+      "normalizedText": "aide moi",
+      "predictedAction": "noop",
+      "correctAction": "discover_meals",
+      "createdAt": "2026-04-16T10:00:05.014Z",
+      "userRef": "local-dev"
+    }
+  ]
+}

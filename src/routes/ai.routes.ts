@@ -58,9 +58,31 @@ import { login } from "../swissdata/auth.js";
 import { setSession, getSession } from "../swissdata/session.js";
 import { getCurrentBasket } from "../swissdata/cart.js";
 import { withPerfTrace } from "../utils/perf.js";
+import {
+  getIntentTrainingRuntime,
+  recordIntentFeedback,
+} from "../ai/services/intent-feedback.service.js";
+import type { FrontendIntentHint } from "../ai/services/planner.service.js";
 
 export function aiRoutes() {
   const r = Router();
+
+  function parseFrontendIntentHint(value: any): FrontendIntentHint | undefined {
+    if (!value || typeof value !== "object") return undefined;
+
+    const actionKey = value.actionKey != null ? String(value.actionKey) : "";
+    if (!actionKey) return undefined;
+
+    return {
+      actionKey: actionKey as FrontendIntentHint["actionKey"],
+      confidence:
+        value.confidence != null && Number.isFinite(Number(value.confidence))
+          ? Number(value.confidence)
+          : undefined,
+      family: value.family != null ? String(value.family) : undefined,
+      planner: value.planner != null ? String(value.planner) : undefined,
+    };
+  }
 
   r.post("/login", async (req, res, next) => {
     try {
@@ -89,6 +111,45 @@ export function aiRoutes() {
     res.json({ ok: true, userRef, hasToken: !!s?.token, expires: s?.expires ?? null });
   });
 
+  r.get("/intent-training", async (_req, res, next) => {
+    try {
+      const training = await getIntentTrainingRuntime();
+      res.json({ ok: true, training });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  r.post("/intent-feedback", async (req, res, next) => {
+    try {
+      const userRef = String(req.body?.userRef ?? "local-dev");
+      const text = String(req.body?.text ?? "");
+      const predictedAction = String(req.body?.predictedAction ?? "");
+      const correctAction = req.body?.correctAction != null
+        ? String(req.body.correctAction)
+        : undefined;
+      const kind = req.body?.kind != null
+        ? String(req.body.kind)
+        : undefined;
+
+      const result = await recordIntentFeedback({
+        userRef,
+        text,
+        predictedAction: predictedAction as any,
+        correctAction: correctAction as any,
+        kind: kind as any,
+      });
+
+      res.json({
+        ok: true,
+        event: result.event,
+        training: result.training,
+      });
+    } catch (e) {
+      next(e);
+    }
+  });
+
   r.post("/test", (req, res) => {
     const text = String(req.body?.text ?? "");
     const parsed = localNlpFallback(text);
@@ -108,14 +169,17 @@ export function aiRoutes() {
     try {
       const userRef = String(req.body?.userRef ?? "anonymous");
       const text = String(req.body?.text ?? "");
+      const frontendIntentHint = parseFrontendIntentHint(req.body?.frontendIntentHint);
       if (!text) return res.status(400).json({ ok: false, error: "Missing text" });
 
       const out = await withPerfTrace(
         "ai.chat",
-        async () => await runAgent(userRef, text),
+        async () => await runAgent(userRef, text, frontendIntentHint),
         {
           userRef,
           textPreview: text.slice(0, 80),
+          frontendIntentHintAction: frontendIntentHint?.actionKey,
+          frontendIntentHintConfidence: frontendIntentHint?.confidence,
         }
       );
       res.json({ ok: true, userRef, input: text, ...out });

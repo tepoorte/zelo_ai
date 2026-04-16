@@ -624,6 +624,76 @@
       transition:width .2s ease, background .2s ease;
     }
 
+    .feedbackDock{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.03);
+    }
+
+    .feedbackPrompt{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.4;
+    }
+
+    .feedbackActions,
+    .feedbackChoiceRail{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .feedbackBtn{
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.05);
+      color:var(--text);
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:12px;
+      cursor:pointer;
+      line-height:1;
+    }
+
+    .feedbackBtn.is-positive{
+      background:rgba(93,242,155,0.1);
+      border-color:rgba(93,242,155,0.24);
+    }
+
+    .feedbackBtn.is-negative{
+      background:rgba(255,107,107,0.1);
+      border-color:rgba(255,107,107,0.2);
+    }
+
+    .feedbackBtn.is-export{
+      background:rgba(47,124,255,0.08);
+      border-color:rgba(47,124,255,0.18);
+    }
+
+    .feedbackChooser{
+      display:grid;
+      gap:8px;
+      margin-top:8px;
+      padding:10px 12px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.03);
+    }
+
+    .feedbackStatus{
+      min-height:18px;
+      margin-top:8px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
     .suggestion{
       border:none;
       background:rgba(255,255,255,0.05);
@@ -847,16 +917,24 @@
       font-weight:700;
     }
 
-    #authOverlay{
+    #authOverlay,
+    #modeOverlay{
       position:fixed;
       inset:0;
-      z-index:20;
       display:flex;
       align-items:center;
       justify-content:center;
       padding:26px;
       background:rgba(3, 7, 14, 0.48);
       backdrop-filter:blur(12px);
+    }
+
+    #authOverlay{
+      z-index:20;
+    }
+
+    #modeOverlay{
+      z-index:19;
     }
 
     .authCard{
@@ -869,6 +947,130 @@
         radial-gradient(circle at top right, rgba(47,124,255,0.18), transparent 30%),
         radial-gradient(circle at bottom left, rgba(25,211,179,0.14), transparent 35%),
         rgba(7, 14, 25, 0.92);
+    }
+
+    .modeCard{
+      width:min(880px, 100%);
+      border-radius:34px;
+      padding:26px;
+      display:grid;
+      gap:18px;
+      background:
+        radial-gradient(circle at top right, rgba(47,124,255,0.18), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(25,211,179,0.14), transparent 34%),
+        rgba(7, 14, 25, 0.94);
+    }
+
+    .modeHeader{
+      display:grid;
+      gap:10px;
+    }
+
+    .modeTitle{
+      margin:0;
+      font-size:clamp(28px, 5vw, 48px);
+      line-height:1;
+      letter-spacing:-.05em;
+    }
+
+    .modeTitle em{
+      font-family:"Instrument Serif", serif;
+      font-style:italic;
+      font-weight:400;
+      color:#bde7ff;
+    }
+
+    .modeSub{
+      margin:0;
+      color:var(--muted);
+      font-size:15px;
+      line-height:1.55;
+      max-width:740px;
+    }
+
+    .modeGrid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:14px;
+    }
+
+    .modeOption{
+      width:100%;
+      min-height:240px;
+      border-radius:26px;
+      padding:22px;
+      display:grid;
+      gap:14px;
+      align-content:start;
+      border:1px solid rgba(255,255,255,0.1);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
+        rgba(255,255,255,0.03);
+      color:var(--text);
+      text-align:left;
+      cursor:pointer;
+    }
+
+    .modeOption:hover{
+      border-color:rgba(174,232,255,0.22);
+    }
+
+    .modeTag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      width:max-content;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.08);
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      background:rgba(255,255,255,0.04);
+    }
+
+    .modeOptionTitle{
+      margin:0;
+      font-size:28px;
+      line-height:1;
+      letter-spacing:-.04em;
+    }
+
+    .modeOptionText{
+      margin:0;
+      color:var(--muted);
+      line-height:1.55;
+      font-size:15px;
+    }
+
+    .modeList{
+      margin:0;
+      padding:0;
+      list-style:none;
+      display:grid;
+      gap:8px;
+      color:var(--text);
+      font-size:14px;
+    }
+
+    .modeList li{
+      display:flex;
+      gap:8px;
+      align-items:flex-start;
+      line-height:1.4;
+    }
+
+    .modeList li::before{
+      content:"•";
+      color:#9df0c8;
+      flex:none;
+    }
+
+    .modeFooter{
+      color:rgba(237,247,255,0.56);
+      font-size:13px;
+      line-height:1.5;
     }
 
     .authHeader{
@@ -1039,6 +1241,7 @@
       }
       .signalGrid,
       .authDeck,
+      .modeGrid,
       .basketStats,
       .predictionBoard{
         grid-template-columns:1fr;
@@ -1108,6 +1311,53 @@
     </div>
   </div>
 
+  <div id="modeOverlay" class="hidden">
+    <div class="modeCard livingCard">
+      <div class="modeHeader">
+        <div class="authKicker"><span class="eyebrowDot"></span> Choix de l'interface</div>
+        <h2 class="modeTitle">Choisis la version de <em>Zelo AI</em> qui te convient.</h2>
+        <p class="modeSub">
+          Tu peux garder la surface avancée actuelle, ou passer sur une version très simple pensée pour
+          un client qui veut juste écrire naturellement et se laisser guider.
+        </p>
+      </div>
+
+      <div class="modeGrid">
+        <button type="button" class="modeOption livingCard magnetic" onclick="selectSimpleMode()">
+          <span class="modeTag">Mode simple</span>
+          <h3 class="modeOptionTitle">Assistant Zelo</h3>
+          <p class="modeOptionText">
+            Une interface très claire: quelques suggestions, un champ de texte, et l’assistant qui aide
+            pendant la frappe.
+          </p>
+          <ul class="modeList">
+            <li>Moins de texte, moins de blocs, démarrage immédiat.</li>
+            <li>Conseils simples pendant que le client écrit.</li>
+            <li>Idéal pour quelqu’un qui veut juste demander quelque chose.</li>
+          </ul>
+        </button>
+
+        <button type="button" class="modeOption livingCard magnetic" onclick="selectAdvancedMode()">
+          <span class="modeTag">Mode avancé</span>
+          <h3 class="modeOptionTitle">Surface augmentée</h3>
+          <p class="modeOptionText">
+            L’interface complète actuelle: signaux, prédiction visible, panier vivant et lecture détaillée
+            de l’intention.
+          </p>
+          <ul class="modeList">
+            <li>Affiche tout le contexte en direct.</li>
+            <li>Pratique pour tester, observer et affiner.</li>
+            <li>Parfait pour nous quand on veut comprendre le système.</li>
+          </ul>
+        </button>
+      </div>
+
+      <div class="modeFooter">
+        Tu pourras changer de mode plus tard depuis l’interface.
+      </div>
+    </div>
+  </div>
+
   <div class="wrap">
     <header class="topbar livingCard">
       <div class="brandBlock">
@@ -1121,6 +1371,7 @@
 
       <div class="topActions">
         <span id="sessionBadge" class="sessionPill">non connecté</span>
+        <button id="changeModeBtn" class="actionBtn magnetic hidden" onclick="openModeChooser()">Changer de mode</button>
         <button id="refreshBasketBtn" class="actionBtn magnetic hidden" onclick="refreshBasket()">Rafraîchir</button>
         <button id="logoutBtn" class="actionBtn magnetic hidden" onclick="logout()">Déconnexion</button>
       </div>
@@ -1225,6 +1476,24 @@
                   </span>
                 </div>
               </div>
+
+              <div class="feedbackDock">
+                <span class="feedbackPrompt" id="feedbackPrompt">
+                  Prediction utile ? Valide ou corrige l'action detectee.
+                </span>
+                <div class="feedbackActions">
+                  <button type="button" class="feedbackBtn magnetic is-positive" id="feedbackYes">Oui</button>
+                  <button type="button" class="feedbackBtn magnetic is-negative" id="feedbackNo">Non</button>
+                  <button type="button" class="feedbackBtn magnetic is-export" id="feedbackExport">Exporter</button>
+                </div>
+              </div>
+
+              <div class="feedbackChooser hidden" id="feedbackChooser">
+                <span class="feedbackPrompt">Si ce n'etait pas la bonne action, laquelle fallait-il predire ?</span>
+                <div class="feedbackChoiceRail" id="feedbackChoices"></div>
+              </div>
+
+              <div class="feedbackStatus" id="feedbackStatus"></div>
             </div>
 
             <div class="sendCluster">
@@ -1272,6 +1541,7 @@
   </div>
 
   <script src="/predictor/intent-classifier.js"></script>
+  <script src="/predictor/intent-feedback.js"></script>
   <script>
     const USER_REF = "local-dev";
 
@@ -1306,6 +1576,7 @@
     const sendEyebrow = document.getElementById("sendEyebrow");
 
     const authOverlay = document.getElementById("authOverlay");
+    const modeOverlay = document.getElementById("modeOverlay");
     const emailInput = document.getElementById("emailInput");
     const passwordInput = document.getElementById("passwordInput");
     const loginBtn = document.getElementById("loginBtn");
@@ -1313,6 +1584,7 @@
 
     const inputBar = document.getElementById("inputBar");
     const sessionBadge = document.getElementById("sessionBadge");
+    const changeModeBtn = document.getElementById("changeModeBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const refreshBasketBtn = document.getElementById("refreshBasketBtn");
 
@@ -1342,6 +1614,12 @@
     const predictionConfidence = document.getElementById("predictionConfidence");
     const predictionFill = document.getElementById("predictionFill");
     const predictionFamily = document.getElementById("predictionFamily");
+    const feedbackYes = document.getElementById("feedbackYes");
+    const feedbackNo = document.getElementById("feedbackNo");
+    const feedbackExport = document.getElementById("feedbackExport");
+    const feedbackChooser = document.getElementById("feedbackChooser");
+    const feedbackChoices = document.getElementById("feedbackChoices");
+    const feedbackStatus = document.getElementById("feedbackStatus");
 
     const intentPalette = {
       general: { label: "Générale", color: "#19d3b3" },
@@ -1349,6 +1627,18 @@
       add: { label: "Ajout", color: "#ffd166" },
       meal: { label: "Repas", color: "#ff8f6b" }
     };
+
+    const FEEDBACK_LABELS = {
+      add_items: "Ajouter",
+      clear_cart: "Vider",
+      show_cart: "Voir panier",
+      exec_cart: "Commander",
+      build_meal: "Construire repas",
+      discover_meals: "Propositions",
+      noop: "General"
+    };
+
+    const UI_MODE_KEY = "zelo_ai_ui_mode";
 
     function escapeHtml(str){
       return String(str)
@@ -1362,7 +1652,10 @@
     const predictorState = {
       ready: false,
       loading: false,
-      classifier: null
+      classifier: null,
+      training: null,
+      latestPrediction: null,
+      latestText: ""
     };
 
     function getDefaultPrediction(text){
@@ -1380,6 +1673,33 @@
       };
     }
 
+    function setFeedbackStatus(text){
+      feedbackStatus.textContent = text || "";
+    }
+
+    function renderFeedbackChoices(){
+      feedbackChoices.innerHTML = "";
+      const intents = Array.isArray(predictorState.training?.intents) ? predictorState.training.intents : [];
+      intents.forEach((intent) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "feedbackBtn magnetic";
+        button.textContent = FEEDBACK_LABELS[intent.key] || intent.label || intent.key;
+        button.onclick = () => handleFeedbackCorrection(intent.key);
+        feedbackChoices.appendChild(button);
+      });
+      applyMagnetism(feedbackChoices.querySelectorAll(".magnetic"));
+    }
+
+    async function rebuildPredictor(){
+      if (!predictorState.training) {
+        return;
+      }
+
+      predictorState.classifier = await window.ZeloIntentClassifier.create(predictorState.training);
+      predictorState.ready = true;
+    }
+
     async function initPredictor(){
       if (predictorState.ready || predictorState.loading) {
         return;
@@ -1388,8 +1708,9 @@
       predictorState.loading = true;
 
       try {
-        predictorState.classifier = await window.ZeloIntentClassifier.create("/predictor/intent-training.json");
-        predictorState.ready = true;
+        predictorState.training = await window.ZeloIntentFeedback.fetchTraining();
+        renderFeedbackChoices();
+        await rebuildPredictor();
       } catch (error) {
         console.warn("predictor init failed", error);
       } finally {
@@ -1404,6 +1725,100 @@
       }
 
       return predictorState.classifier.predict(text);
+    }
+
+    function buildFrontendIntentHint(text){
+      if (!predictorState.ready || !predictorState.classifier) {
+        return null;
+      }
+
+      const sourceText = String(text || "");
+      const prediction =
+        predictorState.latestText === sourceText && predictorState.latestPrediction
+          ? predictorState.latestPrediction
+          : predictIntentContext(sourceText);
+
+      if (!prediction?.actionKey) {
+        return null;
+      }
+
+      return {
+        actionKey: prediction.actionKey,
+        confidence: Number(prediction.confidence || 0),
+        family: prediction.family || "general",
+        planner: prediction.planner || "planner/general"
+      };
+    }
+
+    function canCollectFeedback(text){
+      return Boolean(String(text || "").trim()) && predictorState.ready && predictorState.training;
+    }
+
+    async function handleFeedbackPositive(){
+      const text = predictorState.latestText;
+      const prediction = predictorState.latestPrediction;
+
+      if (!canCollectFeedback(text) || !prediction?.actionKey) {
+        setFeedbackStatus("Ecris d'abord quelque chose pour laisser un feedback utile.");
+        return;
+      }
+
+      const result = await window.ZeloIntentFeedback.submitFeedback({
+        userRef: USER_REF,
+        text,
+        predictedAction: prediction.actionKey,
+        correctAction: prediction.actionKey,
+        kind: "positive"
+      });
+      predictorState.training = result.training;
+      await rebuildPredictor();
+      feedbackChooser.classList.add("hidden");
+      applyIntentState(text);
+      setFeedbackStatus("Apprentissage serveur mis a jour: cette prediction est maintenant renforcee pour tout le monde.");
+    }
+
+    function showFeedbackChooser(){
+      if (!canCollectFeedback(predictorState.latestText)) {
+        setFeedbackStatus("Ecris d'abord une phrase pour corriger une prediction.");
+        return;
+      }
+
+      feedbackChooser.classList.remove("hidden");
+      setFeedbackStatus("Choisis l'action correcte pour apprendre de cette phrase.");
+    }
+
+    async function handleFeedbackCorrection(correctKey){
+      const text = predictorState.latestText;
+      const prediction = predictorState.latestPrediction;
+
+      if (!canCollectFeedback(text) || !correctKey) {
+        setFeedbackStatus("Impossible d'enregistrer cette correction pour l'instant.");
+        return;
+      }
+
+      const result = await window.ZeloIntentFeedback.submitFeedback({
+        userRef: USER_REF,
+        text,
+        predictedAction: prediction?.actionKey || "noop",
+        correctAction: correctKey,
+        kind: "correction"
+      });
+      predictorState.training = result.training;
+      await rebuildPredictor();
+      feedbackChooser.classList.add("hidden");
+      applyIntentState(text);
+      const label = FEEDBACK_LABELS[correctKey] || correctKey;
+      setFeedbackStatus(`Correction memorisee cote serveur: cette phrase renforcera maintenant l'action ${label} pour tout le monde.`);
+    }
+
+    function exportFeedbackTraining(){
+      if (!predictorState.training) {
+        setFeedbackStatus("Le training n'est pas encore charge.");
+        return;
+      }
+
+      window.ZeloIntentFeedback.downloadTraining(predictorState.training, "intent-training-enriched.json");
+      setFeedbackStatus("Export du training enrichi lance.");
     }
 
     function addMessage(text, who){
@@ -1451,9 +1866,58 @@
       if(type === "ok") authStatus.classList.add("statusOk");
     }
 
+    function getStoredUiMode(){
+      return localStorage.getItem(UI_MODE_KEY) || "";
+    }
+
+    function saveUiMode(mode){
+      if (!mode) return;
+      localStorage.setItem(UI_MODE_KEY, mode);
+    }
+
+    function hideModeChooser(){
+      modeOverlay.classList.add("hidden");
+    }
+
+    function showModeChooser(){
+      modeOverlay.classList.remove("hidden");
+    }
+
+    function selectAdvancedMode(){
+      saveUiMode("advanced");
+      hideModeChooser();
+      setTimeout(() => input?.focus(), 40);
+    }
+
+    function selectSimpleMode(){
+      saveUiMode("simple");
+      window.location.href = "/index_simple.html";
+    }
+
+    function openModeChooser(){
+      showModeChooser();
+    }
+
+    function applySavedModeOnRestore(){
+      const mode = getStoredUiMode();
+      if (mode === "simple") {
+        window.location.href = "/index_simple.html";
+        return true;
+      }
+
+      if (!mode) {
+        showModeChooser();
+      } else {
+        hideModeChooser();
+      }
+
+      return false;
+    }
+
     function setLoggedInUI(email){
       authOverlay.classList.add("hidden");
       inputBar.classList.remove("hidden");
+      changeModeBtn.classList.remove("hidden");
       logoutBtn.classList.remove("hidden");
       refreshBasketBtn.classList.remove("hidden");
       sessionBadge.textContent = email ? `connecté · ${email}` : "connecté";
@@ -1466,7 +1930,9 @@
 
     function setLoggedOutUI(){
       authOverlay.classList.remove("hidden");
+      hideModeChooser();
       inputBar.classList.add("hidden");
+      changeModeBtn.classList.add("hidden");
       logoutBtn.classList.add("hidden");
       refreshBasketBtn.classList.add("hidden");
       sessionBadge.textContent = "non connecté";
@@ -1631,6 +2097,8 @@
 
     function applyIntentState(text){
       const prediction = predictIntentContext(text);
+      predictorState.latestPrediction = prediction;
+      predictorState.latestText = String(text || "");
       const intent = prediction.family;
       const palette = intentPalette[intent];
       const copy = getIntentCopy(intent, text, prediction);
@@ -1658,7 +2126,14 @@
       predictionConfidence.textContent = `${prediction.confidence}%`;
       predictionFill.style.width = `${prediction.confidence}%`;
       predictionFill.style.background = `linear-gradient(90deg, ${palette.color}, rgba(25,211,179,0.86))`;
-      predictionFamily.textContent = `Famille détectée: ${palette.label.toLowerCase()}`;
+      predictionFamily.textContent = prediction.ambiguity && prediction.secondChoice
+        ? `Famille détectée: ${palette.label.toLowerCase()} · alternative ${prediction.secondChoice.actionLabel}`
+        : `Famille détectée: ${palette.label.toLowerCase()}`;
+
+      if (!String(text || "").trim()) {
+        feedbackChooser.classList.add("hidden");
+        setFeedbackStatus("");
+      }
 
       renderHeroIdeas(intent);
       renderSuggestions(intent);
@@ -1837,6 +2312,7 @@
         saveSession(username);
         setLoggedInUI(username);
         setAuthStatus("Connexion réussie.", "ok");
+        showModeChooser();
 
         if(messages.children.length === 0){
           addMessage("Bonjour. La surface est active, votre panier réel aussi. On commence ?", "ai");
@@ -1862,6 +2338,7 @@
     async function send(){
       const text = input.value.trim();
       if(!text) return;
+      const frontendIntentHint = buildFrontendIntentHint(text);
 
       addMessage(text, "user");
       input.value = "";
@@ -1876,10 +2353,15 @@
       addTypingMessage();
 
       try{
+        const payload = { userRef: USER_REF, text };
+        if (frontendIntentHint?.actionKey) {
+          payload.frontendIntentHint = frontendIntentHint;
+        }
+
         const res = await fetch("/ai/chat", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ userRef: USER_REF, text })
+          body: JSON.stringify(payload)
         });
 
         const data = await res.json();
@@ -1905,6 +2387,10 @@
     input.addEventListener("input", () => {
       applyIntentState(input.value);
     });
+
+    feedbackYes.addEventListener("click", handleFeedbackPositive);
+    feedbackNo.addEventListener("click", showFeedbackChooser);
+    feedbackExport.addEventListener("click", exportFeedbackTraining);
 
     emailInput.addEventListener("keydown", (e) => {
       if(e.key === "Enter") login();
@@ -2089,11 +2575,14 @@
     if(!restoreSession()){
       setLoggedOutUI();
     } else {
-      if(messages.children.length === 0){
-        addMessage("Bonjour. La surface est active, votre panier réel aussi. On commence ?", "ai");
+      const redirectedToSimple = applySavedModeOnRestore();
+      if (!redirectedToSimple) {
+        if(messages.children.length === 0){
+          addMessage("Bonjour. La surface est active, votre panier réel aussi. On commence ?", "ai");
+        }
+        refreshBasket();
+        setTimeout(() => input?.focus(), 40);
       }
-      refreshBasket();
-      setTimeout(() => input?.focus(), 40);
     }
   </script>
 </body>

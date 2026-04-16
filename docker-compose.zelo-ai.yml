@@ -40,7 +40,8 @@ services:
       - NODE_ENV=development
       - PORT=3041
       - AI_PROVIDER=ollama
-      - OLLAMA_BASE_URL=http://ollama:11434
+      #OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
       - OLLAMA_MODEL=llama3.2
       - OLLAMA_PLANNER_MODEL=llama3.2:1b
       # lascia pure i tuoi env meta/swissdata, non servono per il test base

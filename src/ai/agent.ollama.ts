@@ -27,7 +27,7 @@ import {
 //import { handleBuildMealActionV2 } from "./services/meal.service.v2.js";
 import { MealBuildEngineV2 } from "./MealBuildEngine.v2.js";
 //import { MealBuildEngineV3 } from "./MealBuildEngineV3.js";
-import { planUserIntent } from "./services/planner.service.js";
+import { planUserIntent, type FrontendIntentHint } from "./services/planner.service.js";
 import { timeAsync, perfMeta } from "../utils/perf.js";
 
 
@@ -40,7 +40,8 @@ import { timeAsync, perfMeta } from "../utils/perf.js";
 
 export async function runAgentOllama(
   userRef: string,
-  userText: string
+  userText: string,
+  intentHint?: FrontendIntentHint
 ): Promise<{ message: string }> {
   perfMeta({ userRef, userTextPreview: userText.slice(0, 80) });
   const lower = userText.toLowerCase();
@@ -74,7 +75,7 @@ if (/(carrello|basket|panier|cart)/i.test(lower) && /(montre|mostra|show|voir)/i
 
   const plan = await timeAsync(
     "agent.plan_user_intent",
-    async () => await planUserIntent(userRef, userText)
+    async () => await planUserIntent(userRef, userText, intentHint)
   );
   
   /*const planText = await ollamaChat(
@@ -220,6 +221,36 @@ if (action.type === "discover_meal_ideas") {
   const clearResult = toolResults.find(
     (x) => x.action?.type === "clear_cart"
   )?.result;
+
+  if (clearResult?.mode === "partial") {
+    const removedItems = Array.isArray(clearResult?.removedItems) ? clearResult.removedItems : [];
+    const unmatchedQueries = Array.isArray(clearResult?.unmatchedQueries) ? clearResult.unmatchedQueries : [];
+
+    if (!removedItems.length) {
+      return {
+        message:
+          `Je n’ai pas trouvé clairement l’article à retirer dans votre panier.\n\n` +
+          formatCartFr(clearResult?.basket),
+      };
+    }
+
+    const lines = removedItems.map(
+      (item: any) => `• ${item?.quantity ?? 1} × ${item?.name ?? "Produit"}`
+    );
+
+    const unmatchedBlock = unmatchedQueries.length
+      ? `\n\nJe n’ai pas retrouvé clairement :\n${unmatchedQueries.map((q: string) => `• ${q}`).join("\n")}`
+      : "";
+
+    return {
+      message:
+        `🧹 J’ai retiré du panier :\n` +
+        lines.join("\n") +
+        unmatchedBlock +
+        `\n\n` +
+        formatCartFr(clearResult?.basket),
+    };
+  }
 
   return {
     message:

@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Assistant Zelo</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap");
+
+    :root{
+      --bg:#f4f8fb;
+      --panel:#ffffff;
+      --line:rgba(9, 38, 62, 0.1);
+      --text:#082032;
+      --muted:#5d7283;
+      --blue:#2f7cff;
+      --teal:#19d3b3;
+      --shadow:0 22px 70px rgba(8, 32, 50, 0.12);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ min-height:100%; }
+    body{
+      margin:0;
+      font-family:"Space Grotesk", system-ui, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(47,124,255,0.12), transparent 22%),
+        radial-gradient(circle at bottom right, rgba(25,211,179,0.12), transparent 24%),
+        linear-gradient(180deg, #f7fbff, #eef4f8 70%);
+    }
+
+    button,
+    input{
+      font:inherit;
+    }
+
+    .shell{
+      max-width:980px;
+      margin:0 auto;
+      padding:24px 18px 40px;
+      display:grid;
+      gap:18px;
+    }
+
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+    }
+
+    .topbar{
+      padding:20px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+
+    .eyebrow{
+      margin:0 0 10px;
+      font-size:12px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--teal);
+      font-weight:700;
+    }
+
+    h1{
+      margin:0;
+      font-size:clamp(32px, 5vw, 54px);
+      line-height:.95;
+      letter-spacing:-.05em;
+    }
+
+    .sub{
+      margin:12px 0 0;
+      color:var(--muted);
+      line-height:1.55;
+      max-width:560px;
+      font-size:16px;
+    }
+
+    .topActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
+    .pill{
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(47,124,255,0.06);
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .actionBtn{
+      border:none;
+      border-radius:16px;
+      padding:11px 15px;
+      cursor:pointer;
+      color:var(--text);
+      background:rgba(8,32,50,0.06);
+    }
+
+    .actionBtn.primary{
+      color:white;
+      background:linear-gradient(135deg, rgba(47,124,255,0.96), rgba(25,211,179,0.88));
+    }
+
+    .helper{
+      padding:20px;
+      display:grid;
+      gap:14px;
+    }
+
+    .helperLead{
+      margin:0;
+      font-size:20px;
+      line-height:1.35;
+    }
+
+    .helperHint{
+      margin:0;
+      color:var(--muted);
+      font-size:15px;
+      line-height:1.5;
+    }
+
+    .suggestionRail{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .suggestion{
+      border:none;
+      border-radius:999px;
+      padding:12px 16px;
+      cursor:pointer;
+      background:rgba(8,32,50,0.06);
+      color:var(--text);
+    }
+
+    .chat{
+      min-height:360px;
+      max-height:56vh;
+      overflow:auto;
+      padding:20px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .row{
+      display:flex;
+    }
+
+    .row.user{
+      justify-content:flex-end;
+    }
+
+    .bubble{
+      max-width:min(100%, 720px);
+      padding:14px 16px;
+      border-radius:18px;
+      line-height:1.55;
+      white-space:pre-wrap;
+    }
+
+    .bubble.ai{
+      background:rgba(47,124,255,0.08);
+      border:1px solid rgba(47,124,255,0.1);
+    }
+
+    .bubble.user{
+      color:white;
+      background:linear-gradient(135deg, rgba(47,124,255,0.94), rgba(25,211,179,0.86));
+    }
+
+    .typingDots{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      min-height:18px;
+    }
+
+    .typingDots span{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:#6e8798;
+      animation: blink 1s infinite ease-in-out;
+    }
+
+    .typingDots span:nth-child(2){ animation-delay:.15s; }
+    .typingDots span:nth-child(3){ animation-delay:.3s; }
+
+    @keyframes blink {
+      0%, 80%, 100%{ opacity:.25; transform:translateY(0); }
+      40%{ opacity:1; transform:translateY(-2px); }
+    }
+
+    .composer{
+      padding:20px;
+      display:grid;
+      gap:12px;
+    }
+
+    .inputWrap{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) auto;
+      gap:12px;
+      align-items:center;
+    }
+
+    .composer input{
+      width:100%;
+      min-height:62px;
+      border-radius:18px;
+      border:1px solid var(--line);
+      background:#fbfdff;
+      color:var(--text);
+      padding:0 18px;
+      outline:none;
+      font-size:17px;
+    }
+
+    .composer input:focus{
+      border-color:rgba(47,124,255,0.28);
+      box-shadow:0 0 0 3px rgba(47,124,255,0.08);
+    }
+
+    .sendBtn{
+      min-width:136px;
+      min-height:62px;
+      border:none;
+      border-radius:18px;
+      cursor:pointer;
+      color:white;
+      font-weight:700;
+      background:linear-gradient(135deg, rgba(47,124,255,0.96), rgba(25,211,179,0.88));
+    }
+
+    .sendBtn:disabled{
+      opacity:.7;
+      cursor:not-allowed;
+    }
+
+    .tiny{
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.45;
+    }
+
+    @media (max-width: 720px){
+      .topbar,
+      .helper,
+      .chat,
+      .composer{
+        padding:16px;
+      }
+
+      .inputWrap{
+        grid-template-columns:1fr;
+      }
+
+      .sendBtn{
+        width:100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="panel topbar">
+      <div>
+        <p class="eyebrow">Assistant Zelo</p>
+        <h1>Ecris simplement ce que tu veux.</h1>
+        <p class="sub">
+          Pas besoin de commandes compliquées. Commence à écrire, et Zelo te guide avec des exemples utiles.
+        </p>
+      </div>
+
+      <div class="topActions">
+        <span id="sessionBadge" class="pill">connecte</span>
+        <button class="actionBtn" type="button" onclick="goAdvanced()">Interface avancee</button>
+        <button class="actionBtn primary" type="button" onclick="logout()">Deconnexion</button>
+      </div>
+    </header>
+
+    <section class="panel helper">
+      <p id="helperLead" class="helperLead">Je suis pret. Ecris comme tu parlerais a une personne.</p>
+      <p id="helperHint" class="helperHint">Exemples utiles: ajoute 1 pain anglais a mon panier, montre-moi mon panier, de quoi faire une fondue.</p>
+      <div id="suggestionRail" class="suggestionRail"></div>
+    </section>
+
+    <section id="messages" class="panel chat"></section>
+
+    <section class="panel composer">
+      <div class="inputWrap">
+        <input id="input" type="text" placeholder="Ex: ajoute 1 lard de begnins a mon panier" />
+        <button id="sendBtn" class="sendBtn" type="button" onclick="send()">Envoyer</button>
+      </div>
+      <div class="tiny">Tu peux demander un ajout, voir le panier, vider le panier, passer la commande ou demander des idees repas.</div>
+    </section>
+  </div>
+
+  <script src="/predictor/intent-classifier.js"></script>
+  <script src="/predictor/intent-feedback.js"></script>
+  <script>
+    const USER_REF = "local-dev";
+    const AUTH_KEY = "zelo_ai_auth";
+    const UI_MODE_KEY = "zelo_ai_ui_mode";
+
+    const QUICK_ACTIONS = {
+      general: [
+        "bonjour",
+        "comment ca va ?",
+        "quel temps fait-il aujourd'hui ?"
+      ],
+      cart: [
+        "montre-moi mon panier",
+        "vide mon panier",
+        "passe la commande"
+      ],
+      add: [
+        "ajoute 1 lard de begnins a mon panier",
+        "ajoute 1 pain anglais a mon panier",
+        "ajoute 1 panier budget 50 a mon panier"
+      ],
+      meal: [
+        "de quoi faire une fondue",
+        "de quoi faire une carbonara",
+        "qu'est-ce que tu me proposes aujourd'hui ?"
+      ]
+    };
+
+    const predictorState = {
+      ready: false,
+      loading: false,
+      classifier: null,
+      latestPrediction: null,
+      latestText: "",
+      initPromise: null
+    };
+
+    const messages = document.getElementById("messages");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("sendBtn");
+    const sessionBadge = document.getElementById("sessionBadge");
+    const helperLead = document.getElementById("helperLead");
+    const helperHint = document.getElementById("helperHint");
+    const suggestionRail = document.getElementById("suggestionRail");
+
+    function setComposerReadyState(ready){
+      sendBtn.disabled = !ready;
+      input.disabled = !ready;
+      if (!ready) {
+        helperLead.textContent = "Je prepare la lecture d'intention avant le premier envoi.";
+        helperHint.textContent = "Encore une petite seconde: je charge le modele local pour choisir le bon planner des le premier message.";
+      }
+    }
+
+    function getDefaultPrediction(text){
+      const hasText = Boolean(String(text || "").trim());
+      return {
+        family: "general",
+        actionKey: "noop",
+        actionLabel: "NOOP",
+        confidence: hasText ? 12 : 0,
+        canonical: hasText ? "Analyse locale en cours" : "Reponse generale",
+        planner: "planner/general",
+        reason: hasText
+          ? "Le modele local se charge."
+          : "Aucune action claire detectee."
+      };
+    }
+
+    async function initPredictor(){
+      if (predictorState.ready) {
+        return true;
+      }
+
+      if (predictorState.initPromise) {
+        return predictorState.initPromise;
+      }
+
+      setComposerReadyState(false);
+      predictorState.loading = true;
+      predictorState.initPromise = (async () => {
+        try {
+          const training = await window.ZeloIntentFeedback.fetchTraining();
+          predictorState.classifier = await window.ZeloIntentClassifier.create(training);
+          predictorState.ready = true;
+          return true;
+        } catch (error) {
+          console.warn("simple predictor init failed", error);
+          predictorState.ready = false;
+          return false;
+        } finally {
+          predictorState.loading = false;
+          predictorState.initPromise = null;
+          applySimpleAssist(input.value || "");
+          setComposerReadyState(predictorState.ready);
+        }
+      })();
+
+      return predictorState.initPromise;
+    }
+
+    async function ensurePredictorReady(){
+      if (predictorState.ready) {
+        return true;
+      }
+
+      return await initPredictor();
+    }
+
+    function predictIntentContext(text){
+      if (!predictorState.ready || !predictorState.classifier) {
+        return getDefaultPrediction(text);
+      }
+      return predictorState.classifier.predict(text);
+    }
+
+    function buildFrontendIntentHint(text){
+      if (!predictorState.ready || !predictorState.classifier) {
+        return null;
+      }
+
+      const sourceText = String(text || "");
+      const prediction =
+        predictorState.latestText === sourceText && predictorState.latestPrediction
+          ? predictorState.latestPrediction
+          : predictIntentContext(sourceText);
+
+      if (!prediction?.actionKey) {
+        return null;
+      }
+
+      return {
+        actionKey: prediction.actionKey,
+        confidence: Number(prediction.confidence || 0),
+        family: prediction.family || "general",
+        planner: prediction.planner || "planner/general"
+      };
+    }
+
+    function getSimpleCopy(prediction){
+      const family = prediction.family;
+      const actionKey = prediction.actionKey;
+
+      if (family === "add") {
+        return {
+          lead: "On dirait que tu veux ajouter quelque chose.",
+          hint: "Si tu peux, precise la quantite: 1, 150g, 1 litre, etc.",
+          suggestions: QUICK_ACTIONS.add
+        };
+      }
+
+      if (family === "cart") {
+        if (actionKey === "clear_cart") {
+          return {
+            lead: "On dirait une action pour vider le panier.",
+            hint: "Tu peux aussi demander a voir le panier ou a passer la commande.",
+            suggestions: QUICK_ACTIONS.cart
+          };
+        }
+
+        if (actionKey === "exec_cart") {
+          return {
+            lead: "On dirait que tu veux finaliser la commande.",
+            hint: "Tu peux aussi verifier le panier juste avant si besoin.",
+            suggestions: QUICK_ACTIONS.cart
+          };
+        }
+
+        return {
+          lead: "On dirait une demande autour du panier.",
+          hint: "Tu peux demander a voir, vider ou commander.",
+          suggestions: QUICK_ACTIONS.cart
+        };
+      }
+
+      if (family === "meal") {
+        return {
+          lead: "On dirait une envie de repas ou d'idees cuisine.",
+          hint: "Tu peux demander de quoi faire une fondue, une carbonara, ou demander une idee du jour.",
+          suggestions: QUICK_ACTIONS.meal
+        };
+      }
+
+      return {
+        lead: "Ecris simplement ce que tu veux. Zelo s'adapte pendant la frappe.",
+        hint: "Exemples utiles: ajoute 1 pain anglais a mon panier, montre-moi mon panier, de quoi faire une fondue.",
+        suggestions: QUICK_ACTIONS.general
+      };
+    }
+
+    function renderSuggestions(items){
+      suggestionRail.innerHTML = "";
+      items.forEach((item) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "suggestion";
+        button.textContent = item;
+        button.onclick = () => {
+          input.value = item;
+          applySimpleAssist(item);
+          input.focus();
+        };
+        suggestionRail.appendChild(button);
+      });
+    }
+
+    function applySimpleAssist(text){
+      const prediction = predictIntentContext(text);
+      predictorState.latestPrediction = prediction;
+      predictorState.latestText = String(text || "");
+      const copy = getSimpleCopy(prediction);
+      helperLead.textContent = copy.lead;
+      helperHint.textContent = copy.hint;
+      renderSuggestions(copy.suggestions);
+    }
+
+    function addMessage(text, who){
+      const row = document.createElement("div");
+      row.className = "row " + (who === "user" ? "user" : "ai");
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble " + (who === "user" ? "user" : "ai");
+      bubble.textContent = text;
+
+      row.appendChild(bubble);
+      messages.appendChild(row);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function addTypingMessage(){
+      removeTypingMessage();
+
+      const row = document.createElement("div");
+      row.className = "row ai";
+      row.id = "typingRow";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble ai";
+
+      const dots = document.createElement("div");
+      dots.className = "typingDots";
+      dots.innerHTML = "<span></span><span></span><span></span>";
+
+      bubble.appendChild(dots);
+      row.appendChild(bubble);
+      messages.appendChild(row);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function removeTypingMessage(){
+      const el = document.getElementById("typingRow");
+      if (el) el.remove();
+    }
+
+    function restoreSession(){
+      try {
+        const raw = localStorage.getItem(AUTH_KEY);
+        if (!raw) return null;
+        const session = JSON.parse(raw);
+        if (session?.loggedIn) {
+          return session;
+        }
+      } catch {}
+      return null;
+    }
+
+    function clearSession(){
+      localStorage.removeItem(AUTH_KEY);
+    }
+
+    function goAdvanced(){
+      localStorage.setItem(UI_MODE_KEY, "advanced");
+      window.location.href = "/";
+    }
+
+    function logout(){
+      clearSession();
+      window.location.href = "/";
+    }
+
+    async function send(){
+      const text = input.value.trim();
+      if (!text) return;
+
+      const ready = await ensurePredictorReady();
+      if (!ready) {
+        addMessage("Je ne suis pas encore pret a lire ton intention. Reessaie dans un instant.", "ai");
+        return;
+      }
+
+      const frontendIntentHint = buildFrontendIntentHint(text);
+      if (!frontendIntentHint?.actionKey) {
+        addMessage("Je n'ai pas encore pu preparer le bon contexte d'intention. Reessaie tout de suite.", "ai");
+        return;
+      }
+
+      addMessage(text, "user");
+      input.value = "";
+      applySimpleAssist("");
+      input.focus();
+
+      sendBtn.disabled = true;
+      addTypingMessage();
+
+      try {
+        const payload = {
+          userRef: USER_REF,
+          text,
+          frontendIntentHint
+        };
+
+        const response = await fetch("/ai/chat", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        removeTypingMessage();
+        addMessage(data.message || data.error || "Erreur", "ai");
+      } catch (error) {
+        removeTypingMessage();
+        addMessage("Erreur de reseau: " + (error?.message || error), "ai");
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    input.addEventListener("input", () => {
+      applySimpleAssist(input.value);
+    });
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        send();
+      }
+    });
+
+    const session = restoreSession();
+    if (!session) {
+      window.location.href = "/";
+    } else {
+      localStorage.setItem(UI_MODE_KEY, "simple");
+      sessionBadge.textContent = session.email ? "connecte · " + session.email : "connecte";
+      addMessage("Bonjour. Dis-moi simplement ce que tu veux faire.", "ai");
+      setComposerReadyState(false);
+      applySimpleAssist("");
+      initPredictor();
+      setTimeout(() => input.focus(), 40);
+    }
+  </script>
+</body>
+</html>

@@ -86,11 +86,16 @@ export async function runAgent(
 // src/ai/agent.ts
 import { env } from "../config/env.js";
 import { runAgentOllama } from "./agent.ollama.js";
+import type { FrontendIntentHint } from "./services/planner.service.js";
 //import { runAgentOpenAI } from "./agent.openai.js"; // se vuoi tenerlo per dopo
 
-export async function runAgent(userRef: string, userText: string): Promise<{ message: string }> {
+export async function runAgent(
+  userRef: string,
+  userText: string,
+  intentHint?: FrontendIntentHint
+): Promise<{ message: string }> {
 
-    return runAgentOllama(userRef, userText);
+    return runAgentOllama(userRef, userText, intentHint);
   
   //return runAgentOpenAI(userRef, userText);
 }

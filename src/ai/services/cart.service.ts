@@ -1,5 +1,11 @@
 import { getPending, setPending, clearPending } from "../pending.js";
-import { getCurrentBasket, addProductToBasket, clearCurrentBasket, placeCurrentBasketOrder } from "../../swissdata/cart.js";
+import {
+  getCurrentBasket,
+  addProductToBasket,
+  clearCurrentBasket,
+  placeCurrentBasketOrder,
+  removeProductFromBasket,
+} from "../../swissdata/cart.js";
 import { type Product } from "../../swissdata/products.js";
 import {
   formatCartFr,
@@ -8,6 +14,7 @@ import {
   formatOptionQuestion,
   resolveOptionsFromText,
   userChoseNoOptions,
+  normalizeLooseText,
 } from "./cart-helpers.service.js";
 import { timeAsync, timeSync } from "../../utils/perf.js";
 
@@ -22,6 +29,88 @@ type AddOutcomeSuccess = {
 };
 
 export type AddOutcome = AddOutcomePending | AddOutcomeSuccess;
+
+type ClearCartAction = {
+  userRef?: string;
+  mode?: "all" | "partial";
+  items?: Array<{ query: string }>;
+};
+
+type BasketLine = {
+  productId?: string;
+  optionsIds?: string[];
+  name?: string;
+  productName?: string;
+  product?: { name?: string };
+  quantity?: number;
+  qty?: number;
+};
+
+function basketLineName(line: BasketLine): string {
+  return String(
+    line?.name ??
+    line?.productName ??
+    line?.product?.name ??
+    line?.productId ??
+    "Produit"
+  );
+}
+
+function scoreBasketLine(query: string, lineName: string): number {
+  const normalizedQuery = normalizeLooseText(query);
+  const normalizedLine = normalizeLooseText(lineName);
+
+  if (!normalizedQuery || !normalizedLine) return 0;
+  if (normalizedLine === normalizedQuery) return 100;
+  if (normalizedLine.includes(normalizedQuery)) return 90;
+  if (normalizedQuery.includes(normalizedLine)) return 75;
+
+  const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+  const lineTokens = new Set(normalizedLine.split(" ").filter(Boolean));
+  const overlap = queryTokens.filter((token) => lineTokens.has(token)).length;
+
+  if (!overlap) return 0;
+
+  const coverage = overlap / queryTokens.length;
+  if (coverage >= 1) return 70;
+  if (coverage >= 0.75) return 55;
+  if (coverage >= 0.5) return 40;
+  return 0;
+}
+
+function selectBasketLinesForRemoval(
+  basket: any,
+  queries: string[]
+): { matched: BasketLine[]; unmatched: string[] } {
+  const products = Array.isArray(basket?.products) ? (basket.products as BasketLine[]) : [];
+  const matched: BasketLine[] = [];
+  const unmatched: string[] = [];
+  const usedIndexes = new Set<number>();
+
+  for (const query of queries) {
+    let bestIndex = -1;
+    let bestScore = 0;
+
+    for (let index = 0; index < products.length; index++) {
+      if (usedIndexes.has(index)) continue;
+      const line = products[index];
+      const score = scoreBasketLine(query, basketLineName(line));
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    }
+
+    if (bestIndex >= 0 && bestScore >= 40) {
+      usedIndexes.add(bestIndex);
+      matched.push(products[bestIndex]);
+    } else {
+      unmatched.push(query);
+    }
+  }
+
+  return { matched, unmatched };
+}
 
 export async function tryResolvePendingOptions(
   userRef: string,
@@ -238,9 +327,44 @@ export async function handleShowCartAction(userRef: string, action?: { userRef?:
 }
 
 export async function handleClearCartAction(userRef: string, action?: { userRef?: string }) {
-  const updated = await clearCurrentBasket(action?.userRef ?? userRef);
+  const targetUserRef = action?.userRef ?? userRef;
+  const typedAction = (action ?? {}) as ClearCartAction;
+
+  if (typedAction.mode === "partial" && Array.isArray(typedAction.items) && typedAction.items.length) {
+    const basket = await getCurrentBasket(targetUserRef);
+    const queries = typedAction.items
+      .map((item) => String(item?.query ?? "").trim())
+      .filter(Boolean);
+
+    const { matched, unmatched } = selectBasketLinesForRemoval(basket, queries);
+
+    for (const line of matched) {
+      if (!line?.productId) continue;
+      await removeProductFromBasket(
+        targetUserRef,
+        basket.id,
+        String(line.productId),
+        Array.isArray(line.optionsIds) ? line.optionsIds : []
+      );
+    }
+
+    const updated = await getCurrentBasket(targetUserRef);
+    return {
+      ok: true,
+      mode: "partial" as const,
+      removedItems: matched.map((line) => ({
+        name: basketLineName(line),
+        quantity: line?.quantity ?? line?.qty ?? 1,
+      })),
+      unmatchedQueries: unmatched,
+      basket: updated,
+    };
+  }
+
+  const updated = await clearCurrentBasket(targetUserRef);
   return {
     ok: true,
+    mode: "all" as const,
     basket: updated,
   };
 }
