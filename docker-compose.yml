@@ -9,7 +9,7 @@ services:
     environment:
       - NODE_ENV={{NODE_ENV}}
       - PORT={{PORT}}
-      - AI_PROVIDER=ollama
+      - AI_PROVIDER={{AI_PROVIDER}}
       - OLLAMA_BASE_URL={{OLLAMA_BASE_URL}}
       - OLLAMA_MODEL={{OLLAMA_MODEL}}
       - OLLAMA_PLANNER_MODEL={{OLLAMA_PLANNER_MODEL}}
