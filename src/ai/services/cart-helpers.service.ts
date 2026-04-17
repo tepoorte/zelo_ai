@@ -122,7 +122,7 @@ export function computeBasketQty(product: any, requestedQty: number, requestedUn
     return Math.max(1, requestedQty);
   }
 
-  if (unit === "g" || unit === "kg") {
+  if (unit === "g" || unit === "gr" || unit === "gramme" || unit === "grammes" || unit === "kg") {
     const requestedGrams = unit === "kg" ? requestedQty * 1000 : requestedQty;
 
     if (

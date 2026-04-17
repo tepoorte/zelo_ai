@@ -1,6 +1,7 @@
 import { env } from "../config/env.js";
 import { swissdataClient } from "./client.js";
 import { timeAsync, timeSync } from "../utils/perf.js";
+import { normalizeText, tokenizeForMatch } from "../domain/normalizer.js";
 
 const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -92,16 +93,27 @@ export async function searchProducts(
   query: string,
   limit = 10
 ): Promise<Product[]> {
-  const q = query.toLowerCase().trim();
+  const q = normalizeText(query);
   const items = await getCatalog(userRef);
+  const qTokens = q.split(" ").filter(Boolean);
+  const qMatchTokens = tokenizeForMatch(query);
+  const qMatchTokenSet = new Set(qMatchTokens);
 
   return items
     .map((p) => {
-      const name = (p?.name ?? "").toLowerCase();
+      const name = normalizeText(p?.name ?? "");
+      const nameMatchTokens = tokenizeForMatch(p?.name ?? "");
+      const nameMatchTokenSet = new Set(nameMatchTokens);
+      const overlap = [...qMatchTokenSet].filter((token) => nameMatchTokenSet.has(token)).length;
+      const allQueryTokensIncluded =
+        qTokens.length > 0 &&
+        qTokens.every((token) => nameMatchTokenSet.has(token) || nameMatchTokenSet.has(token.endsWith("s") ? token.slice(0, -1) : token));
 
       const score =
-        name.includes(q) ? 3 :
-        name.split(" ").some((w) => q.split(" ").includes(w)) ? 1 : 0;
+        name.includes(q) ? 4 :
+        allQueryTokensIncluded ? 3 :
+        overlap >= 2 ? 2 :
+        overlap >= 1 ? 1 : 0;
 
       return { p, score };
     })

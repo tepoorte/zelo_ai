@@ -1,5 +1,5 @@
 import { Product } from "../swissdata/products.js";
-import { normalizeText } from "./normalizer.js";
+import { normalizeText, tokenizeForMatch } from "./normalizer.js";
 
 export function matchIngredientToProduct(
   ingredientName: string,
@@ -41,10 +41,14 @@ function similarity(a: string, b: string): number {
 
   if (b.includes(a) || a.includes(b)) return 0.8;
 
-  const aWords = new Set(a.split(" "));
-  const bWords = new Set(b.split(" "));
+  const aWords = new Set(tokenizeForMatch(a));
+  const bWords = new Set(tokenizeForMatch(b));
 
   const intersection = [...aWords].filter(w => bWords.has(w)).length;
+
+  if (intersection > 0 && [...aWords].every((word) => bWords.has(word))) {
+    return 0.92;
+  }
 
   return intersection / Math.max(aWords.size, bWords.size);
 }

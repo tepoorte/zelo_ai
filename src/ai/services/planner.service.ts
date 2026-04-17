@@ -39,12 +39,140 @@ type Plan = {
   userFacingDraft?: string;
 };
 
+function normalizeUnit(value: unknown): string | undefined {
+  const unit = String(value ?? "").trim().toLowerCase();
+  if (!unit) return undefined;
+
+  if (unit === "piece" || unit === "pieces" || unit === "piece(s)" || unit === "pièce" || unit === "pièces") {
+    return "piece";
+  }
+  if (
+    unit === "g" ||
+    unit === "gr" ||
+    unit === "gram" ||
+    unit === "grams" ||
+    unit === "gramme" ||
+    unit === "grammes" ||
+    unit === "grain" ||
+    unit === "grains"
+  ) {
+    return "g";
+  }
+  if (unit === "kg" || unit === "kilogramme" || unit === "kilogrammes") {
+    return "kg";
+  }
+  if (unit === "l" || unit === "litre") return "litre";
+  if (unit === "litres") return "litres";
+  if (unit === "ml") return "ml";
+  return undefined;
+}
+
+function parseLooseNumber(value: string): number | undefined {
+  const normalized = String(value || "").trim().replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function extractInlineQuantity(rawQuery: string): {
+  query: string;
+  qty?: number;
+  unit?: string;
+} {
+  const query = String(rawQuery ?? "").trim().replace(/\s+/g, " ");
+  if (!query) return { query: "" };
+
+  const unitPattern =
+    "(kg|kilogrammes?|g|gr|grammes?|grams?|grains?|ml|l|litres?|pieces?|piece\\(s\\)|pi[eè]ces?)";
+
+  const prefixWithUnit = query.match(
+    new RegExp(`^(\\d+(?:[\\.,]\\d+)?)\\s*${unitPattern}\\s+(?:de\\s+|du\\s+|des\\s+|d['’]\\s*)?(.+)$`, "i")
+  );
+  if (prefixWithUnit) {
+    return {
+      query: prefixWithUnit[3].trim(),
+      qty: parseLooseNumber(prefixWithUnit[1]),
+      unit: normalizeUnit(prefixWithUnit[2]),
+    };
+  }
+
+  const suffixWithUnit = query.match(
+    new RegExp(`^(.+?)\\s+(\\d+(?:[\\.,]\\d+)?)\\s*${unitPattern}$`, "i")
+  );
+  if (suffixWithUnit) {
+    return {
+      query: suffixWithUnit[1].trim(),
+      qty: parseLooseNumber(suffixWithUnit[2]),
+      unit: normalizeUnit(suffixWithUnit[3]),
+    };
+  }
+
+  const prefixNumberOnly = query.match(/^(\d+(?:[\.,]\d+)?)\s+(?:de\s+|du\s+|des\s+|d['’]\s*)?(.+)$/i);
+  if (prefixNumberOnly) {
+    return {
+      query: prefixNumberOnly[2].trim(),
+      qty: parseLooseNumber(prefixNumberOnly[1]),
+      unit: "piece",
+    };
+  }
+
+  const suffixNumberOnly = query.match(/^(.+?)\s+(\d+(?:[\.,]\d+)?)$/i);
+  if (suffixNumberOnly) {
+    return {
+      query: suffixNumberOnly[1].trim(),
+      qty: parseLooseNumber(suffixNumberOnly[2]),
+      unit: "piece",
+    };
+  }
+
+  return { query };
+}
+
+function normalizePlannedItem(item: any): {
+  query: string;
+  qty: number;
+  unit?: string;
+  productId?: string;
+} | null {
+  const rawQuery = String(item?.query ?? "").trim();
+  const extracted = extractInlineQuantity(rawQuery);
+  const normalizedUnit = normalizeUnit(item?.unit);
+  const normalizedQty = Number(item?.qty ?? 1);
+
+  const finalQuery = extracted.query || rawQuery;
+  const finalUnit = extracted.unit ?? normalizedUnit ?? "piece";
+  const finalQty =
+    extracted.qty != null && Number.isFinite(extracted.qty) && extracted.qty > 0
+      ? extracted.qty
+      : Number.isFinite(normalizedQty) && normalizedQty > 0
+        ? normalizedQty
+        : 1;
+
+  if (!finalQuery) return null;
+
+  return {
+    query: finalQuery,
+    qty: finalQty,
+    unit: finalUnit,
+    ...(item?.productId ? { productId: String(item.productId) } : {}),
+  };
+}
 
 function normalizePlannedAction(action: any): PlannedAction | null {
   if (!action || typeof action !== "object") return null;
 
   if (action.type === "discover_meal_ideas" || action.type === "DISCOVER_MEALS") {
     return { type: "discover_meal_ideas", userRef: action.userRef };
+  }
+
+  if (action.type === "add_to_cart" && Array.isArray(action.items)) {
+    return {
+      type: "add_to_cart",
+      userRef: action.userRef,
+      items: action.items
+        .filter((item: any) => item && typeof item === "object")
+        .map((item: any) => normalizePlannedItem(item))
+        .filter((item: any) => item.query && Number.isFinite(item.qty) && item.qty > 0),
+    };
   }
 
   return action as PlannedAction;
@@ -63,9 +191,36 @@ function normalizePlan(parsed: Plan | null): Plan | null {
     normalizedActions.push({ type: "discover_meal_ideas" });
   }
 
+  const mergedActions: PlannedAction[] = [];
+  const mergedAddItems: Array<{
+    query: string;
+    qty: number;
+    unit?: string;
+    productId?: string;
+  }> = [];
+  let mergedAddUserRef: string | undefined;
+
+  for (const action of normalizedActions) {
+    if (action.type === "add_to_cart") {
+      mergedAddUserRef = mergedAddUserRef ?? action.userRef;
+      mergedAddItems.push(...action.items);
+      continue;
+    }
+
+    mergedActions.push(action);
+  }
+
+  if (mergedAddItems.length) {
+    mergedActions.unshift({
+      type: "add_to_cart",
+      ...(mergedAddUserRef ? { userRef: mergedAddUserRef } : {}),
+      items: mergedAddItems,
+    });
+  }
+
   return {
     ...parsed,
-    actions: normalizedActions,
+    actions: mergedActions,
   };
 }
 
@@ -107,8 +262,8 @@ Actions autorisées:
      "items":[
        {
          "query":"...",
-         "qty":150,
-         "unit":"g"
+         "qty":1,
+         "unit":"..."
        }
      ]
    }
@@ -169,7 +324,7 @@ RÈGLE GÉNÉRALE POUR LES DEMANDES VAGUES:
 - Supprime les déterminants inutiles: "du", "de la", "des", "un", "une", "de", "d’", "d'".
 - Garde uniquement le coeur utile de la demande produit.
 - Si aucune quantité explicite n'est donnée, utilise qty=1.
-- Si aucune unité explicite n'est donnée, utilise unit="piece".
+- Par défaut, si aucune unité explicite n'est écrite dans le message, utilise unit="piece".
 - Ne retourne pas noop si une query produit raisonnable peut être déduite.
 
 EXEMPLES DE TRANSFORMATION GÉNÉRALE:
@@ -182,6 +337,7 @@ EXEMPLES DE TRANSFORMATION GÉNÉRALE:
 - "Ajoute de quoi faire des hot dog" -> query="hot dog", qty=1, unit="piece"
 
 RÈGLE POUR LES QUANTITÉS:
+- Si un nombre est écrit sans unité de poids/volume, garde exactement ce nombre et utilise unit="piece" ; n'invente jamais "g", "kg", "ml", "l", "litre" ou "litres".
 - "150g de lard de Begnins" -> query="lard de Begnins", qty=150, unit="g"
 - "1 litre de lait normal" -> query="lait normal", qty=1, unit="litre"
 - "3 pains anglais" -> query="pains anglais", qty=3, unit="piece"
@@ -430,6 +586,21 @@ RÈGLE DE REPLI:
 `;
 }
 
+function normalizePlannerUserText(userText: string): string {
+  return String(userText || "")
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, " ")
+    .replace(/\u00A0/g, " ")
+    .replace(/\r/g, "\n")
+    .replace(/\t/g, " ")
+    .replace(/[•●▪◦◉∙‣⁃◾◽]/g, "\n- ")
+    .replace(/\n\s*-\s*/g, "\n- ")
+    .replace(/[ ]+\n/g, "\n")
+    .replace(/\n[ ]+/g, "\n")
+    .replace(/[ ]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function plannerPromptAddItems() {
   return `
 Tu es l'IA de Zelo. Tu es un planner spécialisé ADD_ITEMS.
@@ -440,12 +611,11 @@ ${plannerPromptOutputRules()}
 Actions autorisées:
 1) {
      "type":"add_to_cart",
-     "userRef":"...",
      "items":[
        {
          "query":"...",
-         "qty":150,
-         "unit":"g"
+         "qty":1,
+         "unit":"piece|g|kg|litre|litres"
        }
      ]
    }
@@ -455,21 +625,52 @@ IMPORTANT:
 - Ton intent principal est ADD_ITEMS.
 - Pour add_to_cart, n'invente jamais de productId si l'utilisateur n'en donne pas.
 - Si l'utilisateur donne un nom produit, mets-le dans "query".
-- "unit" peut être par exemple: "g", "kg", "ml", "l", "litre", "litres", "piece".
+- Ignore totalement les métadonnées techniques éventuellement visibles dans l'entrée, par exemple:
+  "UserRef=...", "UserMessage=...", "local-dev", "anonymous", un email, un id, un token.
+- N'utilise jamais ces métadonnées techniques dans "query".
+- L'expression "à mon panier", "dans mon panier", "au panier" ou "pour mon panier" indique seulement la destination.
+  Elle ne doit jamais créer un produit nommé "panier".
+- N'ajoute jamais une query comme "panier", "panier local-dev", "panier anonymous" ou toute autre combinaison
+  fabriquée à partir de mots techniques ou de la destination du panier.
+- N'utilise "panier" dans "query" que si l'utilisateur demande explicitement un vrai produit dont le nom contient
+  ce mot, par exemple "Panier Budget 50", "panier de légumes", "panier de fruits".
+- La valeur de "unit" doit être uniquement l'une de: "piece", "g", "kg", "litre", "litres".
+- Toute autre valeur est interdite.
+- Canonise strictement les unités en sortie:
+  "pièce", "pièces", "pieces" -> "piece"
+  "gr", "gramme", "grammes", "grams", "grains" -> "g"
+  "kilogramme", "kilogrammes" -> "kg"
+  "l" -> "litre" ou "litres"
+- N'écris jamais autre chose.
 - Retourne un seul objet {"type":"add_to_cart"} avec un tableau "items", même si plusieurs produits sont demandés.
+- Ne retourne jamais deux actions "add_to_cart" ou plus.
+- Tous les produits à ajouter doivent être regroupés dans un seul tableau "items".
+- Si plusieurs produits sont demandés, n'ouvre jamais une deuxième action: continue simplement la liste dans le même tableau "items".
+- Si le message contient une longue phrase, des politesses, des bullets, des virgules ou des retours à la ligne,
+  ignore le bruit conversationnel et extrais uniquement les produits à mettre dans un seul "items".
+- Si le message contient une liste de produits, tu dois extraire toutes les lignes utiles de la liste.
+- Ne perds jamais les derniers produits d'une liste longue: continue jusqu'à la fin du message.
 - Si l'utilisateur corrige sa demande ("non finalement pas de cacahuètes"), tu peux ignorer l'article annulé dans la version finale du plan.
 - Si l'utilisateur demande d'ajouter quelque chose au panier, même de manière vague, essaie d'extraire une query produit simple et exploitable.
 - La query doit être le nom commun le plus utile pour rechercher le produit dans le catalogue.
 - Supprime les déterminants inutiles: "du", "de la", "des", "un", "une", "de", "d’", "d'".
 - Garde uniquement le coeur utile de la demande produit.
 - Si aucune quantité explicite n'est donnée, utilise qty=1.
-- Si aucune unité explicite n'est donnée, utilise unit="piece".
+- Par défaut, si aucune unité explicite n'est écrite dans le message, utilise unit="piece".
 - Si une query produit raisonnable peut être déduite, préfère ADD_ITEMS.
 - Si le message ne demande pas réellement un ajout panier, retourne NOOP.
 
 RÈGLE POUR LES QUANTITÉS:
+- Si l'utilisateur écrit un nombre sans unité explicite de poids ou volume, conserve ce nombre et utilise unit="piece".
+- Si l'utilisateur écrit un poids en grammes, utilise toujours unit="g".
+- Si l'utilisateur écrit un poids en kilogrammes, utilise toujours unit="kg".
+- Si l'utilisateur écrit un volume en litres, utilise unit="litre" pour 1 et unit="litres" pour 2 ou plus.
+- "1 lard de Begnins" -> query="lard de Begnins", qty=1, unit="piece"
 - "150g de lard de Begnins" -> query="lard de Begnins", qty=150, unit="g"
+- "250 gr de fromage aléatoire gimelan" -> query="fromage aléatoire gimelan", qty=250, unit="g"
+- "2kg de pommes" -> query="pommes", qty=2, unit="kg"
 - "1 litre de lait normal" -> query="lait normal", qty=1, unit="litre"
+- "2 litres de lait sapalet" -> query="lait sapalet", qty=2, unit="litres"
 - "3 pains anglais" -> query="pains anglais", qty=3, unit="piece"
 
 EXEMPLES DE TRANSFORMATION GÉNÉRALE:
@@ -484,6 +685,22 @@ Exemples:
 
 Message:
 "Ajoute 1 lard de Begnins à mon panier"
+Réponse:
+{
+  "intent":"ADD_ITEMS",
+  "actions":[
+    {
+      "type":"add_to_cart",
+      "items":[
+        {"query":"lard de Begnins","qty":1,"unit":"piece"}
+      ]
+    }
+  ]
+}
+
+Message:
+"UserRef=local-dev
+UserMessage=Ajoute 1 lard de Begnins à mon panier"
 Réponse:
 {
   "intent":"ADD_ITEMS",
@@ -545,6 +762,51 @@ Réponse:
 }
 
 Message:
+"Bonjour André, selon les dispos je veux bien stp : 1 panier de fruits classique petit, 1 panier de légumes local moyen, 1 pain balance et 1 gruyère d'alpage"
+Réponse:
+{
+  "intent":"ADD_ITEMS",
+  "actions":[
+    {
+      "type":"add_to_cart",
+      "items":[
+        {"query":"panier de fruits classique petit","qty":1,"unit":"piece"},
+        {"query":"panier de légumes local moyen","qty":1,"unit":"piece"},
+        {"query":"pain balance","qty":1,"unit":"piece"},
+        {"query":"gruyère d'alpage","qty":1,"unit":"piece"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Bonjour André, selon les dispos je veux bien stp :
+• 1 panier de fruits classique petit
+• 1 panier de légumes local moyen
+• 1 pain balance
+• 1 gruyère d'alpage
+• 1 tomme vaudoise
+• 1 beurre frais
+Merci bien, Oriana"
+Réponse:
+{
+  "intent":"ADD_ITEMS",
+  "actions":[
+    {
+      "type":"add_to_cart",
+      "items":[
+        {"query":"panier de fruits classique petit","qty":1,"unit":"piece"},
+        {"query":"panier de légumes local moyen","qty":1,"unit":"piece"},
+        {"query":"pain balance","qty":1,"unit":"piece"},
+        {"query":"gruyère d'alpage","qty":1,"unit":"piece"},
+        {"query":"tomme vaudoise","qty":1,"unit":"piece"},
+        {"query":"beurre frais","qty":1,"unit":"piece"}
+      ]
+    }
+  ]
+}
+
+Message:
 "Comment ça va ?"
 Réponse:
 {
@@ -579,6 +841,12 @@ IMPORTANT:
 - Cela inclut des formulations comme:
   "supprime Crottins de chèvre par 2", "enlève le lait bio de mon panier",
   "retire le lard de begnins", "enlève seulement le pain anglais".
+- Attention: le mot "panier" peut faire partie du nom d'un produit, par exemple
+  "Panier Budget 50", "Panier de légumes Bio", "Panier de fruits exotiques".
+- Si l'utilisateur demande de supprimer / enlever / retirer un produit précis dont le nom contient "panier",
+  cela reste un retrait ciblé en mode "partial", pas un vidage total.
+- N'utilise le mode "all" que si la demande parle clairement de tout vider:
+  "tout", "rien", "vide", "complètement", "entièrement", "tout le panier".
 - En mode partial, mets dans "items" une ou plusieurs queries produit simples et exploitables.
 - Ne retourne jamais SHOW_CART, ADD_ITEMS, EXEC_CART, BUILD_MEAL ou DISCOVER_MEALS dans ce planner.
 - Si le message parle du panier mais ne demande pas clairement une suppression totale ou ciblée, retourne NOOP.
@@ -652,6 +920,38 @@ Réponse:
       "mode":"partial",
       "items":[
         {"query":"lait bio"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Supprime 1 panier budget 50"
+Réponse:
+{
+  "intent":"CLEAR_CART",
+  "actions":[
+    {
+      "type":"clear_cart",
+      "mode":"partial",
+      "items":[
+        {"query":"panier budget 50"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Retire le panier budget 50 de mon panier"
+Réponse:
+{
+  "intent":"CLEAR_CART",
+  "actions":[
+    {
+      "type":"clear_cart",
+      "mode":"partial",
+      "items":[
+        {"query":"panier budget 50"}
       ]
     }
   ]
@@ -1024,6 +1324,7 @@ export function selectPlannerPrompt(intentHint?: FrontendIntentHint) {
 function selectPlannerBudget(intentHint?: FrontendIntentHint) {
   switch (intentHint?.actionKey) {
     case "add_items":
+      return { numPredict: 192, numCtx: 2048 };
     case "clear_cart":
     case "show_cart":
     case "exec_cart":
@@ -1045,6 +1346,7 @@ export async function planUserIntent(
 ): Promise<Plan | null> {
   const selectedPrompt = selectPlannerPrompt(intentHint);
   const plannerBudget = selectPlannerBudget(intentHint);
+  const normalizedUserText = normalizePlannerUserText(userText);
 
   const raw = await timeAsync(
     "planner.ollama_chat",
@@ -1052,7 +1354,7 @@ export async function planUserIntent(
       await ollamaChat(
         [
           { role: "system", content: selectedPrompt },
-          { role: "user", content: `UserRef=${userRef}\nUserMessage=${userText}` },
+          { role: "user", content: `UserRef=${userRef}\nUserMessage=${normalizedUserText}` },
         ],
         0,
         {
@@ -1077,6 +1379,9 @@ export async function planUserIntent(
   console.log("[PLAN RAW]", raw);
   console.log("[PLAN PARSED]", JSON.stringify(normalized, null, 2));
   console.log("[PLANNER HINT]", JSON.stringify(intentHint ?? null));
+  if (normalizedUserText !== userText) {
+    console.log("[PLANNER USER TEXT NORMALIZED]", normalizedUserText);
+  }
 
   return normalized;
 }

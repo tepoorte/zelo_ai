@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-04-16T10:00:05.014Z",
+  "updatedAt": "2026-04-16T12:33:35.500Z",
   "events": [
     {
       "id": "b57624e0-2d89-4be3-aa2a-fd4dba06387e",
@@ -50,6 +50,26 @@
       "predictedAction": "noop",
       "correctAction": "discover_meals",
       "createdAt": "2026-04-16T10:00:05.014Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "b5b59aa9-62b1-4830-911e-ca5e06d22f8b",
+      "kind": "correction",
+      "text": "supprime 1 lard du begnins de mon panier",
+      "normalizedText": "supprime 1 lard du begnins de mon panier",
+      "predictedAction": "add_items",
+      "correctAction": "clear_cart",
+      "createdAt": "2026-04-16T10:52:13.205Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "162f2b83-7375-4353-8cc8-da565b5e706b",
+      "kind": "correction",
+      "text": "Salut André, j’espère que tu vas bien. Si c’est possible pour ta tournée, je te prends volontiers 2 litres de lait sapalet, 8 œufs, 250 gr de fromage aléatoire gimelan et 2kg de pommes. Si pas possible ou que c’est trop, c’est pas grave! Merci et bonne journée, Loraine",
+      "normalizedText": "salut andre j espere que tu vas bien si c est possible pour ta tournee je te prends volontiers 2 litres de lait sapalet 8 ufs 250 gr de fromage aleatoire gimelan et 2kg de pommes si pas possible ou que c est trop c est pas grave merci et bonne journee loraine",
+      "predictedAction": "discover_meals",
+      "correctAction": "add_items",
+      "createdAt": "2026-04-16T12:33:35.500Z",
       "userRef": "local-dev"
     }
   ]

@@ -157,7 +157,8 @@
         "j aimerais mettre du lard de begnins",
         "je veux du lard de begnins dans mon panier",
         "Non, je veux le pain balance coupé en tranche",
-        "A. Lait Bio pasteurisé"
+        "A. Lait Bio pasteurisé",
+        "Salut André, j’espère que tu vas bien. Si c’est possible pour ta tournée, je te prends volontiers 2 litres de lait sapalet, 8 œufs, 250 gr de fromage aléatoire gimelan et 2kg de pommes. Si pas possible ou que c’est trop, c’est pas grave! Merci et bonne journée, Loraine"
       ]
     },
     {
@@ -185,7 +186,14 @@
         "ahh je voudrais qui mon panier ne contient rien non plus",
         "mon panier ne contient rien non plus",
         "il faut que le panier soit vide",
-        "Enlève le pain balance du panier"
+        "supprime 1 panier budget 50",
+        "retire 1 panier budget 50",
+        "enleve 1 panier budget 50",
+        "retire le panier budget 50 de mon panier",
+        "supprime panier budget 50",
+        "enleve panier budget 50",
+        "Enlève le pain balance du panier",
+        "supprime 1 lard du begnins de mon panier"
       ]
     },
     {
@@ -346,12 +354,22 @@
           "text": "A. Lait Bio pasteurisé",
           "normalized": "a lait bio pasteurise",
           "count": 2
+        },
+        {
+          "text": "Salut André, j’espère que tu vas bien. Si c’est possible pour ta tournée, je te prends volontiers 2 litres de lait sapalet, 8 œufs, 250 gr de fromage aléatoire gimelan et 2kg de pommes. Si pas possible ou que c’est trop, c’est pas grave! Merci et bonne journée, Loraine",
+          "normalized": "salut andre j espere que tu vas bien si c est possible pour ta tournee je te prends volontiers 2 litres de lait sapalet 8 ufs 250 gr de fromage aleatoire gimelan et 2kg de pommes si pas possible ou que c est trop c est pas grave merci et bonne journee loraine",
+          "count": 2
         }
       ],
       "clear_cart": [
         {
           "text": "Enlève le pain balance du panier",
           "normalized": "enleve le pain balance du panier",
+          "count": 2
+        },
+        {
+          "text": "supprime 1 lard du begnins de mon panier",
+          "normalized": "supprime 1 lard du begnins de mon panier",
           "count": 2
         }
       ],
@@ -364,5 +382,5 @@
       ]
     }
   },
-  "updatedAt": "2026-04-16T10:00:05.018Z"
+  "updatedAt": "2026-04-16T12:33:35.508Z"
 }

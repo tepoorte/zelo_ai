@@ -46,6 +46,23 @@ type BasketLine = {
   qty?: number;
 };
 
+function normalizeBasketMatchToken(token: string): string {
+  if (token.length <= 3) return token;
+  if (token.endsWith("s")) return token.slice(0, -1);
+  return token;
+}
+
+function basketMatchTokens(value: string): string[] {
+  return normalizeLooseText(value)
+    .split(" ")
+    .filter(Boolean)
+    .map((token) => normalizeBasketMatchToken(token));
+}
+
+function basketMatchText(value: string): string {
+  return basketMatchTokens(value).join(" ");
+}
+
 function basketLineName(line: BasketLine): string {
   return String(
     line?.name ??
@@ -59,14 +76,19 @@ function basketLineName(line: BasketLine): string {
 function scoreBasketLine(query: string, lineName: string): number {
   const normalizedQuery = normalizeLooseText(query);
   const normalizedLine = normalizeLooseText(lineName);
+  const matchQuery = basketMatchText(query);
+  const matchLine = basketMatchText(lineName);
 
   if (!normalizedQuery || !normalizedLine) return 0;
   if (normalizedLine === normalizedQuery) return 100;
   if (normalizedLine.includes(normalizedQuery)) return 90;
   if (normalizedQuery.includes(normalizedLine)) return 75;
+  if (matchLine === matchQuery) return 100;
+  if (matchLine.includes(matchQuery)) return 90;
+  if (matchQuery.includes(matchLine)) return 75;
 
-  const queryTokens = normalizedQuery.split(" ").filter(Boolean);
-  const lineTokens = new Set(normalizedLine.split(" ").filter(Boolean));
+  const queryTokens = basketMatchTokens(query);
+  const lineTokens = new Set(basketMatchTokens(lineName));
   const overlap = queryTokens.filter((token) => lineTokens.has(token)).length;
 
   if (!overlap) return 0;

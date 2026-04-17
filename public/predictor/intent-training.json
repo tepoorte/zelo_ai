@@ -182,7 +182,13 @@
         "je ne veux plus rien dans mon panier",
         "ahh je voudrais qui mon panier ne contient rien non plus",
         "mon panier ne contient rien non plus",
-        "il faut que le panier soit vide"
+        "il faut que le panier soit vide",
+        "supprime 1 panier budget 50",
+        "retire 1 panier budget 50",
+        "enleve 1 panier budget 50",
+        "retire le panier budget 50 de mon panier",
+        "supprime panier budget 50",
+        "enleve panier budget 50"
       ]
     },
     {
