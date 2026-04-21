@@ -1,22 +1,20 @@
 services:
   zelo_ai:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
     container_name: zelo_ai
+    image: ${DOCKERREGISTRY}/${IMAGENAME}:${VERSION}
     ports:
-      - "{{AI_PORT}}:3041" #change the left one
+      - "${AI_PORT}:3041" #change the left one
     environment:
-      - NODE_ENV={{NODE_ENV}}
-      - PORT={{PORT}}
-      - AI_PROVIDER={{AI_PROVIDER}}
-      - OLLAMA_BASE_URL={{OLLAMA_BASE_URL}}
-      - OLLAMA_MODEL={{OLLAMA_MODEL}}
-      - OLLAMA_PLANNER_MODEL={{OLLAMA_PLANNER_MODEL}}
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT}
+      - AI_PROVIDER=${AI_PROVIDER}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+      - OLLAMA_PLANNER_MODEL=${OLLAMA_PLANNER_MODEL}
     #volumes:
       #- ./:/app
       #- /app/node_modules
-    command: ["npm","run","dev"]
+    command: ["node", "dist/server.js"]
     restart: unless-stopped
 
 #volumes:

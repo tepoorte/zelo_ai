@@ -5,7 +5,7 @@ WORKDIR /app
 RUN apk add --no-cache libc6-compat
 
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --include=dev
 
 COPY tsconfig.json ./
 COPY src ./src

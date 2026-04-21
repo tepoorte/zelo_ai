@@ -1,0 +1,25 @@
+services:
+  zelo_ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: zelo_ai
+    ports:
+      - "${AI_PORT}:3041" #change the left one
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT}
+      - AI_PROVIDER=${AI_PROVIDER}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+      - OLLAMA_PLANNER_MODEL=${OLLAMA_PLANNER_MODEL}
+    #volumes:
+      #- ./:/app
+      #- /app/node_modules
+    command: ["npm","run","dev"]
+    restart: unless-stopped
+
+#volumes:
+  #ollama_data:
+
+  
