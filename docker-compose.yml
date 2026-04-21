@@ -20,13 +20,25 @@ services:
       - SWISSDATA_APP_ID=${SWISSDATA_APP_ID}
       - SWISSDATA_SHOP_ID=${SWISSDATA_SHOP_ID}
       - SWISSDATA_COUNTRY=${SWISSDATA_COUNTRY}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zeloai.rule=Host(`${AI_HOST}`)"
+      - "traefik.http.routers.zeloai.entrypoints=http,https"
+      - "traefik.http.routers.zeloai.tls=true"
+      - "traefik.http.routers.zeloai.tls.certresolver=${CERTRESOLVER}"
+      - "traefik.http.services.zeloai.loadbalancer.server.port=3041"
     #volumes:
       #- ./:/app
       #- /app/node_modules
-    command: ["node", "dist/server.js"]
     restart: unless-stopped
+    networks:
+      - proxy
+    command: ["node", "dist/server.js"]
 
 #volumes:
   #ollama_data:
 
-  
+networks:
+  proxy:
+      name: ${PROXYNET}
+      external: true
