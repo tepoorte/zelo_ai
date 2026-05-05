@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "updatedAt": "2026-05-01T14:44:59.243Z",
+  "events": [
+    {
+      "id": "e49539e7-929d-4825-b268-d37d7f91ec9d",
+      "createdAt": "2026-05-01T14:44:52.536Z",
+      "mealKey": "hot_dog",
+      "ingredientKey": "viennes",
+      "action": "ban_product",
+      "productId": "5ecccbc3fd9b040006222c63",
+      "productName": "Viennes par paire",
+      "userRef": "local-dev",
+      "note": "Produit incorrect signale depuis l'interface avancée"
+    },
+    {
+      "id": "5f9cb65a-8dd9-4144-a6e7-ae13da43cd73",
+      "createdAt": "2026-05-01T14:44:59.243Z",
+      "mealKey": "hot_dog",
+      "ingredientKey": "viennes",
+      "action": "prefer_product",
+      "productId": "62b176b4bfe30c7314ee0f63",
+      "productName": "Saucisse de Schübling",
+      "userRef": "local-dev",
+      "note": "Correction recette depuis l'interface avancée"
+    }
+  ]
+}

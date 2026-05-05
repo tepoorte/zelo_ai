@@ -53,11 +53,20 @@ export function aiRoutes() {
 //-----------------------------------------------------------------------------
 import { Router } from "express";
 import { runAgent } from "../ai/agent.js";
-import { localNlpFallback } from "../ai/meal_old/localFallback.js";
+import { BuildMealEngine } from "../ai/build-meal/engine.js";
 import { login } from "../swissdata/auth.js";
 import { setSession, getSession } from "../swissdata/session.js";
 import { getCurrentBasket } from "../swissdata/cart.js";
+import { searchProducts } from "../swissdata/products.js";
 import { withPerfTrace } from "../utils/perf.js";
+import {
+  createBuildMealUserRecipe,
+  getBuildMealUserRecipes,
+  getBuildMealTrainingRuntime,
+  recordBuildMealFeedback,
+} from "../ai/build-meal/training.service.js";
+import { getBuildMealLearningState } from "../ai/build-meal/learning.service.js";
+import { CATEGORY_NAME_BY_ID } from "../ai/food-taxonomy.js";
 import {
   getIntentTrainingRuntime,
   recordIntentFeedback,
@@ -150,10 +159,137 @@ export function aiRoutes() {
     }
   });
 
-  r.post("/test", (req, res) => {
-    const text = String(req.body?.text ?? "");
-    const parsed = localNlpFallback(text);
-    res.json({ ok: true, input: text, ...parsed });
+  r.get("/build-meal-training", async (_req, res, next) => {
+    try {
+      const userRef =
+        _req.query?.userRef != null ? String(_req.query.userRef) : undefined;
+      const training = await getBuildMealTrainingRuntime(userRef);
+      res.json({ ok: true, training });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  r.get("/build-meal-learning-state", async (_req, res, next) => {
+    try {
+      const state = await getBuildMealLearningState();
+      res.json({ ok: true, ...state });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  r.get("/build-meal-recipes", async (req, res, next) => {
+    try {
+      const userRef =
+        req.query?.userRef != null ? String(req.query.userRef) : undefined;
+      const store = await getBuildMealUserRecipes(userRef);
+      res.json({ ok: true, ...store });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  r.post("/build-meal-recipes", async (req, res, next) => {
+    try {
+      const result = await createBuildMealUserRecipe({
+        userRef: req.body?.userRef != null ? String(req.body.userRef) : undefined,
+        key: req.body?.key != null ? String(req.body.key) : undefined,
+        label: String(req.body?.label ?? ""),
+        aliases: Array.isArray(req.body?.aliases) ? req.body.aliases.map(String) : undefined,
+        examples: Array.isArray(req.body?.examples) ? req.body.examples.map(String) : undefined,
+        sourceText: req.body?.sourceText != null ? String(req.body.sourceText) : undefined,
+        defaultServings:
+          req.body?.defaultServings != null ? Number(req.body.defaultServings) : undefined,
+        family: req.body?.family != null ? String(req.body.family) : undefined,
+        baseRecipe: Boolean(req.body?.baseRecipe),
+        ingredients: Array.isArray(req.body?.ingredients) ? req.body.ingredients : [],
+      });
+
+      res.json({
+        ok: true,
+        recipe: result.recipe,
+        training: result.training,
+      });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  r.post("/build-meal-feedback", async (req, res, next) => {
+    try {
+      const mealKey = String(req.body?.mealKey ?? "");
+      const ingredientKey = String(req.body?.ingredientKey ?? "");
+      const action = String(req.body?.action ?? "");
+      const productId =
+        req.body?.productId != null ? String(req.body.productId) : undefined;
+      const productName =
+        req.body?.productName != null ? String(req.body.productName) : undefined;
+      const userRef =
+        req.body?.userRef != null ? String(req.body.userRef) : undefined;
+      const note =
+        req.body?.note != null ? String(req.body.note) : undefined;
+
+      const result = await recordBuildMealFeedback({
+        mealKey,
+        ingredientKey,
+        action: action as any,
+        productId,
+        productName,
+        userRef,
+        note,
+      });
+
+      res.json({
+        ok: true,
+        event: result.event,
+        training: result.training,
+      });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  r.post("/build-meal-search", async (req, res, next) => {
+    try {
+      const userRef = String(req.body?.userRef ?? "local-dev");
+      const query = String(req.body?.query ?? "").trim();
+      const limit =
+        req.body?.limit != null && Number.isFinite(Number(req.body.limit))
+          ? Math.max(1, Math.min(20, Number(req.body.limit)))
+          : 8;
+
+      if (!query) {
+        return res.status(400).json({ ok: false, error: "Missing query" });
+      }
+
+      const products = await searchProducts(userRef, query, limit);
+      res.json({
+        ok: true,
+        products: products.map((product) => ({
+          id: String(product.id),
+          name: product.name,
+          categories: product.categories || [],
+          categoryNames: (product.categories || [])
+            .map((categoryId) => CATEGORY_NAME_BY_ID[String(categoryId)])
+            .filter(Boolean),
+        })),
+      });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  r.post("/test", async (req, res, next) => {
+    try {
+      const text = String(req.body?.text ?? "");
+      const userRef =
+        req.body?.userRef != null ? String(req.body.userRef) : undefined;
+      const parsed = await BuildMealEngine.preview(text, userRef);
+      res.json({ ok: true, input: text, ...parsed });
+    } catch (e) {
+      next(e);
+    }
   });
 
     r.get("/basket", async (req, res, next) => {

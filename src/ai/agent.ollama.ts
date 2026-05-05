@@ -23,12 +23,72 @@ import {
   handleDiscoverMealIdeasAction,
   tryResolvePendingMealDiscovery,
 } from "./services/meal-discovery.service.js";
-//import { handleBuildMealAction } from "./services/meal.service.js";
-//import { handleBuildMealActionV2 } from "./services/meal.service.v2.js";
-import { MealBuildEngineV2 } from "./MealBuildEngine.v2.js";
-//import { MealBuildEngineV3 } from "./MealBuildEngineV3.js";
+import { BuildMealEngine } from "./build-meal/engine.js";
+import type {
+  BuildMealFeedbackContext,
+  BuildMealUnknownRecipeContext,
+} from "./build-meal/types.js";
 import { planUserIntent, type FrontendIntentHint } from "./services/planner.service.js";
 import { timeAsync, perfMeta } from "../utils/perf.js";
+
+type AgentResponse = {
+  message: string;
+  buildMeal?: BuildMealFeedbackContext;
+  buildMealUnknown?: BuildMealUnknownRecipeContext;
+};
+
+async function formatBuildMealResult(
+  userRef: string,
+  mealResult: any
+): Promise<AgentResponse> {
+  if (!mealResult) {
+    return {
+      message: "Je n’ai pas réussi à préparer les ingrédients pour ce repas.",
+    };
+  }
+
+  if (!mealResult.ok) {
+    return {
+      message:
+        mealResult.message ??
+        `Je ne trouve pas tous les ingrédients nécessaires pour « ${mealResult.meal} ».`,
+      ...(mealResult.feedbackContext ? { buildMeal: mealResult.feedbackContext } : {}),
+      ...(mealResult.unknownRecipe ? { buildMealUnknown: mealResult.unknownRecipe } : {}),
+    };
+  }
+
+  const lines = Array.isArray(mealResult.added)
+    ? mealResult.added.map((it: { productName?: string; ingredient?: string }) => `— ${it.productName ?? it.ingredient ?? "Produit"}`)
+    : [];
+  const missingLines = Array.isArray(mealResult.missing)
+    ? mealResult.missing.map((it: { ingredient?: string }) => `- ${it.ingredient ?? "Ingrédient"}`)
+    : [];
+  const missingBlock = missingLines.length
+    ? `\nIngrédients manquants :\n${missingLines.join("\n")}`
+    : "";
+
+  try {
+    const basket = await handleShowCartAction(userRef);
+
+    return {
+      message:
+        `🍽️ J’ai ajouté des ingrédients pour préparer « ${mealResult.meal} » :\n` +
+        (lines.length ? `${lines.join("\n")}\n` : "\n") +
+        missingBlock +
+        `\n\n` +
+        formatCartFr(basket),
+      ...(mealResult.feedbackContext ? { buildMeal: mealResult.feedbackContext } : {}),
+    };
+  } catch {
+    return {
+      message:
+        `🍽️ J’ai ajouté des ingrédients pour préparer « ${mealResult.meal} » :\n` +
+        (lines.length ? lines.join("\n") : (mealResult.message ?? "Ajout effectué.")) +
+        missingBlock,
+      ...(mealResult.feedbackContext ? { buildMeal: mealResult.feedbackContext } : {}),
+    };
+  }
+}
 
 
 
@@ -42,7 +102,7 @@ export async function runAgentOllama(
   userRef: string,
   userText: string,
   intentHint?: FrontendIntentHint
-): Promise<{ message: string }> {
+): Promise<AgentResponse> {
   perfMeta({ userRef, userTextPreview: userText.slice(0, 80) });
   const lower = userText.toLowerCase();
 
@@ -69,6 +129,24 @@ if (/(carrello|basket|panier|cart)/i.test(lower) && /(montre|mostra|show|voir)/i
     async () => await handleShowCartAction(userRef)
   );
   return { message: formatCartFr(basket) };
+}
+
+if (intentHint?.actionKey === "build_meal") {
+  const result = await timeAsync(
+    "agent.action.build_meal_direct",
+    async () => await BuildMealEngine.handleBuildMealFromText(userRef, userText),
+    { userText }
+  );
+  return await formatBuildMealResult(userRef, result);
+}
+
+const detectedMealResult = await timeAsync(
+  "agent.action.build_meal_detected",
+  async () => await BuildMealEngine.tryHandleDetectedRequest(userRef, userText),
+  { userText }
+);
+if (detectedMealResult) {
+  return await formatBuildMealResult(userRef, detectedMealResult);
 }
 
   // 2) PLAN with Ollama for everything shopping-related
@@ -179,36 +257,6 @@ if (action.type === "discover_meal_ideas") {
   toolResults.push({ action, result });
   continue;
 }
-
-
-    if (action.type === "build_meal") {
-
-        // PROVVISORY// //const result = await handleBuildMealAction(userRef, action);
-        //const result = await handleBuildMealActionV2(userRef, action);
-
-
-        const result = await timeAsync(
-  "agent.action.build_meal",
-  async () => await MealBuildEngineV2.handleBuildMeal(userRef, {
-  type: "build_meal",
-  meal: action.meal,
-  servings: action.servings
-}),
-  { meal: action.meal, servings: action.servings }
-);
-
-   //const result = await MealBuildEngineV3.handleBuildMeal(userRef, action);
-  toolResults.push({
-    action,
-    result,
-  });
-     
-      continue;
-    }
-
-
-
-
 
     toolResults.push({ action, result: { ok: true } });
   }
@@ -327,60 +375,6 @@ if (plan.intent === "DISCOVER_MEALS") {
       "Je peux vous proposer quelques idees par categorie alimentaire.",
   };
 }
-
-if (plan.intent === "BUILD_MEAL") {
-  const mealResult = toolResults.find(
-    (x) => x.action?.type === "build_meal"
-  )?.result;
-
-  if (!mealResult) {
-    return {
-      message: "Je n’ai pas réussi à préparer les ingrédients pour ce repas.",
-    };
-  }
-
-  if (!mealResult.ok) {
-    const missingLines: string[] = [];
-
-    if (Array.isArray(mealResult.resolvedItems)) {
-      for (const it of mealResult.resolvedItems) {
-        if (!it.ok && !it.isCore) {
-          missingLines.push(`— ${it.query}`);
-        }
-      }
-    }
-
-    const alternatives = Array.isArray(mealResult.alternatives)
-      ? mealResult.alternatives
-      : [];
-
-    return {
-      message:
-        `Je ne trouve pas tous les ingrédients nécessaires pour « ${mealResult.meal} ».\n` +
-        (missingLines.length ? `\nIl me manque notamment :\n${missingLines.join("\n")}\n` : "\n") +
-        (alternatives.length
-          ? `\nJe peux te proposer plutôt :\n${alternatives.map((a: string) => `— ${a}`).join("\n")}`
-          : ""),
-    };
-  }
-
-  const lines: string[] = [];
-
-  for (const it of mealResult.resolvedItems) {
-    if (it.ok) {
-      lines.push(`— ${it.product?.name ?? it.query}`);
-    }
-  }
-
-  return {
-    message:
-      `🍽️ J’ai ajouté des ingrédients pour préparer « ${mealResult.meal} » :\n` +
-      lines.join("\n") +
-      `\n\n` +
-      formatCartFr(mealResult.basket),
-  };
-}
-
 
   const message = await ollamaChat(
     [

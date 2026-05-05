@@ -1,4 +1,5 @@
-import { MealBuildHelpersV2 } from "../MealBuildHelpers.v2.js";
+import { normalizeText } from "../../domain/normalizer.js";
+import { CATEGORY_NAME_BY_ID, FOOD_CATEGORY_IDS } from "../food-taxonomy.js";
 import { clearPending, getPending, setPending } from "../pending.js";
 import { getAllProducts, type Product } from "../../swissdata/products.js";
 import { formatCartFr } from "./cart-helpers.service.js";
@@ -15,7 +16,7 @@ type FoodSuggestion = {
 };
 
 function normalizeLoose(text: string): string {
-  return MealBuildHelpersV2.normalizeText(text);
+  return normalizeText(text);
 }
 
 function toDisplayCategoryName(raw: string): string {
@@ -39,7 +40,7 @@ function toDisplayCategoryName(raw: string): string {
 function buildFoodCategoryChoices(products: Product[]): FoodCategoryChoice[] {
   const choices: FoodCategoryChoice[] = [];
 
-  for (const categoryId of MealBuildHelpersV2.FOOD_CATEGORY_IDS) {
+  for (const categoryId of FOOD_CATEGORY_IDS) {
     const hasProducts = products.some((product) =>
       Array.isArray(product.categories) &&
       product.categories.map(String).includes(categoryId)
@@ -47,7 +48,7 @@ function buildFoodCategoryChoices(products: Product[]): FoodCategoryChoice[] {
 
     if (!hasProducts) continue;
 
-    const rawName = MealBuildHelpersV2.CATEGORY_NAME_BY_ID[categoryId] || categoryId;
+    const rawName = CATEGORY_NAME_BY_ID[categoryId] || categoryId;
     choices.push({
       id: categoryId,
       name: toDisplayCategoryName(rawName),

@@ -1,0 +1,462 @@
+{
+  "version": 1,
+  "updatedAt": "2026-05-05T10:51:51.212Z",
+  "items": [
+    {
+      "normalizedText": "de quoi faire une pizza jambon",
+      "sampleText": "de quoi faire une pizza jambon",
+      "count": 5,
+      "firstSeenAt": "2026-05-04T15:18:29.826Z",
+      "lastSeenAt": "2026-05-04T16:21:35.116Z",
+      "userRefs": [
+        "local-dev"
+      ],
+      "topCandidates": [
+        {
+          "mealKey": "pizza_ananas",
+          "mealLabel": "pizza ananas",
+          "matchedText": "faire une de quoi faire une pizza ananas",
+          "score": 0.734133501192953,
+          "lexicalScore": 0.35714285714285715,
+          "semanticScore": 0.7979711969488619,
+          "source": "generated"
+        },
+        {
+          "mealKey": "hot_dog",
+          "mealLabel": "hot dog",
+          "matchedText": "de quoi faire des hot dog",
+          "score": 0.6989280861168617,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.7597044414313714,
+          "source": "learned"
+        },
+        {
+          "mealKey": "hamburger",
+          "mealLabel": "hamburger",
+          "matchedText": "faire une hamburger",
+          "score": 0.6901532779026742,
+          "lexicalScore": 0.33333333333333326,
+          "semanticScore": 0.7501666064159502,
+          "source": "generated"
+        },
+        {
+          "mealKey": "carbonara",
+          "mealLabel": "carbonara",
+          "matchedText": "je veux de quoi faire spaghetti carbonara",
+          "score": 0.6850182591756461,
+          "lexicalScore": 0.21428571428571427,
+          "semanticScore": 0.7445850643213544,
+          "source": "generated"
+        },
+        {
+          "mealKey": "spaghetti_bolognese",
+          "mealLabel": "spaghetti bolognese",
+          "matchedText": "je veux de quoi faire des spaghetti bolognese",
+          "score": 0.6641474410794864,
+          "lexicalScore": 0.1875,
+          "semanticScore": 0.7218993924777026,
+          "source": "learned"
+        }
+      ]
+    },
+    {
+      "normalizedText": "de quoi faire une pizza ananas",
+      "sampleText": "de quoi faire une pizza ananas",
+      "count": 1,
+      "firstSeenAt": "2026-05-04T15:59:28.436Z",
+      "lastSeenAt": "2026-05-04T15:59:28.436Z",
+      "userRefs": [
+        "local-dev"
+      ],
+      "topCandidates": [
+        {
+          "mealKey": "hamburger",
+          "mealLabel": "hamburger",
+          "matchedText": "faire une hamburger",
+          "score": 0.663512887800779,
+          "lexicalScore": 0.33333333333333326,
+          "semanticScore": 0.7212096606530206,
+          "source": "generated"
+        },
+        {
+          "mealKey": "hot_dog",
+          "mealLabel": "hot dog",
+          "matchedText": "de quoi faire des hot dog",
+          "score": 0.6402162858605304,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.6958872672397068,
+          "source": "learned"
+        },
+        {
+          "mealKey": "carbonara",
+          "mealLabel": "carbonara",
+          "matchedText": "je veux de quoi faire spaghetti carbonara",
+          "score": 0.636924479148783,
+          "lexicalScore": 0.21428571428571427,
+          "semanticScore": 0.6923092164660685,
+          "source": "generated"
+        },
+        {
+          "mealKey": "filet_perche_pomme_de_terre",
+          "mealLabel": "filet de perche et pomme de terre",
+          "matchedText": "pour cuisiner perche et pomme de terre",
+          "score": 0.6142964899706953,
+          "lexicalScore": 0.07142857142857142,
+          "semanticScore": 0.6677135760551035,
+          "source": "generated"
+        },
+        {
+          "mealKey": "maccheroni_carbonara",
+          "mealLabel": "maccheroni carbonara",
+          "matchedText": "je veux de quoi faire des maccheroni carbonara",
+          "score": 0.6131360128409369,
+          "lexicalScore": 0.1875,
+          "semanticScore": 0.6664521878705836,
+          "source": "learned"
+        }
+      ]
+    },
+    {
+      "normalizedText": "de quoi faire une pizza wurstel",
+      "sampleText": "de quoi faire une pizza wurstel",
+      "count": 2,
+      "firstSeenAt": "2026-05-04T16:17:34.220Z",
+      "lastSeenAt": "2026-05-04T16:19:32.445Z",
+      "userRefs": [
+        "local-dev"
+      ],
+      "topCandidates": [
+        {
+          "mealKey": "pizza_ananas",
+          "mealLabel": "pizza ananas",
+          "matchedText": "de quoi faire une pizza wurstel",
+          "score": 1,
+          "lexicalScore": 1,
+          "semanticScore": 0,
+          "source": "learned"
+        },
+        {
+          "mealKey": "hamburger",
+          "mealLabel": "hamburger",
+          "matchedText": "de quoi faire hamburger",
+          "score": 0.6845635555148248,
+          "lexicalScore": 0.375,
+          "semanticScore": 0.7440908212117661,
+          "source": "generated"
+        },
+        {
+          "mealKey": "hot_dog",
+          "mealLabel": "hot dog",
+          "matchedText": "de quoi faire des hot dog",
+          "score": 0.6570945632696028,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.7142332209452205,
+          "source": "learned"
+        },
+        {
+          "mealKey": "carbonara",
+          "mealLabel": "carbonara",
+          "matchedText": "je veux de quoi faire spaghetti carbonara",
+          "score": 0.6432199474123208,
+          "lexicalScore": 0.21428571428571427,
+          "semanticScore": 0.6991521167525225,
+          "source": "generated"
+        },
+        {
+          "mealKey": "maccheroni_carbonara",
+          "mealLabel": "maccheroni carbonara",
+          "matchedText": "je veux de quoi faire des maccheroni carbonara",
+          "score": 0.6357191086179066,
+          "lexicalScore": 0.1875,
+          "semanticScore": 0.6909990311064201,
+          "source": "learned"
+        }
+      ]
+    },
+    {
+      "normalizedText": "de quoi faire un tirami su",
+      "sampleText": "de quoi faire un tirami su",
+      "count": 1,
+      "firstSeenAt": "2026-05-04T16:22:23.562Z",
+      "lastSeenAt": "2026-05-04T16:22:23.562Z",
+      "userRefs": [
+        "local-dev"
+      ],
+      "topCandidates": [
+        {
+          "mealKey": "carbonara",
+          "mealLabel": "carbonara",
+          "matchedText": "je veux de quoi faire spaghetti carbonara",
+          "score": 0.6529539627220359,
+          "lexicalScore": 0.21428571428571427,
+          "semanticScore": 0.709732568176126,
+          "source": "generated"
+        },
+        {
+          "mealKey": "pizza_ananas",
+          "mealLabel": "pizza ananas",
+          "matchedText": "je veux de quoi faire de quoi faire une pizza ananas",
+          "score": 0.6519554928935177,
+          "lexicalScore": 0.16666666666666663,
+          "semanticScore": 0.7086472748842584,
+          "source": "generated"
+        },
+        {
+          "mealKey": "maccheroni_carbonara",
+          "mealLabel": "maccheroni carbonara",
+          "matchedText": "je veux de quoi faire des maccheroni carbonara",
+          "score": 0.6411810787322054,
+          "lexicalScore": 0.1875,
+          "semanticScore": 0.6969359551437015,
+          "source": "learned"
+        },
+        {
+          "mealKey": "pizza_jambon",
+          "mealLabel": "pizza jambon",
+          "matchedText": "je veux de quoi faire de quoi faire une pizza jambon",
+          "score": 0.6393469261876479,
+          "lexicalScore": 0.1875,
+          "semanticScore": 0.6949423110735303,
+          "source": "generated"
+        },
+        {
+          "mealKey": "salade_cesar",
+          "mealLabel": "salade césar",
+          "matchedText": "je veux de quoi faire une salade césar",
+          "score": 0.6381036210295324,
+          "lexicalScore": 0.1875,
+          "semanticScore": 0.6935908924234048,
+          "source": "learned"
+        }
+      ]
+    },
+    {
+      "normalizedText": "de quoi faire une creme brulee",
+      "sampleText": "de quoi faire une crème brûlée",
+      "count": 1,
+      "firstSeenAt": "2026-05-05T10:03:55.212Z",
+      "lastSeenAt": "2026-05-05T10:03:55.212Z",
+      "userRefs": [
+        "local-dev"
+      ],
+      "topCandidates": [
+        {
+          "mealKey": "hot_dog",
+          "mealLabel": "hot dog",
+          "matchedText": "de quoi faire des hot dog",
+          "score": 0.661185336377198,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.718679713453476,
+          "source": "learned"
+        },
+        {
+          "mealKey": "salade_riz",
+          "mealLabel": "salade de riz",
+          "matchedText": "je veux de quoi faire une salade de riz",
+          "score": 0.6537425397232092,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.7105897170904447,
+          "source": "learned"
+        },
+        {
+          "mealKey": "salade_cesar",
+          "mealLabel": "salade césar",
+          "matchedText": "je veux de quoi faire une salade césar",
+          "score": 0.6536142874035389,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.7104503123951509,
+          "source": "learned"
+        },
+        {
+          "mealKey": "pizza_ananas",
+          "mealLabel": "pizza ananas",
+          "matchedText": "de quoi faire de quoi faire une pizza ananas",
+          "score": 0.6455057547422326,
+          "lexicalScore": 0.2857142857142857,
+          "semanticScore": 0.7016366899372093,
+          "source": "generated"
+        },
+        {
+          "mealKey": "pizza_jambon",
+          "mealLabel": "pizza jambon",
+          "matchedText": "de quoi faire de quoi faire une pizza jambon",
+          "score": 0.6449300231293333,
+          "lexicalScore": 0.33333333333333326,
+          "semanticScore": 0.7010108947057971,
+          "source": "generated"
+        }
+      ]
+    },
+    {
+      "normalizedText": "de quoi faire une quiche",
+      "sampleText": "de quoi faire une quiche",
+      "count": 1,
+      "firstSeenAt": "2026-05-05T10:32:37.843Z",
+      "lastSeenAt": "2026-05-05T10:32:37.843Z",
+      "userRefs": [
+        "local-dev"
+      ],
+      "topCandidates": [
+        {
+          "mealKey": "hot_dog",
+          "mealLabel": "hot dog",
+          "matchedText": "de quoi faire des hot dog",
+          "score": 0.6853780709549494,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.7449761640814667,
+          "source": "learned"
+        },
+        {
+          "mealKey": "pizza_jambon",
+          "mealLabel": "pizza jambon",
+          "matchedText": "de quoi faire de quoi faire une pizza jambon",
+          "score": 0.6695090581996942,
+          "lexicalScore": 0.33333333333333326,
+          "semanticScore": 0.7277272371735806,
+          "source": "generated"
+        },
+        {
+          "mealKey": "hamburger",
+          "mealLabel": "hamburger",
+          "matchedText": "de quoi faire hamburger",
+          "score": 0.6510011395558595,
+          "lexicalScore": 0.375,
+          "semanticScore": 0.7076099342998472,
+          "source": "generated"
+        },
+        {
+          "mealKey": "salade_cesar",
+          "mealLabel": "salade césar",
+          "matchedText": "je veux de quoi faire une salade césar",
+          "score": 0.6476687822196749,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.7039878067605162,
+          "source": "learned"
+        },
+        {
+          "mealKey": "pizza_ananas",
+          "mealLabel": "pizza ananas",
+          "matchedText": "je veux de quoi faire de quoi faire une pizza ananas",
+          "score": 0.6453695724088462,
+          "lexicalScore": 0.2222222222222222,
+          "semanticScore": 0.7014886656617894,
+          "source": "generated"
+        }
+      ]
+    },
+    {
+      "normalizedText": "de quoi faire une quiche lorraine",
+      "sampleText": "de quoi faire une quiche lorraine",
+      "count": 2,
+      "firstSeenAt": "2026-05-05T10:42:33.619Z",
+      "lastSeenAt": "2026-05-05T10:46:15.342Z",
+      "userRefs": [
+        "local-dev"
+      ],
+      "topCandidates": [
+        {
+          "mealKey": "quiche",
+          "mealLabel": "quiche",
+          "matchedText": "de quoi faire une quiche lorraine",
+          "score": 1,
+          "lexicalScore": 1,
+          "semanticScore": 1,
+          "source": "learned"
+        },
+        {
+          "mealKey": "hot_dog",
+          "mealLabel": "hot dog",
+          "matchedText": "de quoi faire des hot dog",
+          "score": 0.6691729228162628,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.7273618726263726,
+          "source": "learned"
+        },
+        {
+          "mealKey": "salade_cesar",
+          "mealLabel": "salade césar",
+          "matchedText": "je veux de quoi faire une salade césar",
+          "score": 0.647342869443107,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.7036335537425076,
+          "source": "learned"
+        },
+        {
+          "mealKey": "carbonara",
+          "mealLabel": "carbonara",
+          "matchedText": "je veux de quoi faire carbonara",
+          "score": 0.6408894403052436,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.6966189568535257,
+          "source": "generated"
+        },
+        {
+          "mealKey": "maccheroni_carbonara",
+          "mealLabel": "maccheroni carbonara",
+          "matchedText": "je veux de quoi faire macaroni carbonara",
+          "score": 0.6331936473217002,
+          "lexicalScore": 0.21428571428571427,
+          "semanticScore": 0.6882539644801089,
+          "source": "generated"
+        }
+      ]
+    },
+    {
+      "normalizedText": "de quoi faire une pizza",
+      "sampleText": "de quoi faire une pizza",
+      "count": 1,
+      "firstSeenAt": "2026-05-05T10:51:51.212Z",
+      "lastSeenAt": "2026-05-05T10:51:51.212Z",
+      "userRefs": [
+        "local-dev"
+      ],
+      "topCandidates": [
+        {
+          "mealKey": "pizza_ananas",
+          "mealLabel": "pizza ananas",
+          "matchedText": "faire un de quoi faire une pizza ananas",
+          "score": 0.8325891862837067,
+          "lexicalScore": 0.3125,
+          "semanticScore": 0.9049882459605507,
+          "source": "generated"
+        },
+        {
+          "mealKey": "pizza_jambon",
+          "mealLabel": "pizza jambon",
+          "matchedText": "faire un de quoi faire une pizza jambon",
+          "score": 0.8089771370710379,
+          "lexicalScore": 0.35714285714285715,
+          "semanticScore": 0.8793229750772151,
+          "source": "generated"
+        },
+        {
+          "mealKey": "hamburger",
+          "mealLabel": "hamburger",
+          "matchedText": "de quoi faire hamburger",
+          "score": 0.7306996062843293,
+          "lexicalScore": 0.375,
+          "semanticScore": 0.7942387024829666,
+          "source": "generated"
+        },
+        {
+          "mealKey": "hot_dog",
+          "mealLabel": "hot dog",
+          "matchedText": "de quoi faire des hot dog",
+          "score": 0.7082421289887088,
+          "lexicalScore": 0.25,
+          "semanticScore": 0.7698284010746834,
+          "source": "learned"
+        },
+        {
+          "mealKey": "quiche",
+          "mealLabel": "quiche",
+          "matchedText": "faire un de quoi faire une quiche",
+          "score": 0.7033588614437205,
+          "lexicalScore": 0.33333333333333326,
+          "semanticScore": 0.7645205015692614,
+          "source": "generated"
+        }
+      ]
+    }
+  ]
+}

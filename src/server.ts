@@ -10,7 +10,6 @@ import { errorHandler } from "./middleware/error.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { aiRoutes } from "./routes/ai.routes.js";
 import { webhookRoutes } from "./routes/webhook.routes.js";
-import { buildCatalogEmbedding } from "./ai/meal_old/catalog-embeddings.js";
 import { whatsappMetaRoutes } from "./integrations/meta/whatsapp.routes.js";
 import { twilioWhatsAppRoutes } from "./integrations/twilio/whatsapp.routes.js";
 
@@ -41,8 +40,4 @@ app.use(errorHandler);
 
 app.listen(env.port, "0.0.0.0", () => {
   console.log(`Zelo API listening on http://0.0.0.0:${env.port}`);
-    // build embeddings catalogo (background)
-  buildCatalogEmbedding("local-dev", false)
-    .then(() => console.log("✅ Catalog embeddings ready"))
-    .catch(err => console.error("❌ Catalog embedding error:", err));
 });

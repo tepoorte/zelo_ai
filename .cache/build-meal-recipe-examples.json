@@ -1,0 +1,191 @@
+{
+  "version": 1,
+  "updatedAt": "2026-05-05T12:05:08.298Z",
+  "items": [
+    {
+      "mealKey": "hot_dog",
+      "text": "je veux de quoi faire des hot dog",
+      "normalizedText": "je veux de quoi faire des hot dog",
+      "count": 2,
+      "firstSeenAt": "2026-05-01T17:12:05.880Z",
+      "lastSeenAt": "2026-05-01T17:16:14.666Z",
+      "userRefs": [
+        "smoke-1777655508694",
+        "smoke-1777655769631"
+      ]
+    },
+    {
+      "mealKey": "carbonara",
+      "text": "de quoi faire une carbonara",
+      "normalizedText": "de quoi faire une carbonara",
+      "count": 2,
+      "firstSeenAt": "2026-05-01T17:12:08.458Z",
+      "lastSeenAt": "2026-05-01T17:16:25.216Z",
+      "userRefs": [
+        "smoke-1777655508694",
+        "smoke-1777655769631"
+      ]
+    },
+    {
+      "mealKey": "hamburger",
+      "text": "je veux de quoi faire des hamburgers",
+      "normalizedText": "je veux de quoi faire des hamburgers",
+      "count": 2,
+      "firstSeenAt": "2026-05-01T17:12:11.077Z",
+      "lastSeenAt": "2026-05-01T17:16:27.910Z",
+      "userRefs": [
+        "smoke-1777655508694",
+        "smoke-1777655769631"
+      ]
+    },
+    {
+      "mealKey": "spaghetti_bolognese",
+      "text": "je veux de quoi faire des spaghetti bolognese",
+      "normalizedText": "je veux de quoi faire des spaghetti bolognese",
+      "count": 2,
+      "firstSeenAt": "2026-05-01T17:12:13.607Z",
+      "lastSeenAt": "2026-05-01T17:16:31.031Z",
+      "userRefs": [
+        "smoke-1777655508694",
+        "smoke-1777655769631"
+      ]
+    },
+    {
+      "mealKey": "maccheroni_carbonara",
+      "text": "je veux de quoi faire des maccheroni carbonara",
+      "normalizedText": "je veux de quoi faire des maccheroni carbonara",
+      "count": 2,
+      "firstSeenAt": "2026-05-01T17:12:15.982Z",
+      "lastSeenAt": "2026-05-01T17:16:33.957Z",
+      "userRefs": [
+        "smoke-1777655508694",
+        "smoke-1777655769631"
+      ]
+    },
+    {
+      "mealKey": "filet_perche_pomme_de_terre",
+      "text": "je veux de quoi faire filet de perche et pomme de terre",
+      "normalizedText": "je veux de quoi faire filet de perche et pomme de terre",
+      "count": 2,
+      "firstSeenAt": "2026-05-01T17:12:18.616Z",
+      "lastSeenAt": "2026-05-01T17:16:36.866Z",
+      "userRefs": [
+        "smoke-1777655508694",
+        "smoke-1777655769631"
+      ]
+    },
+    {
+      "mealKey": "salade_cesar",
+      "text": "je veux de quoi faire une salade césar",
+      "normalizedText": "je veux de quoi faire une salade cesar",
+      "count": 2,
+      "firstSeenAt": "2026-05-01T17:12:21.316Z",
+      "lastSeenAt": "2026-05-01T17:16:39.774Z",
+      "userRefs": [
+        "smoke-1777655508694",
+        "smoke-1777655769631"
+      ]
+    },
+    {
+      "mealKey": "salade_riz",
+      "text": "je veux de quoi faire une salade de riz",
+      "normalizedText": "je veux de quoi faire une salade de riz",
+      "count": 2,
+      "firstSeenAt": "2026-05-01T17:12:24.295Z",
+      "lastSeenAt": "2026-05-01T17:16:42.866Z",
+      "userRefs": [
+        "smoke-1777655508694",
+        "smoke-1777655769631"
+      ]
+    },
+    {
+      "mealKey": "hot_dog",
+      "text": "de quoi faire des hot dog",
+      "normalizedText": "de quoi faire des hot dog",
+      "count": 4,
+      "firstSeenAt": "2026-05-01T17:12:56.092Z",
+      "lastSeenAt": "2026-05-01T17:14:01.521Z",
+      "userRefs": [
+        "local-dev",
+        "smoke-direct-system"
+      ]
+    },
+    {
+      "mealKey": "pizza_ananas",
+      "text": "de quoi faire une pizza ananas",
+      "normalizedText": "de quoi faire une pizza ananas",
+      "count": 3,
+      "firstSeenAt": "2026-05-04T16:09:01.908Z",
+      "lastSeenAt": "2026-05-04T16:18:59.281Z",
+      "userRefs": [
+        "local-dev"
+      ]
+    },
+    {
+      "mealKey": "pizza_ananas",
+      "text": "de quoi faire une pizza wurstel",
+      "normalizedText": "de quoi faire une pizza wurstel",
+      "count": 1,
+      "firstSeenAt": "2026-05-04T16:13:04.775Z",
+      "lastSeenAt": "2026-05-04T16:13:04.775Z",
+      "userRefs": [
+        "local-dev"
+      ]
+    },
+    {
+      "mealKey": "pizza_jambon",
+      "text": "de quoi faire une pizza jambon",
+      "normalizedText": "de quoi faire une pizza jambon",
+      "count": 2,
+      "firstSeenAt": "2026-05-04T16:22:04.535Z",
+      "lastSeenAt": "2026-05-05T10:52:22.842Z",
+      "userRefs": [
+        "local-dev"
+      ]
+    },
+    {
+      "mealKey": "quiche",
+      "text": "de quoi faire une quiche",
+      "normalizedText": "de quoi faire une quiche",
+      "count": 4,
+      "firstSeenAt": "2026-05-05T10:37:34.274Z",
+      "lastSeenAt": "2026-05-05T10:45:58.516Z",
+      "userRefs": [
+        "local-dev"
+      ]
+    },
+    {
+      "mealKey": "quiche",
+      "text": "de quoi faire une quiche lorraine",
+      "normalizedText": "de quoi faire une quiche lorraine",
+      "count": 1,
+      "firstSeenAt": "2026-05-05T10:38:09.421Z",
+      "lastSeenAt": "2026-05-05T10:38:09.421Z",
+      "userRefs": [
+        "local-dev"
+      ]
+    },
+    {
+      "mealKey": "pizza",
+      "text": "de quoi faire une pizza",
+      "normalizedText": "de quoi faire une pizza",
+      "count": 1,
+      "firstSeenAt": "2026-05-05T10:52:13.123Z",
+      "lastSeenAt": "2026-05-05T10:52:13.123Z",
+      "userRefs": [
+        "local-dev"
+      ]
+    },
+    {
+      "mealKey": "maccheroni_carbonara",
+      "text": "de quoi faire maccheroni carbonara",
+      "normalizedText": "de quoi faire maccheroni carbonara",
+      "count": 1,
+      "firstSeenAt": "2026-05-05T12:05:08.298Z",
+      "lastSeenAt": "2026-05-05T12:05:08.298Z",
+      "userRefs": [
+        "local-dev"
+      ]
+    }
+  ]
+}

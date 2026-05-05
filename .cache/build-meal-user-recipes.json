@@ -1,0 +1,536 @@
+{
+  "version": 1,
+  "updatedAt": "2026-05-05T10:52:12.322Z",
+  "recipes": [
+    {
+      "key": "pizza_ananas",
+      "label": "pizza ananas",
+      "aliases": [
+        "pizza ananas",
+        "de quoi faire une pizza ananas"
+      ],
+      "examples": [
+        "de quoi faire une pizza ananas"
+      ],
+      "family": "pizza",
+      "baseRecipe": true,
+      "source": "user",
+      "userRef": "local-dev",
+      "createdFromText": "de quoi faire une pizza ananas",
+      "defaultServings": 2,
+      "ingredients": [
+        {
+          "key": "ananas",
+          "label": "Ananas",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "ananas",
+          "slot": "manual",
+          "categoryNames": [
+            "fruits legumes"
+          ],
+          "preferredProductId": "60219c3392d477000754d058",
+          "preferredProductName": "Ananas",
+          "fallbackSearchTerms": [
+            "Ananas"
+          ]
+        },
+        {
+          "key": "farine_pizza",
+          "label": "Farine Pizza",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "farine_pizza",
+          "slot": "manual",
+          "categoryNames": [
+            "farines cereales noix"
+          ],
+          "preferredProductId": "623c1d5079eec66b2243aee5",
+          "preferredProductName": "Farine Pizza",
+          "fallbackSearchTerms": [
+            "Farine Pizza"
+          ]
+        },
+        {
+          "key": "sauce_tomates_pomodoro",
+          "label": "Sauce tomates (Pomodoro)",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "sauce_tomates_pomodoro",
+          "slot": "manual",
+          "categoryNames": [
+            "fruits legumes",
+            "epices huiles sauces"
+          ],
+          "preferredProductId": "5f5b81239abcd50007e10adc",
+          "preferredProductName": "Sauce tomates (Pomodoro)",
+          "fallbackSearchTerms": [
+            "Sauce tomates (Pomodoro)"
+          ]
+        },
+        {
+          "key": "gruyere_doux",
+          "label": "Gruyère doux",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "gruyere_doux",
+          "slot": "manual",
+          "categoryNames": [
+            "lait fromages oeufs"
+          ],
+          "preferredProductId": "5dcfc0906f4a93324a0a2b18",
+          "preferredProductName": "Gruyère doux",
+          "fallbackSearchTerms": [
+            "Gruyère doux"
+          ]
+        },
+        {
+          "key": "sel_fin",
+          "label": "Sel fin",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "sel_fin",
+          "slot": "manual",
+          "categoryNames": [
+            "epices huiles sauces"
+          ],
+          "preferredProductId": "5e11a18c961a2912fec4cc40",
+          "preferredProductName": "Sel fin",
+          "fallbackSearchTerms": [
+            "Sel fin"
+          ]
+        },
+        {
+          "key": "huile_dolive_bio",
+          "label": "Huile d'Olive Bio",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "huile_dolive_bio",
+          "slot": "manual",
+          "categoryNames": [
+            "epices huiles sauces"
+          ],
+          "preferredProductId": "5f64432f9abcd50007e13576",
+          "preferredProductName": "Huile d'Olive Bio",
+          "fallbackSearchTerms": [
+            "Huile d'Olive Bio"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "pizza_jambon",
+      "label": "pizza jambon",
+      "aliases": [
+        "pizza jambon",
+        "de quoi faire une pizza jambon"
+      ],
+      "examples": [
+        "de quoi faire une pizza jambon"
+      ],
+      "family": "pizza",
+      "baseRecipe": true,
+      "source": "user",
+      "userRef": "local-dev",
+      "createdFromText": "de quoi faire une pizza jambon",
+      "defaultServings": 2,
+      "ingredients": [
+        {
+          "key": "farine_pizza",
+          "label": "Farine Pizza",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "farine_pizza",
+          "slot": "manual",
+          "categoryNames": [
+            "farines cereales noix"
+          ],
+          "preferredProductId": "623c1d5079eec66b2243aee5",
+          "preferredProductName": "Farine Pizza",
+          "fallbackSearchTerms": [
+            "Farine Pizza"
+          ]
+        },
+        {
+          "key": "sauce_tomates_pomodoro",
+          "label": "Sauce tomates (Pomodoro)",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "sauce_tomates_pomodoro",
+          "slot": "manual",
+          "categoryNames": [
+            "fruits legumes",
+            "epices huiles sauces"
+          ],
+          "preferredProductId": "5f5b81239abcd50007e10adc",
+          "preferredProductName": "Sauce tomates (Pomodoro)",
+          "fallbackSearchTerms": [
+            "Sauce tomates (Pomodoro)"
+          ]
+        },
+        {
+          "key": "gruyere_doux",
+          "label": "Gruyère doux",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "gruyere_doux",
+          "slot": "manual",
+          "categoryNames": [
+            "lait fromages oeufs"
+          ],
+          "preferredProductId": "5dcfc0906f4a93324a0a2b18",
+          "preferredProductName": "Gruyère doux",
+          "fallbackSearchTerms": [
+            "Gruyère doux"
+          ]
+        },
+        {
+          "key": "sel_fin",
+          "label": "Sel fin",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "sel_fin",
+          "slot": "manual",
+          "categoryNames": [
+            "epices huiles sauces"
+          ],
+          "preferredProductId": "5e11a18c961a2912fec4cc40",
+          "preferredProductName": "Sel fin",
+          "fallbackSearchTerms": [
+            "Sel fin"
+          ]
+        },
+        {
+          "key": "huile_dolive_bio",
+          "label": "Huile d'Olive Bio",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "huile_dolive_bio",
+          "slot": "manual",
+          "categoryNames": [
+            "epices huiles sauces"
+          ],
+          "preferredProductId": "5f64432f9abcd50007e13576",
+          "preferredProductName": "Huile d'Olive Bio",
+          "fallbackSearchTerms": [
+            "Huile d'Olive Bio"
+          ]
+        },
+        {
+          "key": "jambon",
+          "label": "jambon",
+          "qty": 1,
+          "unit": "piece",
+          "role": "garniture",
+          "optional": true,
+          "isCore": false,
+          "scaling": "fixed",
+          "conceptKey": "jambon",
+          "slot": "modifier",
+          "categoryNames": [
+            "viande poisson"
+          ],
+          "preferredProductId": "5ecccbc3fd9b040006222c5d",
+          "preferredProductName": "Jambon",
+          "fallbackSearchTerms": [
+            "jambon",
+            "Jambon"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "quiche",
+      "label": "quiche",
+      "aliases": [
+        "quiche",
+        "de quoi faire une quiche"
+      ],
+      "examples": [
+        "de quoi faire une quiche"
+      ],
+      "family": "quiche",
+      "familySource": "provided",
+      "familyConfidence": 0.9,
+      "familyReasons": [
+        "provided-family"
+      ],
+      "baseRecipe": true,
+      "source": "user",
+      "userRef": "local-dev",
+      "createdFromText": "de quoi faire une quiche",
+      "defaultServings": 2,
+      "ingredients": [
+        {
+          "key": "farine_de_ble_bio_type_300",
+          "label": "Farine de blé Bio Type 300",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "farine_de_ble_bio_type_300",
+          "slot": "manual",
+          "categoryNames": [
+            "farines cereales noix"
+          ],
+          "preferredProductId": "5e050f055fefba5c347ca20f",
+          "preferredProductName": "Farine de blé Bio Type 300",
+          "fallbackSearchTerms": [
+            "Farine de blé Bio Type 300"
+          ]
+        },
+        {
+          "key": "beurre_frais",
+          "label": "Beurre frais",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "beurre_frais",
+          "slot": "manual",
+          "categoryNames": [
+            "lait fromages oeufs"
+          ],
+          "preferredProductId": "5ecccbc2fd9b040006222be5",
+          "preferredProductName": "Beurre frais",
+          "fallbackSearchTerms": [
+            "Beurre frais"
+          ]
+        },
+        {
+          "key": "oeuf_bio_a_piece",
+          "label": "Oeuf Bio à la pièce",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "oeuf_bio_a_piece",
+          "slot": "manual",
+          "categoryNames": [
+            "lait fromages oeufs"
+          ],
+          "preferredProductId": "5dc9680716202533f27ed88f",
+          "preferredProductName": "Oeuf Bio à la pièce",
+          "fallbackSearchTerms": [
+            "Oeuf Bio à la pièce"
+          ]
+        },
+        {
+          "key": "creme_25",
+          "label": "Crème 25%",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "creme_25",
+          "slot": "manual",
+          "categoryNames": [
+            "lait fromages oeufs"
+          ],
+          "preferredProductId": "629dfbfc019e71ca38aa5cc6",
+          "preferredProductName": "Crème 25%",
+          "fallbackSearchTerms": [
+            "Crème 25%"
+          ]
+        },
+        {
+          "key": "gruyere_doux",
+          "label": "Gruyère doux",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "gruyere_doux",
+          "slot": "manual",
+          "categoryNames": [
+            "lait fromages oeufs"
+          ],
+          "preferredProductId": "5dcfc0906f4a93324a0a2b18",
+          "preferredProductName": "Gruyère doux",
+          "fallbackSearchTerms": [
+            "Gruyère doux"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "pizza",
+      "label": "pizza",
+      "aliases": [
+        "pizza",
+        "de quoi faire une pizza"
+      ],
+      "examples": [
+        "de quoi faire une pizza"
+      ],
+      "family": "pizza",
+      "familySource": "provided",
+      "familyConfidence": 0.9,
+      "familyReasons": [
+        "provided-family"
+      ],
+      "baseRecipe": true,
+      "source": "user",
+      "userRef": "local-dev",
+      "createdFromText": "de quoi faire une pizza",
+      "defaultServings": 2,
+      "ingredients": [
+        {
+          "key": "farine_pizza",
+          "label": "Farine Pizza",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "farine_pizza",
+          "slot": "manual",
+          "categoryNames": [
+            "farines cereales noix"
+          ],
+          "preferredProductId": "623c1d5079eec66b2243aee5",
+          "preferredProductName": "Farine Pizza",
+          "fallbackSearchTerms": [
+            "Farine Pizza"
+          ]
+        },
+        {
+          "key": "sauce_tomates_pomodoro",
+          "label": "Sauce tomates (Pomodoro)",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "sauce_tomates_pomodoro",
+          "slot": "manual",
+          "categoryNames": [
+            "fruits legumes",
+            "epices huiles sauces"
+          ],
+          "preferredProductId": "5f5b81239abcd50007e10adc",
+          "preferredProductName": "Sauce tomates (Pomodoro)",
+          "fallbackSearchTerms": [
+            "Sauce tomates (Pomodoro)"
+          ]
+        },
+        {
+          "key": "gruyere_doux",
+          "label": "Gruyère doux",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "gruyere_doux",
+          "slot": "manual",
+          "categoryNames": [
+            "lait fromages oeufs"
+          ],
+          "preferredProductId": "5dcfc0906f4a93324a0a2b18",
+          "preferredProductName": "Gruyère doux",
+          "fallbackSearchTerms": [
+            "Gruyère doux"
+          ]
+        },
+        {
+          "key": "sel_fin",
+          "label": "Sel fin",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "sel_fin",
+          "slot": "manual",
+          "categoryNames": [
+            "epices huiles sauces"
+          ],
+          "preferredProductId": "5e11a18c961a2912fec4cc40",
+          "preferredProductName": "Sel fin",
+          "fallbackSearchTerms": [
+            "Sel fin"
+          ]
+        },
+        {
+          "key": "huile_dolive_bio",
+          "label": "Huile d'Olive Bio",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "huile_dolive_bio",
+          "slot": "manual",
+          "categoryNames": [
+            "epices huiles sauces"
+          ],
+          "preferredProductId": "5f64432f9abcd50007e13576",
+          "preferredProductName": "Huile d'Olive Bio",
+          "fallbackSearchTerms": [
+            "Huile d'Olive Bio"
+          ]
+        }
+      ]
+    }
+  ]
+}

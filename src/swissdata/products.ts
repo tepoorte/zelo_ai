@@ -10,6 +10,10 @@ type CatalogCacheEntry = {
   items: Product[];
 };
 
+export type GetAllProductsOptions = {
+  forceRefresh?: boolean;
+};
+
 const CATALOG_CACHE = new Map<string, CatalogCacheEntry>();
 
 export type ProductOption = {
@@ -131,8 +135,11 @@ export async function fetchFullProduct(
   return items.find((p) => p.id === productId) ?? null;
 }
 
-export async function getAllProducts(userRef: string): Promise<Product[]> {
-  return await getCatalog(userRef);
+export async function getAllProducts(
+  userRef: string,
+  options: GetAllProductsOptions = {}
+): Promise<Product[]> {
+  return await getCatalog(userRef, Boolean(options.forceRefresh));
 }
 
 export function invalidateProductsCache(userRef?: string) {

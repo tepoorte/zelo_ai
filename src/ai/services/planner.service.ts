@@ -25,12 +25,6 @@ type PlannedAction =
     }
   | { type: "exec_cart"; userRef?: string }
   | { type: "discover_meal_ideas"; userRef?: string }
-  | {
-      type: "build_meal";
-      meal: string;
-      servings?: number;
-      userRef?: string;   
-    }
   | { type: "noop"; reason?: string };
 
 type Plan = {
@@ -270,9 +264,8 @@ Actions autorisées:
 3) {"type":"get_cart","userRef":"..."}
 4) {"type":"clear_cart","userRef":"...","mode":"all|partial","items":[{"query":"..."}]}
 5) {"type":"exec_cart","userRef":"..."}
-6) {"type":"build_meal","meal":"...","servings":2}
-7) {"type":"discover_meal_ideas"}
-8) {"type":"noop","reason":"..."}
+6) {"type":"discover_meal_ideas"}
+7) {"type":"noop","reason":"..."}
 
 IMPORTANT:
 - Pour add_to_cart, n'invente jamais de productId si l'utilisateur n'en donne pas.
@@ -292,7 +285,7 @@ IMPORTANT:
   "merci", "super merci", "tu peux m'aider ?",
   "que fais-tu aujourd'hui ?", "quel temps fait-il aujourd'hui ?",
   "quelle heure est-il ?", "qui es-tu ?", "ça roule ?", "quoi de neuf ?"
-- Ne classe jamais ces messages comme SHOW_CART, ADD_ITEMS, CLEAR_CART, EXEC_CART, BUILD_MEAL ou DISCOVER_MEALS.
+- Ne classe jamais ces messages comme SHOW_CART, ADD_ITEMS, CLEAR_CART, EXEC_CART ou DISCOVER_MEALS.
 - Dès qu'aucune action shopping claire n'est demandée, préfère NOOP.
 - Si l'utilisateur veut vider complètement son panier:
   {"intent":"CLEAR_CART","actions":[{"type":"clear_cart","mode":"all"}]}
@@ -306,8 +299,7 @@ IMPORTANT:
   {"intent":"DISCOVER_MEALS","actions":[{"type":"discover_meal_ideas"}]}
 - Pour toute autre phrase, n'utilise jamais DISCOVER_MEALS.
 - Si l'utilisateur demande "de quoi faire ..." ou veut préparer un plat / repas / usage,
-  utilise:
-  {"intent":"BUILD_MEAL","actions":[{"type":"build_meal","meal":"...","servings":2}]}
+  retourne NOOP dans ce planner: le flow build_meal est traité ailleurs.
 
 RÈGLE POUR LE SMALL TALK ET LES QUESTIONS GÉNÉRALES:
 - Si le message est un salut, un remerciement, une formule de politesse,
@@ -334,7 +326,6 @@ EXEMPLES DE TRANSFORMATION GÉNÉRALE:
 - "Ajoute des tomates à mon panier" -> query="tomates", qty=1, unit="piece"
 - "Ajoute du lard à mon panier" -> query="lard", qty=1, unit="piece"
 - "Ajoute quelque chose pour l'apéro" -> query="apéro", qty=1, unit="piece"
-- "Ajoute de quoi faire des hot dog" -> query="hot dog", qty=1, unit="piece"
 
 RÈGLE POUR LES QUANTITÉS:
 - Si un nombre est écrit sans unité de poids/volume, garde exactement ce nombre et utilise unit="piece" ; n'invente jamais "g", "kg", "ml", "l", "litre" ou "litres".
@@ -481,26 +472,6 @@ Réponse:
 }
 
 Message:
-"Je veux de quoi faire des hot dog"
-Réponse:
-{
-  "intent":"BUILD_MEAL",
-  "actions":[
-    {"type":"build_meal","meal":"hot dog","servings":2}
-  ]
-}
-
-Message:
-"De quoi faire une fondue"
-Réponse:
-{
-  "intent":"BUILD_MEAL",
-  "actions":[
-    {"type":"build_meal","meal":"fondue","servings":2}
-  ]
-}
-
-Message:
 "Comment ca va bro ?"
 Réponse:
 {
@@ -601,7 +572,7 @@ function normalizePlannerUserText(userText: string): string {
     .trim();
 }
 
-function plannerPromptAddItems() {
+function plannerPromptAddItems2() {
   return `
 Tu es l'IA de Zelo. Tu es un planner spécialisé ADD_ITEMS.
 Ta mission est de transformer le message utilisateur en PLAN JSON strict pour ajouter un ou plusieurs produits au panier.
@@ -819,6 +790,156 @@ Réponse:
 ${plannerPromptNoopFallbackRules()}
 `;
 }
+
+
+function plannerPromptAddItems() {
+  return `
+Tu es l'IA de Zelo. Tu es un planner spécialisé ADD_ITEMS.
+Ta mission est de transformer le message utilisateur en PLAN JSON strict pour ajouter un ou plusieurs produits au panier.
+
+${plannerPromptOutputRules()}
+
+Actions autorisées:
+1) {
+  "type":"add_to_cart",
+  "items":[
+    {
+      "query":"...",
+      "qty":1,
+      "unit":"piece|g|kg|litre|litres"
+    }
+  ]
+}
+2) {"type":"noop","reason":"..."}
+
+IMPORTANT:
+- Ton intent principal est ADD_ITEMS.
+- Si le message demande clairement d'ajouter des produits au panier, retourne ADD_ITEMS.
+- Si le message ne demande pas réellement un ajout panier, retourne NOOP.
+- Retourne une seule action "add_to_cart" avec un seul tableau "items".
+- N'écris jamais plusieurs actions "add_to_cart".
+- Ignore totalement les métadonnées techniques éventuelles:
+  "UserRef=...", "UserMessage=...", "local-dev", "anonymous", email, id, token.
+- L'expression "à mon panier", "dans mon panier", "au panier", "pour mon panier" indique seulement la destination.
+- N'invente jamais une query générique comme "courses", "courses pour 2", "apéro" ou "panier" si plusieurs produits précis sont présents.
+- Utilise "panier" dans "query" seulement si le produit demandé contient réellement ce mot, par exemple "Panier Budget 50", "panier de légumes", "panier de fruits".
+
+RÈGLES PAR ITEM:
+- "query" = nom du produit seulement.
+- "query" ne doit jamais contenir la quantité, l'unité, "et", "and", ni des mots de politesse.
+- "qty" = quantité numérique.
+- "unit" = uniquement "piece", "g", "kg", "litre" ou "litres".
+- N'utilise jamais d'autre unité.
+
+CANONISATION:
+- "pièce", "pièces", "pieces" -> "piece"
+- "gr", "gramme", "grammes", "grams", "grains" -> "g"
+- "kilogramme", "kilogrammes" -> "kg"
+- "l" -> "litre" ou "litres"
+
+RÈGLES DE QUANTITÉ:
+- Si un nombre est écrit sans unité de poids/volume, conserve ce nombre et utilise unit="piece".
+- Si aucun nombre n'est écrit, utilise qty=1 et unit="piece".
+- Si un poids est écrit en grammes, utilise unit="g".
+- Si un poids est écrit en kilogrammes, utilise unit="kg".
+- Si un volume est écrit en litres, utilise unit="litre" pour 1 et unit="litres" pour 2 ou plus.
+- Comprends aussi les quantités écrites en lettres:
+  un/une=1, deux=2, trois=3, quatre=4, cinq=5, six=6, sept=7, huit=8, neuf=9, dix=10.
+
+LISTES:
+- Si le message contient une liste, des virgules, des puces ou des retours à la ligne, traite chaque segment utile comme un item potentiel.
+- Continue jusqu'au dernier produit utile du message.
+- Ne perds jamais les derniers produits d'une liste longue.
+- Si plusieurs produits précis sont présents, extrais-les tous individuellement.
+- Ne remplace jamais une liste précise par un produit générique.
+
+Exemples:
+
+Message:
+"Ajoute 1 lard de Begnins à mon panier"
+Réponse:
+{
+  "intent":"ADD_ITEMS",
+  "actions":[
+    {
+      "type":"add_to_cart",
+      "items":[
+        {"query":"lard de Begnins","qty":1,"unit":"piece"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Ajoute 150g de lard de Begnins à mon panier"
+Réponse:
+{
+  "intent":"ADD_ITEMS",
+  "actions":[
+    {
+      "type":"add_to_cart",
+      "items":[
+        {"query":"lard de Begnins","qty":150,"unit":"g"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Salut André, je te prends volontiers 2 litres de lait sapalet, 8 œufs, 250 gr de fromage aléatoire gimelan et 2kg de pommes."
+Réponse:
+{
+  "intent":"ADD_ITEMS",
+  "actions":[
+    {
+      "type":"add_to_cart",
+      "items":[
+        {"query":"lait sapalet","qty":2,"unit":"litres"},
+        {"query":"œufs","qty":8,"unit":"piece"},
+        {"query":"fromage aléatoire gimelan","qty":250,"unit":"g"},
+        {"query":"pommes","qty":2,"unit":"kg"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Bonjour. Un pain aux noix, 500g rhubarbs, 200g lard de begnins, deux pates vaudois, deux pizza margaritas, une botte chou plume, un sorbet fraise, une sauce lulu, une sauce salvis."
+Réponse:
+{
+  "intent":"ADD_ITEMS",
+  "actions":[
+    {
+      "type":"add_to_cart",
+      "items":[
+        {"query":"pain aux noix","qty":1,"unit":"piece"},
+        {"query":"rhubarbs","qty":500,"unit":"g"},
+        {"query":"lard de begnins","qty":200,"unit":"g"},
+        {"query":"pates vaudois","qty":2,"unit":"piece"},
+        {"query":"pizza margaritas","qty":2,"unit":"piece"},
+        {"query":"botte chou plume","qty":1,"unit":"piece"},
+        {"query":"sorbet fraise","qty":1,"unit":"piece"},
+        {"query":"sauce lulu","qty":1,"unit":"piece"},
+        {"query":"sauce salvis","qty":1,"unit":"piece"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Comment ça va ?"
+Réponse:
+{
+  "intent":"NOOP",
+  "actions":[
+    {"type":"noop","reason":"general_chat"}
+  ]
+}
+
+${plannerPromptNoopFallbackRules()}
+`;
+}
+
 
 function plannerPromptClearCart() {
   return `
@@ -1102,71 +1223,6 @@ ${plannerPromptNoopFallbackRules()}
 `;
 }
 
-function plannerPromptBuildMeal() {
-  return `
-Tu es l'IA de Zelo. Tu es un planner spécialisé BUILD_MEAL.
-Ta mission est de transformer le message utilisateur en PLAN JSON strict pour construire un repas ou un plat à partir d'une envie précise.
-
-${plannerPromptOutputRules()}
-
-Actions autorisées:
-1) {"type":"build_meal","meal":"...","servings":2}
-2) {"type":"noop","reason":"..."}
-
-IMPORTANT:
-- Ton intent principal est BUILD_MEAL.
-- Utilise BUILD_MEAL si l'utilisateur demande "de quoi faire ..." ou veut préparer un plat / repas / usage précis.
-- Extrais le nom du plat dans "meal".
-- Si le nombre de portions n'est pas explicite, utilise servings=2.
-- Si le message parle d'inspiration générale du jour sans plat précis, retourne NOOP.
-- Ne retourne jamais ADD_ITEMS, SHOW_CART, CLEAR_CART, EXEC_CART ou DISCOVER_MEALS dans ce planner.
-
-Exemples:
-
-Message:
-"Je veux de quoi faire des hot dog"
-Réponse:
-{
-  "intent":"BUILD_MEAL",
-  "actions":[
-    {"type":"build_meal","meal":"hot dog","servings":2}
-  ]
-}
-
-Message:
-"De quoi faire une fondue"
-Réponse:
-{
-  "intent":"BUILD_MEAL",
-  "actions":[
-    {"type":"build_meal","meal":"fondue","servings":2}
-  ]
-}
-
-Message:
-"Je veux préparer une carbonara pour 4"
-Réponse:
-{
-  "intent":"BUILD_MEAL",
-  "actions":[
-    {"type":"build_meal","meal":"carbonara","servings":4}
-  ]
-}
-
-Message:
-"Qu'est-ce que tu me proposes aujourd'hui ?"
-Réponse:
-{
-  "intent":"NOOP",
-  "actions":[
-    {"type":"noop","reason":"wrong_specialized_hint"}
-  ]
-}
-
-${plannerPromptNoopFallbackRules()}
-`;
-}
-
 function plannerPromptDiscoverMeals() {
   return `
 Tu es l'IA de Zelo. Tu es un planner spécialisé DISCOVER_MEALS.
@@ -1310,8 +1366,6 @@ export function selectPlannerPrompt(intentHint?: FrontendIntentHint) {
       return plannerPromptShowCart();
     case "exec_cart":
       return plannerPromptExecCart();
-    case "build_meal":
-      return plannerPromptBuildMeal();
     case "discover_meals":
       return plannerPromptDiscoverMeals();
     case "noop":
@@ -1330,7 +1384,6 @@ function selectPlannerBudget(intentHint?: FrontendIntentHint) {
     case "exec_cart":
     case "noop":
       return { numPredict: 96, numCtx: 2048 };
-    case "build_meal":
     case "discover_meals":
       return { numPredict: 96, numCtx: 2048 };
     default:

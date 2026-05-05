@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Zelo AI Super</title>
+  <title>Assistant Zélo</title>
   <style>
-    @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap");
+    @import url("https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&display=swap");
 
     :root{
       --bg:#06131b;
@@ -16,8 +16,8 @@
       --line-strong:rgba(188, 245, 255, 0.26);
       --text:#edf7ff;
       --muted:rgba(237, 247, 255, 0.66);
-      --blue:#2f7cff;
-      --teal:#19d3b3;
+      --blue:#5CB135;
+      --teal:#5CB135;
       --coral:#ff8f6b;
       --gold:#ffd166;
       --danger:#ff6b6b;
@@ -33,7 +33,7 @@
     html,body{ height:100%; }
     body{
       margin:0;
-      font-family:"Space Grotesk", system-ui, sans-serif;
+      font-family:Verdana, Geneva, sans-serif;
       background:var(--bg);
       color:var(--text);
       overflow-x:hidden;
@@ -198,7 +198,7 @@
     }
 
     .heroTitle em{
-      font-family:"Instrument Serif", serif;
+      font-family:"Comfortaa", Verdana, Geneva, sans-serif;
       font-style:italic;
       font-weight:400;
       color:#aee8ff;
@@ -694,6 +694,129 @@
       color:var(--muted);
     }
 
+    .mealFeedbackPanel{
+      display:grid;
+      gap:10px;
+      margin-top:10px;
+      padding:12px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.035);
+    }
+
+    .mealFeedbackHeader{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .mealFeedbackLead{
+      display:grid;
+      gap:4px;
+    }
+
+    .mealFeedbackList{
+      display:grid;
+      gap:10px;
+    }
+
+    .mealIngredientCard{
+      display:grid;
+      gap:10px;
+      padding:12px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(7,12,18,0.36);
+    }
+
+    .mealIngredientTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .mealIngredientTitle{
+      display:grid;
+      gap:4px;
+    }
+
+    .mealIngredientMeta{
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.4;
+    }
+
+    .mealIngredientProduct{
+      display:grid;
+      gap:3px;
+      min-width:240px;
+    }
+
+    .mealIngredientState{
+      font-size:11px;
+      color:var(--muted);
+    }
+
+    .mealIngredientState.is-missing{
+      color:#ffd166;
+    }
+
+    .mealIngredientSearch{
+      display:grid;
+      gap:8px;
+      padding-top:4px;
+      border-top:1px solid rgba(255,255,255,0.08);
+    }
+
+    .mealIngredientSearchBar{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .mealIngredientSearchInput{
+      flex:1 1 240px;
+      min-height:40px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.04);
+      color:var(--text);
+      padding:10px 12px;
+      outline:none;
+    }
+
+    .mealIngredientResults{
+      display:grid;
+      gap:8px;
+    }
+
+    .mealIngredientResult{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.03);
+    }
+
+    .mealIngredientResultText{
+      display:grid;
+      gap:2px;
+    }
+
+    .mealIngredientResultMeta{
+      font-size:11px;
+      color:var(--muted);
+    }
+
     .suggestion{
       border:none;
       background:rgba(255,255,255,0.05);
@@ -974,7 +1097,7 @@
     }
 
     .modeTitle em{
-      font-family:"Instrument Serif", serif;
+      font-family:"Comfortaa", Verdana, Geneva, sans-serif;
       font-style:italic;
       font-weight:400;
       color:#bde7ff;
@@ -1101,7 +1224,7 @@
     }
 
     .authTitle em{
-      font-family:"Instrument Serif", serif;
+      font-family:"Comfortaa", Verdana, Geneva, sans-serif;
       font-style:italic;
       font-weight:400;
       color:#bde7ff;
@@ -1263,6 +1386,422 @@
         padding:18px;
       }
     }
+
+    /* Zelo visual refresh: light, local, simple, and aligned with app.zelo-epicerie.ch. */
+    :root{
+      --bg:#F7F9F5;
+      --bg-soft:#EEF6EA;
+      --panel:#ffffff;
+      --panel-strong:#ffffff;
+      --line:rgba(92, 177, 53, 0.18);
+      --line-strong:rgba(92, 177, 53, 0.34);
+      --text:#2A2A2A;
+      --muted:#667160;
+      --blue:#5CB135;
+      --teal:#5CB135;
+      --coral:#E08B63;
+      --gold:#D9A441;
+      --danger:#C95D52;
+      --success:#5CB135;
+      --radius-xl:22px;
+      --radius-lg:18px;
+      --radius-md:12px;
+      --shadow:0 14px 38px rgba(42, 42, 42, 0.08);
+      --card-glow:0 14px 38px rgba(42, 42, 42, 0.08);
+    }
+
+    body{
+      font-family:Verdana, Geneva, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(92, 177, 53, 0.1), transparent 28%),
+        linear-gradient(180deg, #ffffff 0%, #F7F9F5 72%);
+      color:var(--text);
+    }
+
+    #bg,
+    .veil,
+    .grain{
+      display:none;
+    }
+
+    h1,
+    h2,
+    h3,
+    .heroTitle,
+    .authTitle,
+    .modeTitle,
+    .basketTitle,
+    .chatTitle{
+      font-family:"Comfortaa", Verdana, Geneva, sans-serif;
+      letter-spacing:-0.025em;
+    }
+
+    .heroTitle em,
+    .authTitle em,
+    .modeTitle em{
+      font-family:"Comfortaa", Verdana, Geneva, sans-serif;
+      font-style:normal;
+      color:var(--success);
+    }
+
+    .wrap{
+      gap:18px;
+      padding:24px;
+    }
+
+    .livingCard,
+    .signalCard,
+    .chatShell,
+    .basketShell,
+    .authCard,
+    .modeCard,
+    .modeOption{
+      background:#ffffff;
+      border:1px solid var(--line);
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      backdrop-filter:none;
+      transform:none !important;
+    }
+
+    .livingCard::before,
+    .modeOption::before,
+    .chatStage::before,
+    .sendCluster::before,
+    #sendBtn::before{
+      display:none;
+    }
+
+    .livingCard:hover,
+    .modeOption:hover,
+    .signalCard:hover,
+    .chatShell:hover,
+    .basketShell:hover{
+      border-color:var(--line-strong);
+      box-shadow:0 18px 42px rgba(42, 42, 42, 0.1);
+    }
+
+    .magnetic,
+    .magnetic:hover{
+      filter:none;
+      transform:none !important;
+    }
+
+    .topbar{
+      background:#ffffff;
+      border-radius:24px;
+      align-items:center;
+    }
+
+    .brandBlock{
+      gap:12px;
+    }
+
+    .zeloLogo{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:max-content;
+      max-width:132px;
+      padding:8px 10px;
+      border-radius:16px;
+      background:#ffffff;
+      border:1px solid rgba(92, 177, 53, 0.14);
+    }
+
+    .zeloLogo svg{
+      display:block;
+      width:108px;
+      height:auto;
+    }
+
+    .eyebrow,
+    .authKicker,
+    .modeTag,
+    .signalLabel,
+    .predictionLabel,
+    .sendEyebrow{
+      color:var(--success);
+      background:rgba(92, 177, 53, 0.08);
+      border:1px solid rgba(92, 177, 53, 0.16);
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+
+    .eyebrowDot,
+    .pulseDot,
+    .intentGlow{
+      background:var(--success);
+      box-shadow:none;
+    }
+
+    .heroTitle{
+      max-width:820px;
+      color:var(--text);
+      line-height:1.06;
+      font-size:clamp(32px, 4.4vw, 58px);
+    }
+
+    .heroSub,
+    .signalMeta,
+    .chatSub,
+    .composerHint,
+    .predictionNote,
+    .feedbackPrompt,
+    .authSub,
+    .modeSub,
+    .modeOptionText,
+    .modeList,
+    .modeFooter,
+    .basketMeta,
+    .basketEmpty{
+      color:var(--muted);
+    }
+
+    .sessionPill,
+    .basketLive,
+    .intentBadge,
+    .pill{
+      color:#3f7e28;
+      background:rgba(92, 177, 53, 0.09);
+      border:1px solid rgba(92, 177, 53, 0.18);
+      box-shadow:none;
+    }
+
+    .actionBtn,
+    .feedbackBtn,
+    .ideaChip,
+    .suggestion,
+    .modeOption,
+    .primaryBtn{
+      border-radius:14px;
+      box-shadow:none;
+    }
+
+    .actionBtn,
+    .feedbackBtn,
+    .ideaChip,
+    .suggestion{
+      background:#ffffff;
+      color:var(--success);
+      border:1px solid rgba(92, 177, 53, 0.28);
+    }
+
+    .actionBtn:hover,
+    .feedbackBtn:hover,
+    .ideaChip:hover,
+    .suggestion:hover{
+      background:rgba(92, 177, 53, 0.08);
+      border-color:rgba(92, 177, 53, 0.46);
+    }
+
+    .primaryBtn,
+    #sendBtn,
+    .actionBtn.primary,
+    .feedbackBtn.is-positive{
+      color:#ffffff;
+      background:#5CB135;
+      border:1px solid #5CB135;
+      box-shadow:0 10px 24px rgba(92, 177, 53, 0.24);
+    }
+
+    .primaryBtn:hover,
+    #sendBtn:hover,
+    .actionBtn.primary:hover,
+    .feedbackBtn.is-positive:hover{
+      background:#4EA02B;
+      border-color:#4EA02B;
+    }
+
+    .feedbackBtn.is-negative{
+      color:var(--danger);
+      background:#ffffff;
+      border-color:rgba(201, 93, 82, 0.28);
+    }
+
+    .feedbackBtn.is-export{
+      color:var(--success);
+      background:#ffffff;
+      border-color:rgba(92, 177, 53, 0.28);
+    }
+
+    .mainGrid{
+      gap:18px;
+    }
+
+    .signalGrid{
+      gap:14px;
+    }
+
+    .chatHeader,
+    .basketTop,
+    .composer,
+    .authDeck,
+    .modeGrid{
+      border-color:var(--line);
+    }
+
+    .composer{
+      background:#ffffff !important;
+      border:1px solid rgba(92, 177, 53, 0.18) !important;
+      box-shadow:0 14px 34px rgba(42, 42, 42, 0.08) !important;
+      transform:none !important;
+    }
+
+    .composer:focus-within{
+      background:#ffffff !important;
+      border-color:rgba(92, 177, 53, 0.46) !important;
+      box-shadow:0 16px 38px rgba(42, 42, 42, 0.1), 0 0 0 4px rgba(92, 177, 53, 0.1) !important;
+      transform:none !important;
+    }
+
+    .composerLabel{
+      color:var(--text) !important;
+    }
+
+    .chatStage{
+      background:#FBFCFA;
+      border-color:rgba(92, 177, 53, 0.12);
+      mask-image:none;
+    }
+
+    .bubble{
+      color:var(--text);
+      background:#ffffff;
+      border:1px solid rgba(92, 177, 53, 0.14);
+      border-radius:18px;
+      box-shadow:0 10px 24px rgba(42, 42, 42, 0.06);
+    }
+
+    .aiBubble,
+    .bubble.ai{
+      color:var(--text) !important;
+      background:#ffffff !important;
+      border:1px solid rgba(92, 177, 53, 0.18) !important;
+    }
+
+    .userBubble,
+    .bubble.user{
+      color:#ffffff !important;
+      background:#5CB135 !important;
+      border:1px solid #5CB135 !important;
+    }
+
+    #input,
+    .composer input,
+    .field input{
+      color:var(--text) !important;
+      caret-color:var(--success);
+      background:#ffffff !important;
+      border:1px solid rgba(92, 177, 53, 0.28) !important;
+      border-radius:14px !important;
+      box-shadow:none !important;
+      transform:none !important;
+    }
+
+    #input::placeholder,
+    .composer input::placeholder,
+    .field input::placeholder{
+      color:#7B8774;
+      opacity:1;
+    }
+
+    #input:focus,
+    .composer input:focus,
+    .field input:focus{
+      color:var(--text) !important;
+      background:#ffffff !important;
+      border-color:rgba(92, 177, 53, 0.62) !important;
+      box-shadow:0 0 0 4px rgba(92, 177, 53, 0.12) !important;
+      transform:none !important;
+    }
+
+    .predictionCell,
+    .feedbackDock,
+    .feedbackChooser,
+    .mealFeedbackPanel,
+    .mealIngredientCard,
+    .mealIngredientResult,
+    .mealFeedbackItem,
+    .statTile,
+    .authMini,
+    .basketLine,
+    .feeLine{
+      background:#FBFCFA;
+      border:1px solid rgba(92, 177, 53, 0.12);
+      box-shadow:none;
+    }
+
+    .mealIngredientSearch{
+      border-top:1px solid rgba(92, 177, 53, 0.12);
+    }
+
+    .mealIngredientSearchInput{
+      color:var(--text);
+      background:#ffffff;
+      border:1px solid rgba(92, 177, 53, 0.22);
+      border-radius:14px;
+    }
+
+    .mealIngredientSearchInput:focus{
+      border-color:rgba(92, 177, 53, 0.6);
+      box-shadow:0 0 0 4px rgba(92, 177, 53, 0.12);
+    }
+
+    .mealIngredientState.is-missing{
+      color:#A06C00;
+    }
+
+    .predictionFill{
+      background:#5CB135;
+    }
+
+    .basketLineIcon,
+    .statTile strong,
+    .basketTotal strong,
+    .predictionValue{
+      color:var(--success);
+    }
+
+    .basketTotal{
+      background:#F0F7EC;
+      border-color:rgba(92, 177, 53, 0.18);
+    }
+
+    .typingDots span{
+      background:var(--success);
+    }
+
+    .modeOption{
+      text-align:left;
+      cursor:pointer;
+    }
+
+    #authOverlay,
+    #modeOverlay{
+      background:rgba(247, 249, 245, 0.88);
+      backdrop-filter:blur(10px);
+    }
+
+    @media (max-width: 980px){
+      .mainGrid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width: 720px){
+      .wrap{
+        padding:14px;
+      }
+
+      .topbar{
+        border-radius:20px;
+      }
+
+      .heroTitle{
+        font-size:34px;
+      }
+    }
   </style>
 </head>
 
@@ -1274,22 +1813,21 @@
   <div id="authOverlay">
     <div class="authCard livingCard">
       <div class="authHeader">
-        <div class="authKicker"><span class="eyebrowDot"></span> Portail vivant</div>
-        <h2 class="authTitle">Connexion <em>Zelo AI</em></h2>
+        <div class="authKicker"><span class="eyebrowDot"></span> Assistant Zélo</div>
+        <h2 class="authTitle">Connexion à <em>Zélo</em></h2>
         <p class="authSub">
-          Entre dans une interface qui réagit à toi. Zelo lit ton panier réel, comprend ton intention
-          et transforme chaque action en mouvement, en signal et en réponse immédiate.
+          Connecte-toi pour retrouver ton panier et commander simplement avec l’assistant.
         </p>
       </div>
 
       <div class="authDeck">
         <div class="authMini">
           <span>Mode</span>
-          <strong>Panier en direct, commandes et demandes naturelles</strong>
+          <strong>Commandes, panier et repas</strong>
         </div>
         <div class="authMini">
           <span>Expérience</span>
-          <strong>Surface liquide, composants magnétiques et suggestions instantanées</strong>
+          <strong>Une aide simple pour préparer ta commande</strong>
         </div>
       </div>
 
@@ -1314,18 +1852,17 @@
   <div id="modeOverlay" class="hidden">
     <div class="modeCard livingCard">
       <div class="modeHeader">
-        <div class="authKicker"><span class="eyebrowDot"></span> Choix de l'interface</div>
-        <h2 class="modeTitle">Choisis la version de <em>Zelo AI</em> qui te convient.</h2>
+        <div class="authKicker"><span class="eyebrowDot"></span> Choix d’affichage</div>
+        <h2 class="modeTitle">Choisis l’affichage qui te convient.</h2>
         <p class="modeSub">
-          Tu peux garder la surface avancée actuelle, ou passer sur une version très simple pensée pour
-          un client qui veut juste écrire naturellement et se laisser guider.
+          Tu peux utiliser une vue très simple, ou garder une vue plus complète pour suivre le panier et les corrections.
         </p>
       </div>
 
       <div class="modeGrid">
         <button type="button" class="modeOption livingCard magnetic" onclick="selectSimpleMode()">
           <span class="modeTag">Mode simple</span>
-          <h3 class="modeOptionTitle">Assistant Zelo</h3>
+          <h3 class="modeOptionTitle">Assistant Zélo</h3>
           <p class="modeOptionText">
             Une interface très claire: quelques suggestions, un champ de texte, et l’assistant qui aide
             pendant la frappe.
@@ -1338,14 +1875,13 @@
         </button>
 
         <button type="button" class="modeOption livingCard magnetic" onclick="selectAdvancedMode()">
-          <span class="modeTag">Mode avancé</span>
-          <h3 class="modeOptionTitle">Surface augmentée</h3>
+          <span class="modeTag">Vue complète</span>
+          <h3 class="modeOptionTitle">Assistant Zélo complet</h3>
           <p class="modeOptionText">
-            L’interface complète actuelle: signaux, prédiction visible, panier vivant et lecture détaillée
-            de l’intention.
+            Une interface plus détaillée: suggestions, lecture de la demande, panier et corrections visibles.
           </p>
           <ul class="modeList">
-            <li>Affiche tout le contexte en direct.</li>
+            <li>Affiche le contexte utile en direct.</li>
             <li>Pratique pour tester, observer et affiner.</li>
             <li>Parfait pour nous quand on veut comprendre le système.</li>
           </ul>
@@ -1361,11 +1897,16 @@
   <div class="wrap">
     <header class="topbar livingCard">
       <div class="brandBlock">
-        <div class="eyebrow"><span class="eyebrowDot"></span> Interface augmentée</div>
-        <h1 class="heroTitle">Zélo <em>AI</em> Avancé</h1>
+        <span class="zeloLogo" aria-label="Zélo">
+          <svg viewBox="0 0 283.91 125.36" aria-hidden="true" focusable="false">
+            <path fill="#5CB135" d="M230.82,23.06c-24.77,0-44.93,20.15-44.93,44.92c0,13.69,6.17,25.95,15.86,34.19H32.78 l44.65-73.62v-2.98H13.62v10.73h43.94l-44.53,73.63v2.98h215.11v-0.14c0.9,0.05,1.79,0.14,2.7,0.14c32.73,0,44.92-27.55,44.92-44.92 C275.74,43.22,255.59,23.06,230.82,23.06z M230.82,102.08c-18.8,0-34.09-15.29-34.09-34.09s15.29-34.09,34.09-34.09 c18.8,0,34.09,15.29,34.09,34.09C264.91,77.47,258.79,102.08,230.82,102.08z M238.26,67.99c0,4.1-3.34,7.43-7.44,7.43 c-4.1,0-7.43-3.34-7.43-7.43c0-4.1,3.34-7.44,7.43-7.44C234.92,60.55,238.26,63.89,238.26,67.99z"/>
+            <path fill="#2A2A2A" d="M153.27,73.92V5.45h11.33v66.56c0,3.42,0.98,6.11,2.95,8.08c1.97,1.97,4.54,2.95,7.72,2.95v10.13 C160.6,93.17,153.27,86.76,153.27,73.92z M126.51,5.99h-12.56l-10.77,12.87h8.93L126.51,5.99z M88.13,85.01 c-6.67-6-10.01-14.07-10.01-24.2c0-10.53,3.42-18.98,10.26-25.34c6.12-5.68,13.37-8.52,21.74-8.52c9.73,0,17.36,2.56,22.89,7.69 c5.36,4.93,8.03,11.47,8.03,19.61c0,2.51-0.32,4.81-0.96,6.92H90.87c0,7.47,2.19,13.22,6.57,17.23c3.87,3.5,8.84,5.25,14.92,5.25 c6.93,0,12.71-1.89,17.34-5.66l5.1,8.17c-1.87,1.75-4.74,3.26-8.61,4.53c-4.85,1.67-10.24,2.5-16.19,2.5 C101.41,93.17,94.12,90.45,88.13,85.01z M91.19,52.94H129c0-4.57-1.53-8.39-4.59-11.45c-3.36-3.34-7.93-5.01-13.71-5.01 c-5.4,0-9.93,1.63-13.58,4.89C93.63,44.47,91.66,48.32,91.19,52.94z"/>
+          </svg>
+        </span>
+        <div class="eyebrow"><span class="eyebrowDot"></span> Assistant Zélo</div>
+        <h1 class="heroTitle">Que veux-tu commander ?</h1>
         <p class="heroSub">
-          Zelo AI n’attend pas le clic final: il anticipe, suggère, glisse vers toi et met le panier en scène
-          comme un organisme vivant. Ici, même l’interface donne l’impression d’avoir une intention.
+          Écris simplement ce dont tu as besoin: produits, panier ou idées repas.
         </p>
       </div>
 
@@ -1380,17 +1921,17 @@
     <section class="signalGrid">
       <article class="signalCard livingCard">
         <div>
-          <div class="signalLabel">Lecture instantanée</div>
+          <div class="signalLabel">Suggestions</div>
           <h2 class="signalValue" id="signalValue">Conversation libre</h2>
         </div>
         <p class="signalMeta" id="signalMeta">
-          La surface observe ce que tu écris et adapte ses signaux avant même l’envoi.
+          Les suggestions s’adaptent à ce que tu écris.
         </p>
       </article>
 
       <article class="signalCard livingCard">
         <div>
-          <div class="signalLabel">Intention dominante</div>
+          <div class="signalLabel">Aide à la commande</div>
           <div class="intentBadge">
             <span class="intentGlow" id="intentGlow"></span>
             <span id="intentBadgeText">Générale</span>
@@ -1403,11 +1944,11 @@
 
       <article class="signalCard livingCard">
         <div>
-          <div class="signalLabel">Actions éclair</div>
+          <div class="signalLabel">Raccourcis utiles</div>
           <div class="ideaRail" id="heroIdeaRail"></div>
         </div>
         <p class="signalMeta">
-          Ces raccourcis changent selon l’humeur de la conversation. Hover, clique, glisse.
+          Quelques exemples utiles pour démarrer rapidement.
         </p>
       </article>
     </section>
@@ -1417,14 +1958,14 @@
         <div class="chatShell livingCard">
           <div class="chatHeader">
             <div>
-              <h2 class="chatTitle">Canal principal</h2>
+              <h2 class="chatTitle">Assistant Zélo</h2>
               <p class="chatSub" id="liveSubtitle">
-                Une zone de dialogue qui réagit à l’intention. Plus tu approches, plus elle s’ouvre.
+                Écris simplement ce que tu veux commander.
               </p>
             </div>
             <div class="intentBadge">
               <span class="intentGlow"></span>
-              <span id="presenceLabel">Signal calme</span>
+              <span id="presenceLabel">Prêt</span>
             </div>
           </div>
 
@@ -1437,20 +1978,20 @@
               <div class="composerTop">
                 <div class="composerLabel">
                   <span class="pulseDot"></span>
-                  <span id="composerLead">Écris librement. Le système te suit en direct.</span>
+                  <span id="composerLead">Écris simplement ce que tu veux commander.</span>
                 </div>
                 <div class="composerHint" id="composerHint">
-                  Exemples: panier, ajout, repas, question générale.
+                  Exemple : ajoute 1 pain, 6 œufs et 2 yogourts nature.
                 </div>
               </div>
 
-              <input id="input" placeholder="Écris quelque chose..." />
+              <input id="input" placeholder="Exemple : ajoute 1 pain, 6 œufs et 2 yogourts nature" />
 
               <div class="suggestionRail" id="suggestionRail"></div>
 
               <div class="predictionBoard">
                 <div class="predictionCell">
-                  <span class="predictionLabel">Action probable</span>
+                  <span class="predictionLabel">Action comprise</span>
                   <strong class="predictionValue" id="predictionAction">NOOP</strong>
                   <span class="predictionNote" id="predictionReason">
                     Aucune action claire détectée pour l’instant.
@@ -1458,15 +1999,15 @@
                 </div>
 
                 <div class="predictionCell">
-                  <span class="predictionLabel">Lecture canonique</span>
+                  <span class="predictionLabel">Résumé</span>
                   <strong class="predictionValue small" id="predictionCanonical">Réponse générale</strong>
                   <span class="predictionNote" id="predictionPlannerTarget">
-                    Cible future: planner/general
+                    Cible: commande
                   </span>
                 </div>
 
                 <div class="predictionCell">
-                  <span class="predictionLabel">Confiance</span>
+                  <span class="predictionLabel">Repère</span>
                   <strong class="predictionValue" id="predictionConfidence">0%</strong>
                   <div class="predictionMiniBar">
                     <div class="predictionFill" id="predictionFill"></div>
@@ -1479,7 +2020,7 @@
 
               <div class="feedbackDock">
                 <span class="feedbackPrompt" id="feedbackPrompt">
-                  Prediction utile ? Valide ou corrige l'action detectee.
+                  Cette lecture est-elle correcte ?
                 </span>
                 <div class="feedbackActions">
                   <button type="button" class="feedbackBtn magnetic is-positive" id="feedbackYes">Oui</button>
@@ -1489,18 +2030,38 @@
               </div>
 
               <div class="feedbackChooser hidden" id="feedbackChooser">
-                <span class="feedbackPrompt">Si ce n'etait pas la bonne action, laquelle fallait-il predire ?</span>
+                <span class="feedbackPrompt">Si ce n’était pas la bonne action, laquelle fallait-il choisir ?</span>
                 <div class="feedbackChoiceRail" id="feedbackChoices"></div>
               </div>
 
               <div class="feedbackStatus" id="feedbackStatus"></div>
+
+              <div class="mealFeedbackPanel hidden" id="mealFeedbackPanel">
+                <div class="mealFeedbackHeader">
+                  <div class="mealFeedbackLead">
+                    <span class="predictionLabel">Recette</span>
+                    <strong class="predictionValue small" id="mealFeedbackTitle">
+                      Modifier une recette
+                    </strong>
+                    <span class="feedbackPrompt" id="mealFeedbackPrompt">
+                      Corrige un ingrédient en le reliant au bon produit du catalogue, puis relance la recette.
+                    </span>
+                  </div>
+                  <div class="feedbackActions">
+                    <button type="button" class="feedbackBtn magnetic is-export" id="mealFeedbackReplay">Relancer</button>
+                    <button type="button" class="feedbackBtn magnetic" id="mealFeedbackDismiss">Masquer</button>
+                  </div>
+                </div>
+                <div class="mealFeedbackList" id="mealFeedbackList"></div>
+                <div class="feedbackStatus" id="mealFeedbackStatus"></div>
+              </div>
             </div>
 
             <div class="sendCluster">
               <button id="sendBtn" class="magnetic" onclick="send()">
                 <span class="sendEyebrow" id="sendEyebrow">Action</span>
                 <span class="sendLabel" id="sendLabel">Envoyer</span>
-                <span class="sendSub" id="sendSub">L’interface se recompose selon ton intention.</span>
+                <span class="sendSub" id="sendSub">Ajouter, modifier ou consulter ton panier.</span>
               </button>
             </div>
           </div>
@@ -1511,10 +2072,10 @@
         <div class="basketShell livingCard">
           <div class="basketTop">
             <div>
-              <h2 class="basketTitle">Panier vivant</h2>
+              <h2 class="basketTitle">Ton panier</h2>
               <div id="basketMeta" class="basketMeta">non connecté</div>
             </div>
-            <div class="basketLive" id="basketLive">En veille</div>
+            <div class="basketLive" id="basketLive">À jour</div>
           </div>
 
           <div class="basketStats">
@@ -1533,7 +2094,7 @@
           </div>
 
           <div id="basketContent">
-            <div class="basketEmpty">Connecte-toi pour voir ton panier en direct.</div>
+            <div class="basketEmpty">Connecte-toi pour voir ton panier.</div>
           </div>
         </div>
       </aside>
@@ -1620,12 +2181,35 @@
     const feedbackChooser = document.getElementById("feedbackChooser");
     const feedbackChoices = document.getElementById("feedbackChoices");
     const feedbackStatus = document.getElementById("feedbackStatus");
+    const mealFeedbackPanel = document.getElementById("mealFeedbackPanel");
+    const mealFeedbackTitle = document.getElementById("mealFeedbackTitle");
+    const mealFeedbackPrompt = document.getElementById("mealFeedbackPrompt");
+    const mealFeedbackList = document.getElementById("mealFeedbackList");
+    const mealFeedbackStatus = document.getElementById("mealFeedbackStatus");
+    const mealFeedbackReplay = document.getElementById("mealFeedbackReplay");
+    const mealFeedbackDismiss = document.getElementById("mealFeedbackDismiss");
+
+    const buildMealFeedbackState = {
+      context: null,
+      unknown: null,
+      requestText: "",
+      openIngredientKey: null,
+      searchQueries: {},
+      searchResults: {},
+      searchingKey: "",
+      unknownSearchQuery: "",
+      unknownSearchResults: [],
+      unknownSearching: false,
+      unknownDraftProducts: [],
+      unknownBaseRecipe: false,
+      unknownSaving: false
+    };
 
     const intentPalette = {
-      general: { label: "Générale", color: "#19d3b3" },
-      cart: { label: "Panier", color: "#2f7cff" },
-      add: { label: "Ajout", color: "#ffd166" },
-      meal: { label: "Repas", color: "#ff8f6b" }
+      general: { label: "Générale", color: "#5CB135" },
+      cart: { label: "Panier", color: "#5CB135" },
+      add: { label: "Ajout", color: "#D9A441" },
+      meal: { label: "Repas", color: "#5CB135" }
     };
 
     const FEEDBACK_LABELS = {
@@ -1635,7 +2219,7 @@
       exec_cart: "Commander",
       build_meal: "Construire repas",
       discover_meals: "Propositions",
-      noop: "General"
+      noop: "Général"
     };
 
     const UI_MODE_KEY = "zelo_ai_ui_mode";
@@ -1665,16 +2249,761 @@
         actionKey: "noop",
         actionLabel: "NOOP",
         confidence: hasText ? 12 : 0,
-        canonical: hasText ? "Analyse locale en cours" : "Reponse generale",
+        canonical: hasText ? "Analyse locale en cours" : "Réponse générale",
         planner: "planner/general",
         reason: hasText
-          ? "Le modele local de prediction se charge. La lecture detaillee arrive dans un instant."
-          : "Aucune action claire detectee pour l'instant."
+          ? "Le modèle local de prédiction se charge. La lecture détaillée arrive dans un instant."
+          : "Aucune action claire détectée pour l’instant."
       };
     }
 
     function setFeedbackStatus(text){
       feedbackStatus.textContent = text || "";
+    }
+
+    function setMealFeedbackStatus(text){
+      mealFeedbackStatus.textContent = text || "";
+    }
+
+    async function postJson(url, body){
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      if (!res.ok || data?.ok === false) {
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      return data;
+    }
+
+    function cloneJson(value){
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function resetBuildMealFeedbackState(){
+      buildMealFeedbackState.context = null;
+      buildMealFeedbackState.unknown = null;
+      buildMealFeedbackState.requestText = "";
+      buildMealFeedbackState.openIngredientKey = null;
+      buildMealFeedbackState.searchQueries = {};
+      buildMealFeedbackState.searchResults = {};
+      buildMealFeedbackState.searchingKey = "";
+      buildMealFeedbackState.unknownSearchQuery = "";
+      buildMealFeedbackState.unknownSearchResults = [];
+      buildMealFeedbackState.unknownSearching = false;
+      buildMealFeedbackState.unknownDraftProducts = [];
+      buildMealFeedbackState.unknownBaseRecipe = false;
+      buildMealFeedbackState.unknownSaving = false;
+    }
+
+    function hideBuildMealFeedback(reset = true){
+      mealFeedbackPanel.classList.add("hidden");
+      mealFeedbackList.innerHTML = "";
+      setMealFeedbackStatus("");
+      if (reset) {
+        resetBuildMealFeedbackState();
+      }
+    }
+
+    function getBuildMealIngredientContext(ingredientKey){
+      const ingredients = Array.isArray(buildMealFeedbackState.context?.ingredients)
+        ? buildMealFeedbackState.context.ingredients
+        : [];
+      return ingredients.find((ingredient) => ingredient.key === ingredientKey) || null;
+    }
+
+    function getMealIngredientStateLabel(ingredient){
+      if (ingredient.missing) {
+        return ingredient.optional ? "Ingredient optionnel non resolu" : "Ingredient a corriger";
+      }
+      if (ingredient.resolvedProductName) {
+        return "Produit actuellement utilise pour cette recette";
+      }
+      if (ingredient.preferredProductName) {
+        return "Produit prefere memorise dans le training";
+      }
+      return "Aucune preference enregistree";
+    }
+
+    function productToUnknownDraft(product, source){
+      return {
+        productId: String(product.productId || product.id || product.preferredProductId || ""),
+        productName: product.productName || product.name || product.preferredProductName || product.label || "Produit",
+        label: product.label || product.productName || product.name || product.preferredProductName || "ingredient",
+        qty: Number(product.qty || 1),
+        unit: product.unit || "piece",
+        role: product.role || "principal",
+        optional: Boolean(product.optional),
+        isCore: product.isCore !== false,
+        conceptKey: product.conceptKey || product.label || product.productName || product.name,
+        slot: product.slot || source || "modifier",
+        categoryNames: Array.isArray(product.categoryNames) ? product.categoryNames : undefined,
+        fallbackSearchTerms: [
+          product.label,
+          product.productName,
+          product.name,
+          product.preferredProductName
+        ].filter(Boolean)
+      };
+    }
+
+    function hydrateUnknownDraftProducts(unknown){
+      const draftIngredients = Array.isArray(unknown?.draft?.ingredients)
+        ? unknown.draft.ingredients
+        : [];
+      buildMealFeedbackState.unknownDraftProducts = draftIngredients
+        .filter((ingredient) => ingredient.preferredProductId || ingredient.preferredProductName)
+        .map((ingredient) => productToUnknownDraft({
+          ...ingredient,
+          productId: ingredient.preferredProductId,
+          productName: ingredient.preferredProductName
+        }, ingredient.slot || "draft"));
+    }
+
+    function addUnknownRecipeProduct(product){
+      const item = productToUnknownDraft(product, "manual");
+      if (!item.productId) {
+        setMealFeedbackStatus("Produit catalogue invalide: impossible de l'ajouter a la recette.");
+        return;
+      }
+
+      const exists = buildMealFeedbackState.unknownDraftProducts
+        .some((current) => current.productId === item.productId);
+      if (!exists) {
+        buildMealFeedbackState.unknownDraftProducts.push(item);
+      }
+      setMealFeedbackStatus(`${item.productName} ajoute a la recette en training.`);
+      renderUnknownBuildMealRecipe();
+    }
+
+    function removeUnknownRecipeProduct(index){
+      buildMealFeedbackState.unknownDraftProducts.splice(index, 1);
+      renderUnknownBuildMealRecipe();
+    }
+
+    async function searchUnknownRecipeProducts(){
+      const query = String(buildMealFeedbackState.unknownSearchQuery || "").trim();
+      if (!query) {
+        setMealFeedbackStatus("Entre un produit du catalogue a chercher pour cette recette.");
+        return;
+      }
+
+      buildMealFeedbackState.unknownSearching = true;
+      renderUnknownBuildMealRecipe();
+
+      try{
+        const data = await postJson("/ai/build-meal-search", {
+          userRef: USER_REF,
+          query,
+          limit: 10
+        });
+        buildMealFeedbackState.unknownSearchResults = Array.isArray(data.products) ? data.products : [];
+        setMealFeedbackStatus(
+          buildMealFeedbackState.unknownSearchResults.length
+            ? "Choisis les produits catalogue qui composent cette recette."
+            : "Aucun produit catalogue trouve pour cette recherche."
+        );
+      }catch(error){
+        setMealFeedbackStatus("Recherche catalogue impossible: " + (error?.message || error));
+      }finally{
+        buildMealFeedbackState.unknownSearching = false;
+        renderUnknownBuildMealRecipe();
+      }
+    }
+
+    async function saveUnknownBuildMealRecipe(replayAfterSave = false){
+      const unknown = buildMealFeedbackState.unknown;
+      const products = buildMealFeedbackState.unknownDraftProducts;
+      if (!unknown?.suggestedLabel) {
+        setMealFeedbackStatus("Contexte recette inconnue manquant.");
+        return;
+      }
+      if (!products.length) {
+        setMealFeedbackStatus("Ajoute au moins un produit catalogue avant d'enregistrer cette recette.");
+        return;
+      }
+
+      buildMealFeedbackState.unknownSaving = true;
+      renderUnknownBuildMealRecipe();
+      let handedOffToReplay = false;
+
+      try{
+        await postJson("/ai/build-meal-recipes", {
+          userRef: USER_REF,
+          key: unknown.suggestedMealKey,
+          label: unknown.suggestedLabel,
+          sourceText: buildMealFeedbackState.requestText || unknown.text,
+          defaultServings: unknown.servings || 2,
+          family: unknown.draft?.family || unknown.suggestedFamily || "",
+          baseRecipe: Boolean(buildMealFeedbackState.unknownBaseRecipe),
+          aliases: [
+            unknown.suggestedLabel,
+            buildMealFeedbackState.requestText,
+            unknown.text
+          ].filter(Boolean),
+          ingredients: products.map((product, index) => ({
+            key: product.label,
+            label: product.label,
+            productId: product.productId,
+            productName: product.productName,
+            qty: product.qty || 1,
+            unit: product.unit || "piece",
+            role: product.role || (index === 0 ? "base" : "principal"),
+            optional: Boolean(product.optional),
+            isCore: product.isCore !== false,
+            conceptKey: product.conceptKey || product.label,
+            slot: product.slot || (index === 0 ? "base" : "modifier"),
+            categoryNames: product.categoryNames,
+            fallbackSearchTerms: product.fallbackSearchTerms
+          }))
+        });
+
+        setMealFeedbackStatus(`Recette « ${unknown.suggestedLabel} » enregistree dans le training. Elle peut maintenant etre relancee.`);
+        if (replayAfterSave) {
+          handedOffToReplay = true;
+          await sendText(buildMealFeedbackState.requestText || unknown.text);
+        }
+      }catch(error){
+        setMealFeedbackStatus("Impossible d'enregistrer cette recette: " + (error?.message || error));
+      }finally{
+        buildMealFeedbackState.unknownSaving = false;
+        if (!handedOffToReplay) {
+          renderUnknownBuildMealRecipe();
+        }
+      }
+    }
+
+    async function searchBuildMealProducts(ingredientKey){
+      const ingredient = getBuildMealIngredientContext(ingredientKey);
+      if (!ingredient) return;
+
+      const query = String(
+        buildMealFeedbackState.searchQueries[ingredientKey] || ingredient.label || ""
+      ).trim();
+
+      if (!query) {
+        setMealFeedbackStatus("Entre un terme catalogue avant de lancer la recherche.");
+        return;
+      }
+
+      buildMealFeedbackState.searchingKey = ingredientKey;
+      renderBuildMealFeedback();
+
+      try{
+        const data = await postJson("/ai/build-meal-search", {
+          userRef: USER_REF,
+          query,
+          limit: 8
+        });
+        buildMealFeedbackState.searchResults[ingredientKey] = Array.isArray(data.products) ? data.products : [];
+        setMealFeedbackStatus(
+          buildMealFeedbackState.searchResults[ingredientKey].length
+            ? "Choisis le bon produit catalogue pour cet ingredient."
+            : "Aucun produit catalogue convaincant pour cette recherche."
+        );
+      }catch(error){
+        setMealFeedbackStatus("Recherche catalogue impossible: " + (error?.message || error));
+      }finally{
+        buildMealFeedbackState.searchingKey = "";
+        renderBuildMealFeedback();
+      }
+    }
+
+    function openBuildMealIngredientSearch(ingredientKey){
+      const ingredient = getBuildMealIngredientContext(ingredientKey);
+      if (!ingredient) return;
+
+      buildMealFeedbackState.openIngredientKey =
+        buildMealFeedbackState.openIngredientKey === ingredientKey ? null : ingredientKey;
+
+      if (buildMealFeedbackState.openIngredientKey === ingredientKey) {
+        if (!buildMealFeedbackState.searchQueries[ingredientKey]) {
+          buildMealFeedbackState.searchQueries[ingredientKey] = ingredient.label;
+        }
+      }
+
+      renderBuildMealFeedback();
+
+      if (
+        buildMealFeedbackState.openIngredientKey === ingredientKey &&
+        !Array.isArray(buildMealFeedbackState.searchResults[ingredientKey])
+      ) {
+        searchBuildMealProducts(ingredientKey);
+      }
+    }
+
+    async function handleBuildMealPreferProduct(ingredientKey, product){
+      const context = buildMealFeedbackState.context;
+      const ingredient = getBuildMealIngredientContext(ingredientKey);
+      if (!context?.mealKey || !ingredient || !product?.id) {
+        setMealFeedbackStatus("Contexte recette incomplet: impossible d'enregistrer la correction.");
+        return;
+      }
+
+      try{
+        await postJson("/ai/build-meal-feedback", {
+          mealKey: context.mealKey,
+          ingredientKey,
+          action: "prefer_product",
+          productId: String(product.id),
+          productName: product.name,
+          userRef: USER_REF,
+          note: "Correction recette depuis l'interface avancée"
+        });
+
+        ingredient.preferredProductId = String(product.id);
+        ingredient.preferredProductName = product.name;
+        ingredient.resolvedProductId = String(product.id);
+        ingredient.resolvedProductName = product.name;
+        ingredient.missing = false;
+        buildMealFeedbackState.openIngredientKey = null;
+        delete buildMealFeedbackState.searchResults[ingredientKey];
+        setMealFeedbackStatus(`Correction memorisee pour ${ingredient.label}. Relance la recette pour valider le rendu complet.`);
+        renderBuildMealFeedback();
+      }catch(error){
+        setMealFeedbackStatus("Impossible d'enregistrer cette preference: " + (error?.message || error));
+      }
+    }
+
+    async function handleBuildMealBanCurrentProduct(ingredientKey){
+      const context = buildMealFeedbackState.context;
+      const ingredient = getBuildMealIngredientContext(ingredientKey);
+      const currentProductId = ingredient?.resolvedProductId || ingredient?.preferredProductId;
+      const currentProductName = ingredient?.resolvedProductName || ingredient?.preferredProductName;
+
+      if (!context?.mealKey || !ingredient || (!currentProductId && !currentProductName)) {
+        setMealFeedbackStatus("Aucun produit actuel a bannir pour cet ingredient.");
+        return;
+      }
+
+      try{
+        await postJson("/ai/build-meal-feedback", {
+          mealKey: context.mealKey,
+          ingredientKey,
+          action: "ban_product",
+          productId: currentProductId,
+          productName: currentProductName,
+          userRef: USER_REF,
+          note: "Produit incorrect signale depuis l'interface avancée"
+        });
+
+        if (ingredient.preferredProductId === currentProductId) ingredient.preferredProductId = undefined;
+        if (ingredient.preferredProductName === currentProductName) ingredient.preferredProductName = undefined;
+        if (ingredient.resolvedProductId === currentProductId) ingredient.resolvedProductId = undefined;
+        if (ingredient.resolvedProductName === currentProductName) ingredient.resolvedProductName = undefined;
+        ingredient.missing = true;
+        buildMealFeedbackState.openIngredientKey = ingredientKey;
+        buildMealFeedbackState.searchQueries[ingredientKey] = ingredient.label;
+        setMealFeedbackStatus(`Produit banni pour ${ingredient.label}. Choisis maintenant le bon produit catalogue.`);
+        renderBuildMealFeedback();
+        await searchBuildMealProducts(ingredientKey);
+      }catch(error){
+        setMealFeedbackStatus("Impossible de bannir ce produit: " + (error?.message || error));
+      }
+    }
+
+    function renderUnknownBuildMealRecipe(){
+      const unknown = buildMealFeedbackState.unknown;
+      if (!unknown?.suggestedLabel) {
+        hideBuildMealFeedback();
+        return;
+      }
+
+      mealFeedbackPanel.classList.remove("hidden");
+      mealFeedbackReplay.textContent = buildMealFeedbackState.unknownSaving ? "Sauvegarde..." : "Enregistrer + tester";
+      mealFeedbackTitle.textContent = `Créer « ${unknown.suggestedLabel} »`;
+      mealFeedbackPrompt.textContent =
+        "Cette recette n'existe pas encore dans le training. Ajoute uniquement des produits réels du catalogue, puis enregistre-la.";
+      mealFeedbackList.innerHTML = "";
+
+      if (!unknown.draft?.ingredients?.length && unknown.suggestedFamily) {
+        const familyInfo = document.createElement("div");
+        familyInfo.className = "mealIngredientCard";
+        familyInfo.innerHTML = `
+          <div class="mealIngredientTop">
+            <div class="mealIngredientTitle">
+              <strong>Famille proposée: ${escapeHtml(unknown.suggestedFamily)}</strong>
+              <span class="mealIngredientMeta">
+                Source: ${escapeHtml(unknown.familySource || "rule")} ·
+                Confiance: ${Math.round(Number(unknown.familyConfidence || 0) * 100)}%
+              </span>
+            </div>
+          </div>
+        `;
+        mealFeedbackList.appendChild(familyInfo);
+      }
+
+      if (unknown.draft?.ingredients?.length) {
+        const info = document.createElement("div");
+        info.className = "mealIngredientCard";
+        info.innerHTML = `
+          <div class="mealIngredientTop">
+            <div class="mealIngredientTitle">
+              <strong>Proposition préparée depuis les recettes validées</strong>
+              <span class="mealIngredientMeta">
+                Famille: ${escapeHtml(unknown.draft.family || unknown.suggestedFamily || "non détectée")} ·
+                Base: ${escapeHtml(unknown.draft.baseMealLabel || "aucune")} ·
+                Confiance: ${Math.round(Number(unknown.draft.confidence || 0) * 100)}%
+              </span>
+            </div>
+          </div>
+        `;
+        mealFeedbackList.appendChild(info);
+      }
+
+      const selectedCard = document.createElement("div");
+      selectedCard.className = "mealIngredientCard";
+      const selectedItems = buildMealFeedbackState.unknownDraftProducts;
+      selectedCard.innerHTML = `
+        <div class="mealIngredientTop">
+          <div class="mealIngredientTitle">
+            <strong>Produits choisis pour cette recette</strong>
+            <span class="mealIngredientMeta">
+              ${selectedItems.length ? `${selectedItems.length} produit(s) catalogue` : "Aucun produit choisi pour l'instant"}
+            </span>
+          </div>
+        </div>
+      `;
+
+      const selectedList = document.createElement("div");
+      selectedList.className = "mealIngredientResults";
+      selectedItems.forEach((item, index) => {
+        const row = document.createElement("div");
+        row.className = "mealIngredientResult";
+
+        const text = document.createElement("div");
+        text.className = "mealIngredientResultText";
+        text.innerHTML = `
+          <strong>${escapeHtml(item.productName)}</strong>
+          <span class="mealIngredientResultMeta">${escapeHtml(item.label)} · ${escapeHtml(item.slot || "ingredient")}</span>
+        `;
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "feedbackBtn magnetic is-negative";
+        removeBtn.textContent = "Retirer";
+        removeBtn.onclick = () => removeUnknownRecipeProduct(index);
+
+        row.appendChild(text);
+        row.appendChild(removeBtn);
+        selectedList.appendChild(row);
+      });
+
+      if (!selectedItems.length) {
+        const empty = document.createElement("div");
+        empty.className = "mealIngredientResultMeta";
+        empty.textContent = "Cherche et ajoute les produits du catalogue qui doivent composer cette recette.";
+        selectedList.appendChild(empty);
+      }
+
+      const baseWrap = document.createElement("label");
+      baseWrap.className = "mealIngredientResultMeta";
+      baseWrap.style.display = "flex";
+      baseWrap.style.alignItems = "center";
+      baseWrap.style.gap = "8px";
+      baseWrap.innerHTML = `
+        <input type="checkbox" ${buildMealFeedbackState.unknownBaseRecipe ? "checked" : ""} />
+        Utiliser cette recette comme base pour les prochaines propositions
+      `;
+      baseWrap.querySelector("input").onchange = (event) => {
+        buildMealFeedbackState.unknownBaseRecipe = Boolean(event.target.checked);
+      };
+
+      selectedCard.appendChild(selectedList);
+      selectedCard.appendChild(baseWrap);
+      mealFeedbackList.appendChild(selectedCard);
+
+      const searchCard = document.createElement("div");
+      searchCard.className = "mealIngredientCard";
+
+      const searchWrap = document.createElement("div");
+      searchWrap.className = "mealIngredientSearch";
+
+      const searchBar = document.createElement("div");
+      searchBar.className = "mealIngredientSearchBar";
+
+      const input = document.createElement("input");
+      input.className = "mealIngredientSearchInput";
+      input.type = "text";
+      input.value = buildMealFeedbackState.unknownSearchQuery;
+      input.placeholder = "Chercher un produit catalogue: jambon, mozzarella, pâte...";
+      input.oninput = (event) => {
+        buildMealFeedbackState.unknownSearchQuery = event.target.value;
+      };
+      input.onkeydown = (event) => {
+        if (event.key === "Enter") {
+          searchUnknownRecipeProducts();
+        }
+      };
+
+      const searchBtn = document.createElement("button");
+      searchBtn.type = "button";
+      searchBtn.className = "feedbackBtn magnetic";
+      searchBtn.textContent = buildMealFeedbackState.unknownSearching ? "Recherche..." : "Chercher";
+      searchBtn.disabled = buildMealFeedbackState.unknownSearching;
+      searchBtn.onclick = searchUnknownRecipeProducts;
+
+      searchBar.appendChild(input);
+      searchBar.appendChild(searchBtn);
+      searchWrap.appendChild(searchBar);
+
+      const results = document.createElement("div");
+      results.className = "mealIngredientResults";
+      const resultItems = Array.isArray(buildMealFeedbackState.unknownSearchResults)
+        ? buildMealFeedbackState.unknownSearchResults
+        : [];
+
+      resultItems.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "mealIngredientResult";
+
+        const text = document.createElement("div");
+        text.className = "mealIngredientResultText";
+        text.innerHTML = `
+          <strong>${escapeHtml(item.name || "Produit")}</strong>
+          <span class="mealIngredientResultMeta">
+            ${escapeHtml((item.categoryNames || []).join(", ") || String(item.id || ""))}
+          </span>
+        `;
+
+        const chooseBtn = document.createElement("button");
+        chooseBtn.type = "button";
+        chooseBtn.className = "feedbackBtn magnetic is-positive";
+        chooseBtn.textContent = "Ajouter";
+        chooseBtn.onclick = () => addUnknownRecipeProduct(item);
+
+        row.appendChild(text);
+        row.appendChild(chooseBtn);
+        results.appendChild(row);
+      });
+
+      if (!resultItems.length && !buildMealFeedbackState.unknownSearching) {
+        const empty = document.createElement("div");
+        empty.className = "mealIngredientResultMeta";
+        empty.textContent = "Aucun résultat chargé. Lance une recherche catalogue.";
+        results.appendChild(empty);
+      }
+
+      const saveActions = document.createElement("div");
+      saveActions.className = "feedbackActions";
+
+      const saveBtn = document.createElement("button");
+      saveBtn.type = "button";
+      saveBtn.className = "feedbackBtn magnetic is-positive";
+      saveBtn.textContent = buildMealFeedbackState.unknownSaving ? "Sauvegarde..." : "Enregistrer la recette";
+      saveBtn.disabled = buildMealFeedbackState.unknownSaving;
+      saveBtn.onclick = () => saveUnknownBuildMealRecipe(false);
+
+      const saveReplayBtn = document.createElement("button");
+      saveReplayBtn.type = "button";
+      saveReplayBtn.className = "feedbackBtn magnetic is-export";
+      saveReplayBtn.textContent = "Enregistrer + tester";
+      saveReplayBtn.disabled = buildMealFeedbackState.unknownSaving;
+      saveReplayBtn.onclick = () => saveUnknownBuildMealRecipe(true);
+
+      saveActions.appendChild(saveBtn);
+      saveActions.appendChild(saveReplayBtn);
+
+      searchWrap.appendChild(results);
+      searchWrap.appendChild(saveActions);
+      searchCard.appendChild(searchWrap);
+      mealFeedbackList.appendChild(searchCard);
+
+      applyMagnetism(mealFeedbackPanel.querySelectorAll(".magnetic"));
+    }
+
+    function renderBuildMealFeedback(){
+      const context = buildMealFeedbackState.context;
+      if (!context?.mealKey || !Array.isArray(context.ingredients) || !context.ingredients.length) {
+        hideBuildMealFeedback();
+        return;
+      }
+
+      mealFeedbackPanel.classList.remove("hidden");
+      mealFeedbackReplay.textContent = "Relancer";
+      mealFeedbackTitle.textContent = `Ajuster « ${context.mealLabel} »`;
+      mealFeedbackPrompt.textContent =
+        "Si un ingredient n'est pas bon, choisis le bon produit du catalogue. Le training sera corrige pour les prochains essais.";
+      mealFeedbackList.innerHTML = "";
+
+      context.ingredients.forEach((ingredient) => {
+        const card = document.createElement("div");
+        card.className = "mealIngredientCard";
+
+        const top = document.createElement("div");
+        top.className = "mealIngredientTop";
+
+        const title = document.createElement("div");
+        title.className = "mealIngredientTitle";
+        title.innerHTML = `
+          <strong>${escapeHtml(ingredient.label)}</strong>
+          <span class="mealIngredientMeta">
+            ${escapeHtml(ingredient.role)} · ${ingredient.qty} ${escapeHtml(ingredient.unit)} · ${ingredient.isCore ? "coeur de recette" : "optionnel"}
+          </span>
+        `;
+
+        const product = document.createElement("div");
+        const stateClass = ingredient.missing ? "mealIngredientState is-missing" : "mealIngredientState";
+        product.className = "mealIngredientProduct";
+        product.innerHTML = `
+          <strong>${escapeHtml(ingredient.resolvedProductName || ingredient.preferredProductName || "Aucun produit lie")}</strong>
+          <span class="${stateClass}">${escapeHtml(getMealIngredientStateLabel(ingredient))}</span>
+        `;
+
+        top.appendChild(title);
+        top.appendChild(product);
+        card.appendChild(top);
+
+        const actions = document.createElement("div");
+        actions.className = "feedbackActions";
+
+        const correctBtn = document.createElement("button");
+        correctBtn.type = "button";
+        correctBtn.className = "feedbackBtn magnetic is-positive";
+        correctBtn.textContent =
+          buildMealFeedbackState.openIngredientKey === ingredient.key ? "Fermer" : "Corriger";
+        correctBtn.onclick = () => openBuildMealIngredientSearch(ingredient.key);
+        actions.appendChild(correctBtn);
+
+        if (ingredient.resolvedProductId || ingredient.preferredProductId) {
+          const banBtn = document.createElement("button");
+          banBtn.type = "button";
+          banBtn.className = "feedbackBtn magnetic is-negative";
+          banBtn.textContent = "Bannir l'actuel";
+          banBtn.onclick = () => handleBuildMealBanCurrentProduct(ingredient.key);
+          actions.appendChild(banBtn);
+        }
+
+        card.appendChild(actions);
+
+        if (buildMealFeedbackState.openIngredientKey === ingredient.key) {
+          const searchWrap = document.createElement("div");
+          searchWrap.className = "mealIngredientSearch";
+
+          const searchBar = document.createElement("div");
+          searchBar.className = "mealIngredientSearchBar";
+
+          const input = document.createElement("input");
+          input.className = "mealIngredientSearchInput";
+          input.type = "text";
+          input.value = buildMealFeedbackState.searchQueries[ingredient.key] || ingredient.label;
+          input.placeholder = "Rechercher un produit du catalogue";
+          input.oninput = (event) => {
+            buildMealFeedbackState.searchQueries[ingredient.key] = event.target.value;
+          };
+          input.onkeydown = (event) => {
+            if (event.key === "Enter") {
+              searchBuildMealProducts(ingredient.key);
+            }
+          };
+
+          const searchBtn = document.createElement("button");
+          searchBtn.type = "button";
+          searchBtn.className = "feedbackBtn magnetic";
+          searchBtn.textContent =
+            buildMealFeedbackState.searchingKey === ingredient.key ? "Recherche..." : "Chercher";
+          searchBtn.disabled = buildMealFeedbackState.searchingKey === ingredient.key;
+          searchBtn.onclick = () => searchBuildMealProducts(ingredient.key);
+
+          searchBar.appendChild(input);
+          searchBar.appendChild(searchBtn);
+          searchWrap.appendChild(searchBar);
+
+          const results = document.createElement("div");
+          results.className = "mealIngredientResults";
+          const resultItems = Array.isArray(buildMealFeedbackState.searchResults[ingredient.key])
+            ? buildMealFeedbackState.searchResults[ingredient.key]
+            : [];
+
+          resultItems.forEach((item) => {
+            const row = document.createElement("div");
+            row.className = "mealIngredientResult";
+
+            const text = document.createElement("div");
+            text.className = "mealIngredientResultText";
+            text.innerHTML = `
+              <strong>${escapeHtml(item.name || "Produit")}</strong>
+              <span class="mealIngredientResultMeta">${escapeHtml(String(item.id || ""))}</span>
+            `;
+
+            const chooseBtn = document.createElement("button");
+            chooseBtn.type = "button";
+            chooseBtn.className = "feedbackBtn magnetic is-positive";
+            chooseBtn.textContent = "Choisir";
+            chooseBtn.onclick = () => handleBuildMealPreferProduct(ingredient.key, item);
+
+            row.appendChild(text);
+            row.appendChild(chooseBtn);
+            results.appendChild(row);
+          });
+
+          if (!resultItems.length && buildMealFeedbackState.searchingKey !== ingredient.key) {
+            const empty = document.createElement("div");
+            empty.className = "mealIngredientResultMeta";
+            empty.textContent = "Aucun resultat charge pour l'instant. Lance une recherche ou ajuste le terme.";
+            results.appendChild(empty);
+          }
+
+          searchWrap.appendChild(results);
+          card.appendChild(searchWrap);
+        }
+
+        mealFeedbackList.appendChild(card);
+      });
+
+      applyMagnetism(mealFeedbackPanel.querySelectorAll(".magnetic"));
+    }
+
+    function activateBuildMealFeedback(context, requestText){
+      if (!context?.mealKey || !Array.isArray(context.ingredients) || !context.ingredients.length) {
+        hideBuildMealFeedback();
+        return;
+      }
+
+      resetBuildMealFeedbackState();
+      buildMealFeedbackState.context = cloneJson(context);
+      buildMealFeedbackState.requestText = requestText;
+      mealFeedbackPanel.classList.remove("hidden");
+      setMealFeedbackStatus("Recette détectée. Tu peux maintenant corriger ingrédient par ingrédient si un produit ne te convient pas.");
+      renderBuildMealFeedback();
+    }
+
+    function activateBuildMealUnknown(unknown, requestText){
+      if (!unknown?.suggestedLabel) {
+        hideBuildMealFeedback();
+        return;
+      }
+
+      resetBuildMealFeedbackState();
+      buildMealFeedbackState.unknown = cloneJson(unknown);
+      buildMealFeedbackState.requestText = requestText;
+      buildMealFeedbackState.unknownSearchQuery = unknown.suggestedLabel || "";
+      buildMealFeedbackState.unknownBaseRecipe = Boolean(unknown.draft?.baseRecipe);
+      hydrateUnknownDraftProducts(unknown);
+      mealFeedbackPanel.classList.remove("hidden");
+      setMealFeedbackStatus(
+        unknown.draft?.ingredients?.length
+          ? "Draft prepare depuis les recettes deja apprises. Verifie puis enregistre."
+          : "Recette inconnue. Ajoute les produits catalogue pour l'entrainer."
+      );
+      renderUnknownBuildMealRecipe();
+    }
+
+    async function replayBuildMealRequest(){
+      if (buildMealFeedbackState.unknown?.suggestedLabel) {
+        await saveUnknownBuildMealRecipe(true);
+        return;
+      }
+
+      if (!buildMealFeedbackState.requestText) {
+        setMealFeedbackStatus("Aucune recette recente a relancer.");
+        return;
+      }
+      setMealFeedbackStatus("Relance de la recette en cours...");
+      await sendText(buildMealFeedbackState.requestText);
     }
 
     function renderFeedbackChoices(){
@@ -1759,7 +3088,7 @@
       const prediction = predictorState.latestPrediction;
 
       if (!canCollectFeedback(text) || !prediction?.actionKey) {
-        setFeedbackStatus("Ecris d'abord quelque chose pour laisser un feedback utile.");
+        setFeedbackStatus("Écris d’abord quelque chose pour laisser un feedback utile.");
         return;
       }
 
@@ -1774,12 +3103,12 @@
       await rebuildPredictor();
       feedbackChooser.classList.add("hidden");
       applyIntentState(text);
-      setFeedbackStatus("Apprentissage serveur mis a jour: cette prediction est maintenant renforcee pour tout le monde.");
+      setFeedbackStatus("Apprentissage serveur mis à jour: cette prédiction est maintenant renforcée pour tout le monde.");
     }
 
     function showFeedbackChooser(){
       if (!canCollectFeedback(predictorState.latestText)) {
-        setFeedbackStatus("Ecris d'abord une phrase pour corriger une prediction.");
+        setFeedbackStatus("Écris d’abord une phrase pour corriger une prédiction.");
         return;
       }
 
@@ -1922,23 +3251,24 @@
       refreshBasketBtn.classList.remove("hidden");
       sessionBadge.textContent = email ? `connecté · ${email}` : "connecté";
       basketMeta.textContent = email ? `connecté · ${email}` : "connecté";
-      basketLive.textContent = "Signal en direct";
-      presenceLabel.textContent = "Surface active";
-      liveSubtitle.textContent = "La zone réagit en temps réel: suggestions, mouvement et panier synchronisé.";
+      basketLive.textContent = "À jour";
+      presenceLabel.textContent = "Prêt";
+      liveSubtitle.textContent = "Écris simplement ce que tu veux commander.";
       setTimeout(() => input?.focus(), 40);
     }
 
     function setLoggedOutUI(){
       authOverlay.classList.remove("hidden");
       hideModeChooser();
+      hideBuildMealFeedback();
       inputBar.classList.add("hidden");
       changeModeBtn.classList.add("hidden");
       logoutBtn.classList.add("hidden");
       refreshBasketBtn.classList.add("hidden");
       sessionBadge.textContent = "non connecté";
       basketMeta.textContent = "non connecté";
-      basketLive.textContent = "En veille";
-      basketContent.innerHTML = `<div class="basketEmpty">Connecte-toi pour voir ton panier en direct.</div>`;
+      basketLive.textContent = "À jour";
+      basketContent.innerHTML = `<div class="basketEmpty">Connecte-toi pour voir ton panier.</div>`;
       statItems.textContent = "0";
       statTotal.textContent = "0.00";
       statDelivery.textContent = "—";
@@ -1976,14 +3306,14 @@
       if (!hasText) {
         return {
           signalValue: "Conversation libre",
-          signalMeta: "Pose une question, ouvre ton panier ou décris un repas: l’interface change avant l’envoi.",
-          narrative: "Aucune action détectée pour l’instant. La surface reste ouverte et accueillante.",
-          lead: "Écris librement. Le système te suit en direct.",
-          hint: "Exemples: panier, ajout, repas, question générale.",
+          signalMeta: "Pose une question, ouvre ton panier ou décris un repas.",
+          narrative: "Aucune action détectée pour l’instant.",
+          lead: "Écris simplement ce que tu veux commander.",
+          hint: "Exemple : ajoute 1 pain, 6 œufs et 2 yogourts nature.",
           sendEyebrow: "Action",
           sendLabel: "Envoyer",
-          sendSub: "L’interface se recompose selon ton intention.",
-          subtitle: "Une zone de dialogue qui réagit à l’intention. Plus tu approches, plus elle s’ouvre."
+          sendSub: "Ajouter, modifier ou consulter ton panier.",
+          subtitle: "Écris simplement ce que tu veux commander."
         };
       }
 
@@ -1993,10 +3323,10 @@
           signalValue: isDiscovery ? "Découverte repas" : "Composition repas",
           signalMeta: isDiscovery
             ? "Le texte ressemble à une demande d’inspiration du jour."
-            : "Le texte ressemble à une demande “de quoi faire…”. La surface prépare un mode cuisine.",
+            : "Le texte ressemble à une demande “de quoi faire…”.",
           narrative: isDiscovery
-            ? "Le frontend lit déjà un mode “suggestions” avant l’envoi. Plus tard, on pourra le brancher sur un planner dédié."
-            : "Zelo pourrait passer par le moteur repas et transformer une envie en ingrédients réels.",
+            ? "L’assistant prépare des suggestions utiles."
+            : "Zélo peut transformer une envie en ingrédients réels du catalogue.",
           lead: "Tu sembles vouloir construire un repas.",
           hint: isDiscovery
             ? "Exemples: qu'est-ce que tu me proposes aujourd'hui ?"
@@ -2004,11 +3334,11 @@
           sendEyebrow: isDiscovery ? "Idées" : "Repas",
           sendLabel: isDiscovery ? "Explorer" : "Composer",
           sendSub: isDiscovery
-            ? "Je prépare un contexte inspiration / suggestions."
-            : "Je traduis une envie en panier exploitable.",
+            ? "Je prépare des suggestions."
+            : "Je prépare les ingrédients du panier.",
           subtitle: isDiscovery
-            ? "La surface lit déjà une demande d’inspiration. Plus tard, on pourra la router vers un planner spécialisé."
-            : "Le canal s’oriente vers la cuisine: il cherche une structure, pas juste une réponse."
+            ? "L’assistant aide à trouver des idées."
+            : "L’assistant prépare une recette à partir du catalogue."
         };
       }
 
@@ -2016,13 +3346,13 @@
         return {
           signalValue: "Ajout ciblé",
           signalMeta: "Le texte ressemble à une action d’ajout, même si le verbe n’est pas forcément explicite.",
-          narrative: "Le frontend essaie déjà de sentir une intention d’ajout avant le clic: désir, quantité, produit probable, panier implicite.",
-          lead: "Produit ou besoin détecté. On prépare déjà le contexte d’ajout.",
+          narrative: "L’assistant comprend une demande d’ajout.",
+          lead: "Produit ou besoin détecté.",
           hint: "Précise quantité et format si possible: 1, 150g, 1 litre, etc.",
           sendEyebrow: "Produit",
           sendLabel: "Ajouter",
-          sendSub: "Je prépare un futur planner centré ajout.",
-          subtitle: "Ici, l’interface agit déjà comme un classificateur d’ajout: elle essaie de comprendre le geste avant l’envoi."
+          sendSub: "Je prépare l’ajout au panier.",
+          subtitle: "L’assistant prépare une action d’ajout."
         };
       }
 
@@ -2037,33 +3367,33 @@
               ? "Le texte ressemble à une validation finale."
               : "Le texte parle du panier, de la commande ou d’une action de contrôle.",
           narrative: isClear
-            ? "Même sans écrire exactement “vide mon panier”, la couche frontend essaie de comprendre une intention de panier vide."
+            ? "L’assistant comprend une demande de panier vide."
             : isExec
-              ? "Le frontend lit déjà un signal de checkout avant l’envoi."
-              : "Zelo peut montrer, vider, rafraîchir ou tenter de finaliser l’état courant du panier.",
+              ? "L’assistant comprend une demande de commande."
+              : "Zélo peut montrer, vider, rafraîchir ou tenter de finaliser l’état courant du panier.",
           lead: isClear
             ? "On lit une intention de vider le panier."
             : isExec
               ? "On lit une intention de finalisation."
-              : "Tu interagis avec le coeur transactionnel.",
+            : "Tu interagis avec ton panier.",
           hint: "Montre, vide, rafraîchis ou passe la commande.",
           sendEyebrow: "Panier",
           sendLabel: isClear ? "Vider" : isExec ? "Commander" : "Piloter",
-          sendSub: "Je prépare un contexte transactionnel spécialisé.",
-          subtitle: "La zone bascule en mode opérationnel: elle essaie déjà d’identifier le sous-geste exact du panier."
+          sendSub: "Je prépare l’action sur le panier.",
+          subtitle: "L’assistant prépare une action claire sur le panier."
         };
       }
 
       return {
         signalValue: "Réponse naturelle",
-        signalMeta: "Le texte ressemble à une conversation générale. La surface maintient un contexte social plutôt qu’un geste shopping.",
-        narrative: "Pas d’action panier évidente: le frontend classe déjà ça comme dialogue naturel avant le clic.",
+        signalMeta: "Le texte ressemble à une conversation générale.",
+        narrative: "Pas d’action panier évidente: l’assistant reste disponible.",
         lead: "Conversation détectée. On reste en mode fluide.",
         hint: "Essaie aussi une question générale, une formule sociale ou une curiosité légère.",
         sendEyebrow: "Dialogue",
         sendLabel: "Répondre",
-        sendSub: "Je prépare un futur planner de conversation générale.",
-        subtitle: "La surface reste conversationnelle quand rien de concret n’a besoin d’être manipulé."
+        sendSub: "Je prépare une réponse simple.",
+        subtitle: "L’assistant répond simplement quand aucune action panier n’est nécessaire."
       };
     }
 
@@ -2122,10 +3452,10 @@
       predictionAction.textContent = prediction.actionLabel;
       predictionReason.textContent = prediction.reason;
       predictionCanonical.textContent = prediction.canonical;
-      predictionPlannerTarget.textContent = `Cible future: ${prediction.planner}`;
+      predictionPlannerTarget.textContent = `Cible: ${prediction.planner}`;
       predictionConfidence.textContent = `${prediction.confidence}%`;
       predictionFill.style.width = `${prediction.confidence}%`;
-      predictionFill.style.background = `linear-gradient(90deg, ${palette.color}, rgba(25,211,179,0.86))`;
+      predictionFill.style.background = `linear-gradient(90deg, ${palette.color}, rgba(92,177,53,0.72))`;
       predictionFamily.textContent = prediction.ambiguity && prediction.secondChoice
         ? `Famille détectée: ${palette.label.toLowerCase()} · alternative ${prediction.secondChoice.actionLabel}`
         : `Famille détectée: ${palette.label.toLowerCase()}`;
@@ -2315,7 +3645,7 @@
         showModeChooser();
 
         if(messages.children.length === 0){
-          addMessage("Bonjour. La surface est active, votre panier réel aussi. On commence ?", "ai");
+          addMessage("Bonjour. Que veux-tu commander aujourd’hui ?", "ai");
         }
 
         await refreshBasket();
@@ -2332,28 +3662,24 @@
       setLoggedOutUI();
       setAuthStatus("");
       passwordInput.value = "";
-      addMessage("Session fermée. La surface revient en veille.", "ai");
+      addMessage("Session fermée. À bientôt.", "ai");
     }
 
-    async function send(){
-      const text = input.value.trim();
-      if(!text) return;
-      const frontendIntentHint = buildFrontendIntentHint(text);
+    async function sendText(text){
+      const safeText = String(text || "").trim();
+      if(!safeText) return;
+      const frontendIntentHint = buildFrontendIntentHint(safeText);
 
-      addMessage(text, "user");
-      input.value = "";
-      applyIntentState("");
-      input.focus();
-
+      addMessage(safeText, "user");
       sendBtn.disabled = true;
       sendBtn.classList.add("is-busy");
       sendLabel.textContent = "En cours";
-      sendSub.textContent = "Le composant mute en signal de traitement.";
+      sendSub.textContent = "Traitement de la demande en cours.";
       basketLive.textContent = "Analyse…";
       addTypingMessage();
 
       try{
-        const payload = { userRef: USER_REF, text };
+        const payload = { userRef: USER_REF, text: safeText };
         if (frontendIntentHint?.actionKey) {
           payload.frontendIntentHint = frontendIntentHint;
         }
@@ -2368,6 +3694,13 @@
 
         removeTypingMessage();
         addMessage(data.message || data.error || "erreur", "ai");
+        if (data?.buildMeal?.mealKey) {
+          activateBuildMealFeedback(data.buildMeal, safeText);
+        } else if (data?.buildMealUnknown?.suggestedLabel) {
+          activateBuildMealUnknown(data.buildMealUnknown, safeText);
+        } else {
+          hideBuildMealFeedback();
+        }
 
         await refreshBasket();
       }catch(e){
@@ -2378,6 +3711,15 @@
         sendBtn.classList.remove("is-busy");
         applyIntentState("");
       }
+    }
+
+    async function send(){
+      const text = input.value.trim();
+      if(!text) return;
+      input.value = "";
+      applyIntentState("");
+      input.focus();
+      await sendText(text);
     }
 
     input.addEventListener("keydown", (e) => {
@@ -2391,6 +3733,8 @@
     feedbackYes.addEventListener("click", handleFeedbackPositive);
     feedbackNo.addEventListener("click", showFeedbackChooser);
     feedbackExport.addEventListener("click", exportFeedbackTraining);
+    mealFeedbackReplay.addEventListener("click", replayBuildMealRequest);
+    mealFeedbackDismiss.addEventListener("click", () => hideBuildMealFeedback());
 
     emailInput.addEventListener("keydown", (e) => {
       if(e.key === "Enter") login();
@@ -2578,7 +3922,7 @@
       const redirectedToSimple = applySavedModeOnRestore();
       if (!redirectedToSimple) {
         if(messages.children.length === 0){
-          addMessage("Bonjour. La surface est active, votre panier réel aussi. On commence ?", "ai");
+          addMessage("Bonjour. Que veux-tu commander aujourd’hui ?", "ai");
         }
         refreshBasket();
         setTimeout(() => input?.focus(), 40);

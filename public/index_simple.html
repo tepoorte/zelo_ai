@@ -3,31 +3,31 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Assistant Zelo</title>
+  <title>Assistant Zélo</title>
   <style>
-    @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap");
+    @import url("https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&display=swap");
 
     :root{
-      --bg:#f4f8fb;
+      --bg:#F7F9F5;
       --panel:#ffffff;
-      --line:rgba(9, 38, 62, 0.1);
-      --text:#082032;
-      --muted:#5d7283;
-      --blue:#2f7cff;
-      --teal:#19d3b3;
-      --shadow:0 22px 70px rgba(8, 32, 50, 0.12);
+      --line:rgba(92, 177, 53, 0.18);
+      --text:#2A2A2A;
+      --muted:#667160;
+      --green:#5CB135;
+      --green-dark:#4EA02B;
+      --soft-green:#F0F7EC;
+      --shadow:0 14px 38px rgba(42, 42, 42, 0.08);
     }
 
     *{ box-sizing:border-box; }
     html,body{ min-height:100%; }
     body{
       margin:0;
-      font-family:"Space Grotesk", system-ui, sans-serif;
+      font-family:Verdana, Geneva, sans-serif;
       color:var(--text);
       background:
-        radial-gradient(circle at top left, rgba(47,124,255,0.12), transparent 22%),
-        radial-gradient(circle at bottom right, rgba(25,211,179,0.12), transparent 24%),
-        linear-gradient(180deg, #f7fbff, #eef4f8 70%);
+        radial-gradient(circle at top left, rgba(92,177,53,0.1), transparent 28%),
+        linear-gradient(180deg, #ffffff 0%, var(--bg) 72%);
     }
 
     button,
@@ -46,7 +46,7 @@
     .panel{
       background:var(--panel);
       border:1px solid var(--line);
-      border-radius:28px;
+      border-radius:22px;
       box-shadow:var(--shadow);
     }
 
@@ -64,15 +64,35 @@
       font-size:12px;
       letter-spacing:.12em;
       text-transform:uppercase;
-      color:var(--teal);
+      color:var(--green);
       font-weight:700;
+    }
+
+    .zeloLogo{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:max-content;
+      max-width:132px;
+      margin:0 0 12px;
+      padding:8px 10px;
+      border-radius:16px;
+      background:#ffffff;
+      border:1px solid rgba(92,177,53,0.14);
+    }
+
+    .zeloLogo svg{
+      display:block;
+      width:108px;
+      height:auto;
     }
 
     h1{
       margin:0;
+      font-family:"Comfortaa", Verdana, Geneva, sans-serif;
       font-size:clamp(32px, 5vw, 54px);
-      line-height:.95;
-      letter-spacing:-.05em;
+      line-height:1.06;
+      letter-spacing:-.025em;
     }
 
     .sub{
@@ -95,23 +115,26 @@
       padding:10px 14px;
       border-radius:999px;
       border:1px solid var(--line);
-      background:rgba(47,124,255,0.06);
+      background:rgba(92,177,53,0.08);
       color:var(--muted);
       font-size:13px;
     }
 
     .actionBtn{
       border:none;
-      border-radius:16px;
+      border-radius:14px;
       padding:11px 15px;
       cursor:pointer;
-      color:var(--text);
-      background:rgba(8,32,50,0.06);
+      color:var(--green);
+      background:#ffffff;
+      border:1px solid rgba(92,177,53,0.28);
     }
 
     .actionBtn.primary{
       color:white;
-      background:linear-gradient(135deg, rgba(47,124,255,0.96), rgba(25,211,179,0.88));
+      background:var(--green);
+      border-color:var(--green);
+      box-shadow:0 10px 24px rgba(92,177,53,0.24);
     }
 
     .helper{
@@ -144,8 +167,9 @@
       border-radius:999px;
       padding:12px 16px;
       cursor:pointer;
-      background:rgba(8,32,50,0.06);
-      color:var(--text);
+      background:#ffffff;
+      color:var(--green);
+      border:1px solid rgba(92,177,53,0.28);
     }
 
     .chat{
@@ -170,18 +194,22 @@
       max-width:min(100%, 720px);
       padding:14px 16px;
       border-radius:18px;
+      color:var(--text);
+      background:#ffffff;
       line-height:1.55;
       white-space:pre-wrap;
     }
 
     .bubble.ai{
-      background:rgba(47,124,255,0.08);
-      border:1px solid rgba(47,124,255,0.1);
+      color:var(--text) !important;
+      background:#ffffff !important;
+      border:1px solid rgba(92,177,53,0.14) !important;
     }
 
     .bubble.user{
-      color:white;
-      background:linear-gradient(135deg, rgba(47,124,255,0.94), rgba(25,211,179,0.86));
+      color:#ffffff !important;
+      background:var(--green) !important;
+      border:1px solid var(--green) !important;
     }
 
     .typingDots{
@@ -195,7 +223,7 @@
       width:8px;
       height:8px;
       border-radius:999px;
-      background:#6e8798;
+      background:var(--green);
       animation: blink 1s infinite ease-in-out;
     }
 
@@ -223,29 +251,37 @@
     .composer input{
       width:100%;
       min-height:62px;
-      border-radius:18px;
+      border-radius:14px;
       border:1px solid var(--line);
-      background:#fbfdff;
-      color:var(--text);
+      background:#ffffff;
+      color:var(--text) !important;
+      caret-color:var(--green);
       padding:0 18px;
       outline:none;
       font-size:17px;
     }
 
+    .composer input::placeholder{
+      color:#7B8774;
+      opacity:1;
+    }
+
     .composer input:focus{
-      border-color:rgba(47,124,255,0.28);
-      box-shadow:0 0 0 3px rgba(47,124,255,0.08);
+      border-color:rgba(92,177,53,0.6);
+      box-shadow:0 0 0 4px rgba(92,177,53,0.12);
     }
 
     .sendBtn{
       min-width:136px;
       min-height:62px;
       border:none;
-      border-radius:18px;
+      border-radius:14px;
       cursor:pointer;
       color:white;
       font-weight:700;
-      background:linear-gradient(135deg, rgba(47,124,255,0.96), rgba(25,211,179,0.88));
+      background:var(--green);
+      border:1px solid var(--green);
+      box-shadow:0 10px 24px rgba(92,177,53,0.24);
     }
 
     .sendBtn:disabled{
@@ -281,23 +317,29 @@
   <div class="shell">
     <header class="panel topbar">
       <div>
-        <p class="eyebrow">Assistant Zelo</p>
-        <h1>Ecris simplement ce que tu veux.</h1>
+        <span class="zeloLogo" aria-label="Zélo">
+          <svg viewBox="0 0 283.91 125.36" aria-hidden="true" focusable="false">
+            <path fill="#5CB135" d="M230.82,23.06c-24.77,0-44.93,20.15-44.93,44.92c0,13.69,6.17,25.95,15.86,34.19H32.78 l44.65-73.62v-2.98H13.62v10.73h43.94l-44.53,73.63v2.98h215.11v-0.14c0.9,0.05,1.79,0.14,2.7,0.14c32.73,0,44.92-27.55,44.92-44.92 C275.74,43.22,255.59,23.06,230.82,23.06z M230.82,102.08c-18.8,0-34.09-15.29-34.09-34.09s15.29-34.09,34.09-34.09 c18.8,0,34.09,15.29,34.09,34.09C264.91,77.47,258.79,102.08,230.82,102.08z M238.26,67.99c0,4.1-3.34,7.43-7.44,7.43 c-4.1,0-7.43-3.34-7.43-7.43c0-4.1,3.34-7.44,7.43-7.44C234.92,60.55,238.26,63.89,238.26,67.99z"/>
+            <path fill="#2A2A2A" d="M153.27,73.92V5.45h11.33v66.56c0,3.42,0.98,6.11,2.95,8.08c1.97,1.97,4.54,2.95,7.72,2.95v10.13 C160.6,93.17,153.27,86.76,153.27,73.92z M126.51,5.99h-12.56l-10.77,12.87h8.93L126.51,5.99z M88.13,85.01 c-6.67-6-10.01-14.07-10.01-24.2c0-10.53,3.42-18.98,10.26-25.34c6.12-5.68,13.37-8.52,21.74-8.52c9.73,0,17.36,2.56,22.89,7.69 c5.36,4.93,8.03,11.47,8.03,19.61c0,2.51-0.32,4.81-0.96,6.92H90.87c0,7.47,2.19,13.22,6.57,17.23c3.87,3.5,8.84,5.25,14.92,5.25 c6.93,0,12.71-1.89,17.34-5.66l5.1,8.17c-1.87,1.75-4.74,3.26-8.61,4.53c-4.85,1.67-10.24,2.5-16.19,2.5 C101.41,93.17,94.12,90.45,88.13,85.01z M91.19,52.94H129c0-4.57-1.53-8.39-4.59-11.45c-3.36-3.34-7.93-5.01-13.71-5.01 c-5.4,0-9.93,1.63-13.58,4.89C93.63,44.47,91.66,48.32,91.19,52.94z"/>
+          </svg>
+        </span>
+        <p class="eyebrow">Assistant Zélo</p>
+        <h1>Que veux-tu commander ?</h1>
         <p class="sub">
-          Pas besoin de commandes compliquées. Commence à écrire, et Zelo te guide avec des exemples utiles.
+          Écris simplement ce que tu veux commander. Zélo te guide avec des exemples utiles.
         </p>
       </div>
 
       <div class="topActions">
         <span id="sessionBadge" class="pill">connecte</span>
-        <button class="actionBtn" type="button" onclick="goAdvanced()">Interface avancee</button>
-        <button class="actionBtn primary" type="button" onclick="logout()">Deconnexion</button>
+        <button class="actionBtn" type="button" onclick="goAdvanced()">Vue complète</button>
+        <button class="actionBtn primary" type="button" onclick="logout()">Déconnexion</button>
       </div>
     </header>
 
     <section class="panel helper">
-      <p id="helperLead" class="helperLead">Je suis pret. Ecris comme tu parlerais a une personne.</p>
-      <p id="helperHint" class="helperHint">Exemples utiles: ajoute 1 pain anglais a mon panier, montre-moi mon panier, de quoi faire une fondue.</p>
+      <p id="helperLead" class="helperLead">Écris simplement ce que tu veux commander.</p>
+      <p id="helperHint" class="helperHint">Exemple : ajoute 1 pain, 6 œufs et 2 yogourts nature.</p>
       <div id="suggestionRail" class="suggestionRail"></div>
     </section>
 
@@ -305,10 +347,10 @@
 
     <section class="panel composer">
       <div class="inputWrap">
-        <input id="input" type="text" placeholder="Ex: ajoute 1 lard de begnins a mon panier" />
+        <input id="input" type="text" placeholder="Exemple : ajoute 1 pain, 6 œufs et 2 yogourts nature" />
         <button id="sendBtn" class="sendBtn" type="button" onclick="send()">Envoyer</button>
       </div>
-      <div class="tiny">Tu peux demander un ajout, voir le panier, vider le panier, passer la commande ou demander des idees repas.</div>
+      <div class="tiny">Tu peux ajouter des produits, voir ton panier, le vider ou passer commande.</div>
     </section>
   </div>
 
@@ -363,8 +405,8 @@
       sendBtn.disabled = !ready;
       input.disabled = !ready;
       if (!ready) {
-        helperLead.textContent = "Je prepare la lecture d'intention avant le premier envoi.";
-        helperHint.textContent = "Encore une petite seconde: je charge le modele local pour choisir le bon planner des le premier message.";
+        helperLead.textContent = "Je prépare l’assistant avant le premier envoi.";
+        helperHint.textContent = "Encore une petite seconde: je charge les suggestions.";
       }
     }
 
@@ -375,11 +417,11 @@
         actionKey: "noop",
         actionLabel: "NOOP",
         confidence: hasText ? 12 : 0,
-        canonical: hasText ? "Analyse locale en cours" : "Reponse generale",
+        canonical: hasText ? "Analyse locale en cours" : "Réponse générale",
         planner: "planner/general",
         reason: hasText
-          ? "Le modele local se charge."
-          : "Aucune action claire detectee."
+          ? "Le modèle local se charge."
+          : "Aucune action claire détectée."
       };
     }
 
@@ -460,7 +502,7 @@
       if (family === "add") {
         return {
           lead: "On dirait que tu veux ajouter quelque chose.",
-          hint: "Si tu peux, precise la quantite: 1, 150g, 1 litre, etc.",
+          hint: "Si tu peux, précise la quantité: 1, 150g, 1 litre, etc.",
           suggestions: QUICK_ACTIONS.add
         };
       }
@@ -469,7 +511,7 @@
         if (actionKey === "clear_cart") {
           return {
             lead: "On dirait une action pour vider le panier.",
-            hint: "Tu peux aussi demander a voir le panier ou a passer la commande.",
+            hint: "Tu peux aussi demander à voir le panier ou à passer commande.",
             suggestions: QUICK_ACTIONS.cart
           };
         }
@@ -477,29 +519,29 @@
         if (actionKey === "exec_cart") {
           return {
             lead: "On dirait que tu veux finaliser la commande.",
-            hint: "Tu peux aussi verifier le panier juste avant si besoin.",
+            hint: "Tu peux aussi vérifier le panier juste avant si besoin.",
             suggestions: QUICK_ACTIONS.cart
           };
         }
 
         return {
           lead: "On dirait une demande autour du panier.",
-          hint: "Tu peux demander a voir, vider ou commander.",
+          hint: "Tu peux demander à voir, vider ou commander.",
           suggestions: QUICK_ACTIONS.cart
         };
       }
 
       if (family === "meal") {
         return {
-          lead: "On dirait une envie de repas ou d'idees cuisine.",
-          hint: "Tu peux demander de quoi faire une fondue, une carbonara, ou demander une idee du jour.",
+          lead: "On dirait une envie de repas ou d’idées cuisine.",
+          hint: "Tu peux demander de quoi faire une fondue, une carbonara, ou demander une idée du jour.",
           suggestions: QUICK_ACTIONS.meal
         };
       }
 
       return {
-        lead: "Ecris simplement ce que tu veux. Zelo s'adapte pendant la frappe.",
-        hint: "Exemples utiles: ajoute 1 pain anglais a mon panier, montre-moi mon panier, de quoi faire une fondue.",
+        lead: "Écris simplement ce que tu veux commander.",
+        hint: "Exemple : ajoute 1 pain, 6 œufs et 2 yogourts nature.",
         suggestions: QUICK_ACTIONS.general
       };
     }
@@ -600,13 +642,13 @@
 
       const ready = await ensurePredictorReady();
       if (!ready) {
-        addMessage("Je ne suis pas encore pret a lire ton intention. Reessaie dans un instant.", "ai");
+        addMessage("Je ne suis pas encore prêt. Réessaie dans un instant.", "ai");
         return;
       }
 
       const frontendIntentHint = buildFrontendIntentHint(text);
       if (!frontendIntentHint?.actionKey) {
-        addMessage("Je n'ai pas encore pu preparer le bon contexte d'intention. Reessaie tout de suite.", "ai");
+        addMessage("Je n’ai pas encore pu préparer la demande. Réessaie tout de suite.", "ai");
         return;
       }
 

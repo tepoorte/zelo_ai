@@ -93,7 +93,7 @@ export async function runAgent(
   userRef: string,
   userText: string,
   intentHint?: FrontendIntentHint
-): Promise<{ message: string }> {
+): Promise<Record<string, any> & { message: string }> {
 
     return runAgentOllama(userRef, userText, intentHint);
   

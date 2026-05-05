@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon --watch src --exec \"node --loader ts-node/esm src/server.ts\"",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test:smoke": "node --loader ts-node/esm ./tests/smoke/run.ts"
   },
   "dependencies": {
     "axios": "^1.7.7",
