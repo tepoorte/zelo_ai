@@ -103,12 +103,31 @@ export type BuildMealLearnedExample = {
   firstSeenAt: string;
   lastSeenAt: string;
   userRefs?: string[];
+  status?: "verified" | "rejected";
+  source?: "explicit" | "legacy" | "system";
 };
 
 export type BuildMealLearnedExamplesStore = {
   version: number;
   updatedAt: string;
   items: BuildMealLearnedExample[];
+};
+
+export type BuildMealRejectedExample = {
+  mealKey: string;
+  text: string;
+  normalizedText: string;
+  reason?: string;
+  count: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  userRefs?: string[];
+};
+
+export type BuildMealRejectedExamplesStore = {
+  version: number;
+  updatedAt: string;
+  items: BuildMealRejectedExample[];
 };
 
 export type BuildMealUnknownRecipeRecord = {

@@ -54,9 +54,11 @@ export function aiRoutes() {
 import { Router } from "express";
 import { runAgent } from "../ai/agent.js";
 import { BuildMealEngine } from "../ai/build-meal/engine.js";
+import { buildUnknownRecipeContext } from "../ai/build-meal/recipe-knowledge.service.js";
+import { getRecipeCandidates } from "../ai/build-meal/recipe-memory.js";
 import { login } from "../swissdata/auth.js";
 import { setSession, getSession } from "../swissdata/session.js";
-import { getCurrentBasket } from "../swissdata/cart.js";
+import { ensureCurrentBasketFutureDelivery } from "../swissdata/cart.js";
 import { searchProducts } from "../swissdata/products.js";
 import { withPerfTrace } from "../utils/perf.js";
 import {
@@ -65,8 +67,13 @@ import {
   getBuildMealTrainingRuntime,
   recordBuildMealFeedback,
 } from "../ai/build-meal/training.service.js";
-import { getBuildMealLearningState } from "../ai/build-meal/learning.service.js";
+import {
+  getBuildMealLearningState,
+  rememberBuildMealConfirmedExample,
+  rememberBuildMealRejectedExample,
+} from "../ai/build-meal/learning.service.js";
 import { CATEGORY_NAME_BY_ID } from "../ai/food-taxonomy.js";
+import { normalizeText } from "../domain/normalizer.js";
 import {
   getIntentTrainingRuntime,
   recordIntentFeedback,
@@ -250,6 +257,68 @@ export function aiRoutes() {
     }
   });
 
+  r.post("/build-meal-match-feedback", async (req, res, next) => {
+    try {
+      const mealKey = String(req.body?.mealKey ?? "").trim();
+      const text = String(req.body?.text ?? "").trim();
+      const action = String(req.body?.action ?? "").trim();
+      const userRef =
+        req.body?.userRef != null ? String(req.body.userRef) : undefined;
+      const reason =
+        req.body?.reason != null ? String(req.body.reason) : undefined;
+
+      if (!mealKey || !text) {
+        return res.status(400).json({ ok: false, error: "Missing mealKey or text" });
+      }
+
+      const normalizedText = normalizeText(text);
+      if (action === "confirm") {
+        const example = await rememberBuildMealConfirmedExample({
+          mealKey,
+          text,
+          normalizedText,
+          userRef,
+          source: "explicit",
+        });
+        return res.json({ ok: true, action, example });
+      }
+
+      if (action !== "reject") {
+        return res.status(400).json({ ok: false, error: "Invalid match feedback action" });
+      }
+
+      const rejection = await rememberBuildMealRejectedExample({
+        mealKey,
+        text,
+        normalizedText,
+        userRef,
+        reason,
+      });
+
+      const training = await getBuildMealTrainingRuntime(userRef);
+      const candidates = await getRecipeCandidates(text, training);
+      const unknownRecipe = buildUnknownRecipeContext({
+        userText: text,
+        normalizedText,
+        servings:
+          req.body?.servings != null && Number.isFinite(Number(req.body.servings))
+            ? Math.max(1, Number(req.body.servings))
+            : 2,
+        training,
+        candidates,
+      });
+
+      return res.json({
+        ok: true,
+        action,
+        rejection,
+        unknownRecipe,
+      });
+    } catch (e) {
+      next(e);
+    }
+  });
+
   r.post("/build-meal-search", async (req, res, next) => {
     try {
       const userRef = String(req.body?.userRef ?? "local-dev");
@@ -295,7 +364,7 @@ export function aiRoutes() {
     r.get("/basket", async (req, res, next) => {
     try {
       const userRef = String(req.query.userRef ?? "local-dev");
-      const basket = await getCurrentBasket(userRef);
+      const basket = await ensureCurrentBasketFutureDelivery(userRef);
       res.json({ ok: true, basket });
     } catch (e) {
       next(e);

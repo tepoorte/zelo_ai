@@ -148,6 +148,13 @@ function isRecipeModifierIngredient(
   return conceptTerms(ingredient).some((term) => hasTermInText(modifierText, term));
 }
 
+function isIngredientRequestedExplicitly(
+  normalizedLabel: string,
+  ingredient: BuildMealIngredientTraining
+): boolean {
+  return conceptTerms(ingredient).some((term) => hasTermInText(normalizedLabel, term));
+}
+
 function familyTerms(recipe: BuildMealRecipeTraining): string[] {
   const family = recipeFamily(recipe);
   return uniqueStrings([
@@ -352,7 +359,10 @@ export function buildUnknownRecipeContext(input: {
     const ingredientsByConcept = new Map<string, BuildMealIngredientTraining>();
 
     for (const ingredient of family.baseRecipe.ingredients || []) {
-      if (isRecipeModifierIngredient(family.baseRecipe, ingredient)) {
+      if (
+        isRecipeModifierIngredient(family.baseRecipe, ingredient) &&
+        !isIngredientRequestedExplicitly(normalizedLabel, ingredient)
+      ) {
         continue;
       }
       if (

@@ -37,12 +37,12 @@ export async function processIncomingTwilioWhatsAppMessage(
   message: TwilioInboundWhatsAppMessage
 ) {
   if (hasSeenTwilioMessage(message.messageSid)) {
-    return "Message deja traite.";
+    return "Message déjà traité.";
   }
   markTwilioMessageSeen(message.messageSid);
 
   if (message.numMedia && message.numMedia > 0) {
-    return "Je peux vous aider avec les messages texte pour le moment.";
+    return "Je peux t’aider avec les messages texte pour le moment.";
   }
 
   const userRef = resolveTwilioWhatsAppUserRef(message.from);
@@ -50,15 +50,15 @@ export async function processIncomingTwilioWhatsAppMessage(
 
   if (loginCommand.kind === "login") {
     await loginTwilioWhatsAppUser(userRef, loginCommand.username, loginCommand.password);
-    return "Connexion reussie. Vous pouvez maintenant gerer votre panier ici sur WhatsApp.";
+    return "Connexion réussie. Tu peux maintenant gérer ton panier ici sur WhatsApp.";
   }
 
   if (loginCommand.kind === "invalid_format") {
-    return "Format de connexion invalide. Utilisez: login login-example-999@example.invalid votre_mot_de_passe";
+    return "Format de connexion invalide. Utilise : login login-example-001@example.invalid ton_mot_de_passe";
   }
 
   if (!getStoredToken(userRef)) {
-    return "Avant d'utiliser le panier, connectez-vous ici avec: login login-example-999@example.invalid votre_mot_de_passe";
+    return "Avant d’utiliser le panier, connecte-toi ici avec : login login-example-001@example.invalid ton_mot_de_passe";
   }
 
   const reply = await runAgent(userRef, message.body);

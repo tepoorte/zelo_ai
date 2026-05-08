@@ -330,7 +330,8 @@
         "bonne journee",
         "raconte moi quelque chose",
         "que fais tu aujourd hui",
-        "comment je vais a la gare a pie?"
+        "comment je vais a la gare a pie?",
+        "ja ne sai pas"
       ]
     }
   ],
@@ -341,6 +342,11 @@
         {
           "text": "comment je vais a la gare a pie?",
           "normalized": "comment je vais a la gare a pie",
+          "count": 2
+        },
+        {
+          "text": "ja ne sai pas",
+          "normalized": "ja ne sai pas",
           "count": 2
         }
       ],
@@ -382,5 +388,5 @@
       ]
     }
   },
-  "updatedAt": "2026-04-16T12:33:35.508Z"
+  "updatedAt": "2026-05-08T11:03:55.924Z"
 }

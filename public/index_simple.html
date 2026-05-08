@@ -212,6 +212,102 @@
       border:1px solid var(--green) !important;
     }
 
+    .guideBubble{
+      white-space:normal;
+      max-width:min(100%, 760px);
+    }
+
+    .welcomeGuide{
+      display:grid;
+      gap:12px;
+    }
+
+    .welcomeGuideIntro{
+      display:grid;
+      gap:4px;
+    }
+
+    .welcomeGuideIntro strong{
+      font-family:"Comfortaa", Verdana, Geneva, sans-serif;
+      font-size:17px;
+      color:var(--text);
+    }
+
+    .welcomeGuideIntro span{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.45;
+    }
+
+    .guideStep{
+      border:1px solid rgba(92,177,53,0.16);
+      border-radius:14px;
+      background:#FBFCFA;
+      overflow:hidden;
+    }
+
+    .guideStep summary{
+      cursor:pointer;
+      padding:11px 13px;
+      color:#3f7e28;
+      font-weight:700;
+      list-style-position:inside;
+    }
+
+    .guideStep summary::marker{
+      color:var(--green);
+    }
+
+    .guideStepBody{
+      padding:0 13px 13px;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.55;
+    }
+
+    .guideStepBody p{
+      margin:8px 0;
+    }
+
+    .guideRoot > summary{
+      background:rgba(92,177,53,0.08);
+    }
+
+    .guideRootBody{
+      display:grid;
+      gap:8px;
+    }
+
+    .guideNested{
+      background:#fff;
+    }
+
+    .guideNested summary{
+      padding:10px 12px;
+      color:#496D3C;
+      font-size:13px;
+    }
+
+    .guideNested .guideStepBody{
+      padding:0 12px 12px;
+    }
+
+    .guideExamples{
+      display:flex;
+      flex-wrap:wrap;
+      gap:7px;
+      margin-top:8px;
+    }
+
+    .guideExamples span{
+      padding:6px 9px;
+      border-radius:999px;
+      color:#3f7e28;
+      background:rgba(92,177,53,0.08);
+      border:1px solid rgba(92,177,53,0.16);
+      font-size:12px;
+    }
+
     .typingDots{
       display:flex;
       gap:8px;
@@ -331,7 +427,7 @@
       </div>
 
       <div class="topActions">
-        <span id="sessionBadge" class="pill">connecte</span>
+        <span id="sessionBadge" class="pill">connecté</span>
         <button class="actionBtn" type="button" onclick="goAdvanced()">Vue complète</button>
         <button class="actionBtn primary" type="button" onclick="logout()">Déconnexion</button>
       </div>
@@ -373,9 +469,9 @@
         "passe la commande"
       ],
       add: [
-        "ajoute 1 lard de begnins a mon panier",
-        "ajoute 1 pain anglais a mon panier",
-        "ajoute 1 panier budget 50 a mon panier"
+        "ajoute 1 lard de begnins à mon panier",
+        "ajoute 1 pain anglais à mon panier",
+        "ajoute 1 panier budget 50 à mon panier"
       ],
       meal: [
         "de quoi faire une fondue",
@@ -406,7 +502,7 @@
       input.disabled = !ready;
       if (!ready) {
         helperLead.textContent = "Je prépare l’assistant avant le premier envoi.";
-        helperHint.textContent = "Encore une petite seconde: je charge les suggestions.";
+        helperHint.textContent = "Encore une petite seconde : je charge les suggestions.";
       }
     }
 
@@ -585,6 +681,96 @@
       messages.scrollTop = messages.scrollHeight;
     }
 
+    function addWelcomeGuideMessage(){
+      const row = document.createElement("div");
+      row.className = "row ai";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble ai guideBubble";
+      bubble.innerHTML = `
+        <div class="welcomeGuide">
+          <div class="welcomeGuideIntro">
+            <strong>Salut ! Que veux-tu commander aujourd’hui ?</strong>
+            <span>Écris naturellement ce dont tu as besoin. Si tu veux tester l’app, ouvre le petit guide ci-dessous.</span>
+          </div>
+
+          <details class="guideStep guideRoot">
+            <summary>Guide de test des fonctionnalités</summary>
+            <div class="guideStepBody guideRootBody">
+              <p>Si tu veux essayer les fonctions principales, ouvre uniquement les parties qui t’intéressent.</p>
+
+              <details class="guideStep guideNested">
+                <summary>Passer en vue complète</summary>
+                <div class="guideStepBody">
+                  <p>La vue complète affiche l’intention détectée, le feedback, les suggestions, ton panier et les outils pour corriger ou créer une recette.</p>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Ajouter des produits au panier</summary>
+                <div class="guideStepBody">
+                  <p>Tu peux demander un ou plusieurs produits du catalogue avec des formulations simples comme « ajoute », « mets » ou « je te prends ».</p>
+                  <div class="guideExamples">
+                    <span>ajoute 1 pain</span>
+                    <span>mets 6 œufs</span>
+                    <span>ajoute 1 pain, 6 œufs et 2 yogourts</span>
+                  </div>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Corriger l’intention si besoin</summary>
+                <div class="guideStepBody">
+                  <p>En vue complète, si l’intention détectée avant l’envoi n’est pas la bonne, utilise le feedback. La prochaine fois, la même formulation sera mieux reconnue.</p>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Préparer une recette</summary>
+                <div class="guideStepBody">
+                  <p>Pour tester build_meal, écris « de quoi faire… » suivi d’une recette. Les recettes déjà validées incluent hot dog, carbonara, hamburger, spaghetti bolognese, maccheroni carbonara, filet de perche et pomme de terre, salade césar et salade de riz.</p>
+                  <div class="guideExamples">
+                    <span>de quoi faire une carbonara</span>
+                    <span>de quoi faire une salade de riz</span>
+                  </div>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Créer une recette inconnue</summary>
+                <div class="guideStepBody">
+                  <p>Si une recette n’existe pas encore, crée-la depuis la vue complète avec des produits réels du catalogue. Plus les recettes sont validées, plus les prochains drafts deviennent utiles.</p>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Voir, vider ou modifier ton panier</summary>
+                <div class="guideStepBody">
+                  <p>Tu peux consulter le panier à tout moment, le vider entièrement, ou supprimer un produit précis.</p>
+                  <div class="guideExamples">
+                    <span>montre mon panier</span>
+                    <span>vide mon panier</span>
+                    <span>supprime le pain</span>
+                  </div>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Découvrir des idées ou passer commande</summary>
+                <div class="guideStepBody">
+                  <p>Demande des idées avec « qu’est-ce que tu me proposes aujourd’hui ? ». Pour finaliser, écris « passe la commande ». Pour l’instant, la commande part sur la prochaine date disponible.</p>
+                </div>
+              </details>
+            </div>
+          </details>
+        </div>
+      `;
+
+      row.appendChild(bubble);
+      messages.appendChild(row);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
     function addTypingMessage(){
       removeTypingMessage();
 
@@ -699,8 +885,8 @@
       window.location.href = "/";
     } else {
       localStorage.setItem(UI_MODE_KEY, "simple");
-      sessionBadge.textContent = session.email ? "connecte · " + session.email : "connecte";
-      addMessage("Bonjour. Dis-moi simplement ce que tu veux faire.", "ai");
+      sessionBadge.textContent = session.email ? "connecté · " + session.email : "connecté";
+      addWelcomeGuideMessage();
       setComposerReadyState(false);
       applySimpleAssist("");
       initPredictor();

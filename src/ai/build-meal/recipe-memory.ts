@@ -3,7 +3,15 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { normalizeText, tokenizeForMatch } from "../../domain/normalizer.js";
 import { ollamaEmbed } from "../services/ollama-client.js";
-import { getBuildMealLearnedExamples } from "./learning.service.js";
+import {
+  getBuildMealLearnedExamples,
+  getBuildMealRejectedExamples,
+} from "./learning.service.js";
+import {
+  areBuildMealFamiliesCompatible,
+  inferBuildMealFamily,
+  type BuildMealFamilyInference,
+} from "./recipe-family.service.js";
 import type {
   BuildMealDetectedRequest,
   BuildMealRecipeCandidate,
@@ -28,11 +36,22 @@ type RecipeMemoryCache = {
   items: RecipeMemoryEntry[];
 };
 
+const MEMORY_VERSION = 2;
 const CACHE_DIR = path.join(process.cwd(), ".cache");
 const MEMORY_FILE = path.join(CACHE_DIR, "build-meal-recipe-memory.json");
 const QUERY_EMBEDDING_CACHE = new Map<string, number[]>();
 let embeddingFailureUntil = 0;
 const LEADING_ARTICLES = new Set(["un", "une", "des", "du", "de", "la", "le", "les", "l", "d"]);
+const MATCH_STOPWORDS = new Set([
+  ...LEADING_ARTICLES,
+  "a",
+  "au",
+  "aux",
+  "avec",
+  "et",
+  "en",
+  "pour",
+]);
 
 function clamp(value: number, min = 0, max = 1): number {
   return Math.max(min, Math.min(max, value));
@@ -72,14 +91,70 @@ function stripRequestPattern(text: string, training: BuildMealTrainingSeed): str
   return tokens.join(" ").trim() || normalizeText(text);
 }
 
+function tokenizeRecipeText(value: string): string[] {
+  return tokenizeForMatch(String(value || "").replace(/[_-]+/g, " "));
+}
+
+function meaningfulRecipeTokens(value: string): string[] {
+  return tokenizeRecipeText(value).filter((token) => !MATCH_STOPWORDS.has(token));
+}
+
+function tokenMatches(left: string, right: string): boolean {
+  return left === right ||
+    left.length > 3 && left.endsWith("s") && left.slice(0, -1) === right ||
+    right.length > 3 && right.endsWith("s") && right.slice(0, -1) === left;
+}
+
+function tokenSetHas(tokens: Set<string>, expected: string): boolean {
+  for (const token of tokens) {
+    if (tokenMatches(token, expected)) return true;
+  }
+  return false;
+}
+
+function tokensContainAll(textTokens: Set<string>, expectedTokens: string[]): boolean {
+  return expectedTokens.length > 0 && expectedTokens.every((token) => tokenSetHas(textTokens, token));
+}
+
 function recipeFamilyTokens(recipe: BuildMealRecipeTraining): string[] {
-  if (recipe.family) return tokenizeForMatch(recipe.family);
-  return tokenizeForMatch(recipe.label).slice(0, 1);
+  if (recipe.family) return meaningfulRecipeTokens(recipe.family);
+  return meaningfulRecipeTokens(recipe.label).slice(0, 1);
 }
 
 function recipeModifierTokens(recipe: BuildMealRecipeTraining): string[] {
   const familyTokens = new Set(recipeFamilyTokens(recipe));
-  return tokenizeForMatch(recipe.label).filter((token) => !familyTokens.has(token));
+  return meaningfulRecipeTokens(recipe.label).filter((token) => !familyTokens.has(token));
+}
+
+function recipeFamily(recipe: BuildMealRecipeTraining): string {
+  if (recipe.family) return normalizeText(recipe.family);
+  return inferBuildMealFamily({
+    label: recipe.label,
+    ingredients: recipe.ingredients,
+  }).family;
+}
+
+function inferRequestedFamily(
+  userText: string,
+  training: BuildMealTrainingSeed
+): BuildMealFamilyInference {
+  const label = stripRequestPattern(userText, training);
+  return inferBuildMealFamily({
+    label,
+    sourceText: userText,
+    existingRecipes: training.meals,
+  });
+}
+
+function hasRecipeFamilyConflict(
+  requestedFamily: BuildMealFamilyInference,
+  recipe: BuildMealRecipeTraining
+): boolean {
+  if (requestedFamily.source === "generic" || requestedFamily.confidence < 0.7) {
+    return false;
+  }
+
+  return !areBuildMealFamiliesCompatible(requestedFamily.family, recipeFamily(recipe));
 }
 
 function tokenAllowedByRecipe(token: string, allowedTokens: Set<string>): boolean {
@@ -88,6 +163,77 @@ function tokenAllowedByRecipe(token: string, allowedTokens: Set<string>): boolea
     return true;
   }
   return false;
+}
+
+function recipeAnchorTexts(recipe: BuildMealRecipeTraining): string[] {
+  return [
+    recipe.label,
+    ...(recipe.aliases || []),
+    ...(recipe.examples || []),
+  ]
+    .map((value) => stripLeadingRequestWords(value))
+    .filter(Boolean);
+}
+
+function stripLeadingRequestWords(text: string): string {
+  const normalized = normalizeText(String(text || "").replace(/[_-]+/g, " "));
+  const tokens = normalized.split(" ").filter(Boolean);
+  while (tokens.length && LEADING_ARTICLES.has(tokens[0])) {
+    tokens.shift();
+  }
+  return tokens.join(" ");
+}
+
+function hasAnchoredRecipeText(requestTokens: Set<string>, recipe: BuildMealRecipeTraining): boolean {
+  for (const anchor of recipeAnchorTexts(recipe)) {
+    const anchorTokens = meaningfulRecipeTokens(anchor);
+    if (tokensContainAll(requestTokens, anchorTokens)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function hasRecipeIdentityAnchor(
+  userText: string,
+  training: BuildMealTrainingSeed,
+  recipe: BuildMealRecipeTraining
+): boolean {
+  const requestTokens = new Set(meaningfulRecipeTokens(stripRequestPattern(userText, training)));
+  if (!requestTokens.size) return false;
+
+  if (hasAnchoredRecipeText(requestTokens, recipe)) {
+    return true;
+  }
+
+  const familyTokens = recipeFamilyTokens(recipe);
+  const modifierTokens = recipeModifierTokens(recipe);
+  const hasFamily = tokensContainAll(requestTokens, familyTokens);
+  if (!hasFamily) return false;
+
+  if (modifierTokens.length) {
+    return tokensContainAll(requestTokens, modifierTokens);
+  }
+
+  return !hasUnexpectedBaseRecipeModifier(userText, training, recipe);
+}
+
+function isLearnedEntryTrusted(
+  learnedText: string,
+  training: BuildMealTrainingSeed,
+  meal: BuildMealRecipeTraining
+): boolean {
+  return hasRecipeIdentityAnchor(learnedText, training, meal);
+}
+
+function isRejectedExample(
+  rejectedExamples: Array<{ mealKey: string; normalizedText: string }>,
+  mealKey: string,
+  normalizedText: string
+): boolean {
+  return rejectedExamples.some(
+    (item) => item.mealKey === mealKey && item.normalizedText === normalizedText
+  );
 }
 
 function hasUnexpectedBaseRecipeModifier(
@@ -164,19 +310,26 @@ function cosineSimilarity(left: number[], right: number[]): number {
   return dot / Math.sqrt(leftNorm * rightNorm);
 }
 
-function buildSignature(training: BuildMealTrainingSeed, learnedExamples: Array<{ mealKey: string; normalizedText: string; count: number }>): string {
+function buildSignature(
+  training: BuildMealTrainingSeed,
+  learnedExamples: Array<{ mealKey: string; normalizedText: string; count: number; status?: string }>,
+  rejectedExamples: Array<{ mealKey: string; normalizedText: string; count: number }>
+): string {
   return createHash("sha1")
     .update(
       JSON.stringify({
+        memoryVersion: MEMORY_VERSION,
         version: training.version,
         requestPatterns: training.requestPatterns,
         meals: training.meals.map((meal) => ({
           key: meal.key,
           label: meal.label,
+          family: meal.family,
           aliases: meal.aliases,
           examples: meal.examples || [],
         })),
         learnedExamples,
+        rejectedExamples,
       })
     )
     .digest("hex");
@@ -245,7 +398,10 @@ function pushUniqueEntry(
 }
 
 async function buildEntries(training: BuildMealTrainingSeed): Promise<RecipeMemoryEntry[]> {
-  const learnedExamples = await getBuildMealLearnedExamples();
+  const [learnedExamples, rejectedExamples] = await Promise.all([
+    getBuildMealLearnedExamples(),
+    getBuildMealRejectedExamples(),
+  ]);
   const entries: RecipeMemoryEntry[] = [];
 
   for (const meal of training.meals) {
@@ -261,6 +417,9 @@ async function buildEntries(training: BuildMealTrainingSeed): Promise<RecipeMemo
     }
 
     for (const item of learnedExamples.items.filter((example) => example.mealKey === meal.key)) {
+      if (item.status === "rejected") continue;
+      if (isRejectedExample(rejectedExamples.items, meal.key, item.normalizedText)) continue;
+      if (!isLearnedEntryTrusted(item.text, training, meal)) continue;
       pushUniqueEntry(entries, meal, item.text, "learned");
     }
   }
@@ -269,10 +428,19 @@ async function buildEntries(training: BuildMealTrainingSeed): Promise<RecipeMemo
 }
 
 async function loadRecipeMemory(training: BuildMealTrainingSeed): Promise<RecipeMemoryEntry[]> {
-  const learnedExamples = await getBuildMealLearnedExamples();
+  const [learnedExamples, rejectedExamples] = await Promise.all([
+    getBuildMealLearnedExamples(),
+    getBuildMealRejectedExamples(),
+  ]);
   const signature = buildSignature(
     training,
     learnedExamples.items.map((item) => ({
+      mealKey: item.mealKey,
+      normalizedText: item.normalizedText,
+      count: item.count,
+      status: item.status,
+    })),
+    rejectedExamples.items.map((item) => ({
       mealKey: item.mealKey,
       normalizedText: item.normalizedText,
       count: item.count,
@@ -280,7 +448,12 @@ async function loadRecipeMemory(training: BuildMealTrainingSeed): Promise<Recipe
   );
 
   const cached = await readJsonFile<RecipeMemoryCache | null>(MEMORY_FILE, null);
-  if (cached?.signature === signature && Array.isArray(cached.items) && cached.items.length) {
+  if (
+    cached?.version === MEMORY_VERSION &&
+    cached.signature === signature &&
+    Array.isArray(cached.items) &&
+    cached.items.length
+  ) {
     return cached.items;
   }
 
@@ -292,7 +465,7 @@ async function loadRecipeMemory(training: BuildMealTrainingSeed): Promise<Recipe
   }
 
   await writeJsonFile(MEMORY_FILE, {
-    version: 1,
+    version: MEMORY_VERSION,
     signature,
     items,
   } satisfies RecipeMemoryCache);
@@ -330,14 +503,28 @@ export async function getRecipeCandidates(
   const normalizedText = normalizeText(userText);
   if (!normalizedText) return [];
 
-  const [memory, queryEmbedding] = await Promise.all([
+  const requestedFamily = inferRequestedFamily(userText, training);
+  const recipesByKey = new Map((training.meals || []).map((recipe) => [recipe.key, recipe]));
+  const [memory, queryEmbedding, rejectedExamples] = await Promise.all([
     loadRecipeMemory(training),
     maybeEmbedText(normalizedText),
+    getBuildMealRejectedExamples(),
   ]);
 
   const bestByMeal = new Map<string, BuildMealRecipeCandidate>();
 
   for (const entry of memory) {
+    const recipe = recipesByKey.get(entry.mealKey);
+    if (isRejectedExample(rejectedExamples.items, entry.mealKey, normalizedText)) {
+      continue;
+    }
+    if (recipe && hasRecipeFamilyConflict(requestedFamily, recipe)) {
+      continue;
+    }
+    if (recipe && !hasRecipeIdentityAnchor(userText, training, recipe)) {
+      continue;
+    }
+
     const lexicalScore = aliasScore(normalizedText, entry.normalizedText);
     const semanticScore =
       queryEmbedding?.length && entry.embedding?.length
@@ -377,48 +564,60 @@ export async function detectRecipeRequest(
   if (!normalizedText) return null;
 
   const candidates = await getRecipeCandidates(userText, training);
-  const best = candidates[0];
-  if (!best) return null;
+  if (!candidates.length) return null;
 
-  const recipe = training.meals.find((item) => item.key === best.mealKey);
-  if (!recipe) return null;
-
-  if (hasRecipeModifierMismatch(userText, training, recipe)) {
-    return null;
-  }
-  if (hasUnexpectedBaseRecipeModifier(userText, training, recipe)) {
-    return null;
-  }
-
-  const runnerUp = candidates[1];
-  const margin = best.score - (runnerUp?.score || 0);
+  const requestedFamily = inferRequestedFamily(userText, training);
   const mealRequest = looksLikeMealRequest(normalizedText, training);
-  const lexicalStrong = best.lexicalScore >= 0.8;
-  const lexicalSoft = best.lexicalScore >= 0.45;
-  const semanticStrong = best.semanticScore >= 0.9;
-  const hybridStrong = best.score >= 0.72 && margin >= 0.05;
-  const forcedHybrid = best.score >= 0.58 && margin >= 0.04;
 
-  const shouldAccept =
-    lexicalStrong ||
-    (semanticStrong && lexicalSoft) ||
-    (mealRequest && hybridStrong) ||
-    (options?.force && mealRequest && forcedHybrid);
+  for (let index = 0; index < candidates.length; index += 1) {
+    const best = candidates[index];
+    const recipe = training.meals.find((item) => item.key === best.mealKey);
+    if (!recipe) continue;
 
-  if (!shouldAccept) return null;
+    if (hasRecipeFamilyConflict(requestedFamily, recipe)) {
+      continue;
+    }
+    if (hasRecipeModifierMismatch(userText, training, recipe)) {
+      continue;
+    }
+    if (hasUnexpectedBaseRecipeModifier(userText, training, recipe)) {
+      continue;
+    }
+    if (!hasRecipeIdentityAnchor(userText, training, recipe)) {
+      continue;
+    }
 
-  const strategy =
-    best.lexicalScore >= 0.8 ? "lexical" :
-    best.semanticScore >= 0.9 && best.lexicalScore < 0.45 ? "semantic" :
-    "hybrid";
+    const runnerUp = candidates[index + 1];
+    const margin = best.score - (runnerUp?.score || 0);
+    const lexicalStrong = best.lexicalScore >= 0.8;
+    const lexicalSoft = best.lexicalScore >= 0.45;
+    const semanticStrong = best.semanticScore >= 0.9;
+    const hybridStrong = best.score >= 0.72 && margin >= 0.05;
+    const forcedHybrid = best.score >= 0.58 && margin >= 0.04;
 
-  return {
-    normalizedText,
-    servings,
-    matchedAlias: best.matchedText,
-    recipe,
-    confidence: best.score,
-    strategy,
-    candidates,
-  };
+    const shouldAccept =
+      lexicalStrong ||
+      (semanticStrong && lexicalSoft) ||
+      (mealRequest && hybridStrong) ||
+      (options?.force && mealRequest && forcedHybrid);
+
+    if (!shouldAccept) continue;
+
+    const strategy =
+      best.lexicalScore >= 0.8 ? "lexical" :
+      best.semanticScore >= 0.9 && best.lexicalScore < 0.45 ? "semantic" :
+      "hybrid";
+
+    return {
+      normalizedText,
+      servings,
+      matchedAlias: best.matchedText,
+      recipe,
+      confidence: best.score,
+      strategy,
+      candidates,
+    };
+  }
+
+  return null;
 }

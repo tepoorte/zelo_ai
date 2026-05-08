@@ -1,4 +1,14 @@
 .env
-node_modules
-dist
+node_modules/
+dist/
 
+# macOS / editor noise
+.DS_Store
+**/.DS_Store
+
+# Local archives and temporary deployment backups
+*.zip
+*.tgz
+*.tar.gz
+tmp_deploy.server/
+pre_stage_merge_backup/

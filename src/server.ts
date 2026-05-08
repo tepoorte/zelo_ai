@@ -39,5 +39,5 @@ app.use("/integrations/twilio/whatsapp", twilioWhatsAppRoutes());
 app.use(errorHandler);
 
 app.listen(env.port, "0.0.0.0", () => {
-  console.log(`Zelo API listening on http://0.0.0.0:${env.port}`);
+  console.log(`Zélo API démarrée sur http://0.0.0.0:${env.port}`);
 });

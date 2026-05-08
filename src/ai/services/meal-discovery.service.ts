@@ -31,7 +31,7 @@ function toDisplayCategoryName(raw: string): string {
     })
     .join(", ")
     .replace(" patisseries", " pâtisseries")
-    .replace(" oeufs", " oeufs")
+    .replace(" oeufs", " œufs")
     .replace(" epices", "épices")
     .replace(" huiles", " huiles")
     .replace(" sauces", " sauces");
@@ -102,11 +102,11 @@ function looksLikeFreshIntent(userText: string): boolean {
 
 function formatCategoryQuestion(categories: FoodCategoryChoice[]): string {
   const lines = [
-    "Je peux vous proposer quelques idees par categorie alimentaire.",
+    "Je peux te proposer quelques idées par catégorie alimentaire.",
     "",
     ...categories.map((category, index) => `${index + 1}. ${category.name}`),
     "",
-    "Quelle categorie vous tente ?",
+    "Quelle catégorie te tente ?",
   ];
 
   return lines.join("\n");
@@ -114,11 +114,11 @@ function formatCategoryQuestion(categories: FoodCategoryChoice[]): string {
 
 function formatSuggestionQuestion(categoryName: string, suggestions: FoodSuggestion[]): string {
   const lines = [
-    `Voici quelques idees dans « ${categoryName} » :`,
+    `Voici quelques idées dans « ${categoryName} » :`,
     "",
     ...suggestions.map((suggestion, index) => `${index + 1}. ${suggestion.name}`),
     "",
-    "Lequel voulez-vous ajouter au panier ?",
+    "Lequel veux-tu ajouter au panier ?",
   ];
 
   return lines.join("\n");
@@ -158,7 +158,7 @@ export async function tryResolvePendingMealDiscovery(
     if (!selectedCategory) {
       return {
         message:
-          "Je n’ai pas reconnu la categorie choisie.\n\n" +
+          "Je n’ai pas reconnu la catégorie choisie.\n\n" +
           formatCategoryQuestion(pending.categories),
       };
     }
@@ -183,7 +183,7 @@ export async function tryResolvePendingMealDiscovery(
     if (!selectedSuggestion) {
       return {
         message:
-          "Je n’ai pas reconnu votre choix.\n\n" +
+          "Je n’ai pas reconnu ton choix.\n\n" +
           formatSuggestionQuestion(pending.categoryName, pending.suggestions),
       };
     }
@@ -207,7 +207,7 @@ export async function tryResolvePendingMealDiscovery(
 
     return {
       message:
-        `✅ J’ai ajouté « ${selectedSuggestion.name} » à votre panier.\n\n` +
+        `✅ J’ai ajouté « ${selectedSuggestion.name} » à ton panier.\n\n` +
         formatCartFr(addOutcome.result?.basket),
     };
   }

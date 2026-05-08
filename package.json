@@ -7,6 +7,9 @@
     "dev": "nodemon --watch src --exec \"node --loader ts-node/esm src/server.ts\"",
     "build": "tsc",
     "start": "node dist/server.js",
+    "test:delivery": "node --loader ts-node/esm ./tests/delivery-date.test.ts",
+    "test:build-meal-family": "node --loader ts-node/esm ./tests/build-meal-family.test.ts",
+    "test:build-meal-matching": "node --loader ts-node/esm ./tests/build-meal-matching.test.ts",
     "test:smoke": "node --loader ts-node/esm ./tests/smoke/run.ts"
   },
   "dependencies": {

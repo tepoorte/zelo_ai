@@ -221,7 +221,7 @@ function normalizePlan(parsed: Plan | null): Plan | null {
 
 function plannerPrompt() {
   return `
-Tu es l'IA de Zelo. Transforme le message utilisateur en PLAN JSON strict.
+Tu es l’Assistant Zélo. Transforme le message utilisateur en PLAN JSON strict.
 
 RÈGLES DE SORTIE:
 - Réponds uniquement avec du JSON valide.
@@ -314,7 +314,7 @@ RÈGLE GÉNÉRALE POUR LES DEMANDES VAGUES:
 - Si l'utilisateur demande d'ajouter quelque chose au panier, même de manière vague, essaie d'extraire une query produit simple et exploitable.
 - La query doit être le nom commun le plus utile pour rechercher le produit dans le catalogue.
 - Supprime les déterminants inutiles: "du", "de la", "des", "un", "une", "de", "d’", "d'".
-- Garde uniquement le coeur utile de la demande produit.
+- Garde uniquement le cœur utile de la demande produit.
 - Si aucune quantité explicite n'est donnée, utilise qty=1.
 - Par défaut, si aucune unité explicite n'est écrite dans le message, utilise unit="piece".
 - Ne retourne pas noop si une query produit raisonnable peut être déduite.
@@ -574,7 +574,7 @@ function normalizePlannerUserText(userText: string): string {
 
 function plannerPromptAddItems2() {
   return `
-Tu es l'IA de Zelo. Tu es un planner spécialisé ADD_ITEMS.
+Tu es l’Assistant Zélo. Tu es un planner spécialisé ADD_ITEMS.
 Ta mission est de transformer le message utilisateur en PLAN JSON strict pour ajouter un ou plusieurs produits au panier.
 
 ${plannerPromptOutputRules()}
@@ -625,7 +625,7 @@ IMPORTANT:
 - Si l'utilisateur demande d'ajouter quelque chose au panier, même de manière vague, essaie d'extraire une query produit simple et exploitable.
 - La query doit être le nom commun le plus utile pour rechercher le produit dans le catalogue.
 - Supprime les déterminants inutiles: "du", "de la", "des", "un", "une", "de", "d’", "d'".
-- Garde uniquement le coeur utile de la demande produit.
+- Garde uniquement le cœur utile de la demande produit.
 - Si aucune quantité explicite n'est donnée, utilise qty=1.
 - Par défaut, si aucune unité explicite n'est écrite dans le message, utilise unit="piece".
 - Si une query produit raisonnable peut être déduite, préfère ADD_ITEMS.
@@ -794,7 +794,7 @@ ${plannerPromptNoopFallbackRules()}
 
 function plannerPromptAddItems() {
   return `
-Tu es l'IA de Zelo. Tu es un planner spécialisé ADD_ITEMS.
+Tu es l’Assistant Zélo. Tu es un planner spécialisé ADD_ITEMS.
 Ta mission est de transformer le message utilisateur en PLAN JSON strict pour ajouter un ou plusieurs produits au panier.
 
 ${plannerPromptOutputRules()}
@@ -943,7 +943,7 @@ ${plannerPromptNoopFallbackRules()}
 
 function plannerPromptClearCart() {
   return `
-Tu es l'IA de Zelo. Tu es un planner spécialisé CLEAR_CART.
+Tu es l’Assistant Zélo. Tu es un planner spécialisé CLEAR_CART.
 Ta mission est de transformer le message utilisateur en PLAN JSON strict pour retirer des produits du panier, soit totalement, soit de manière ciblée.
 
 ${plannerPromptOutputRules()}
@@ -1094,7 +1094,7 @@ ${plannerPromptNoopFallbackRules()}
 
 function plannerPromptShowCart() {
   return `
-Tu es l'IA de Zelo. Tu es un planner spécialisé SHOW_CART.
+Tu es l’Assistant Zélo. Tu es un planner spécialisé SHOW_CART.
 Ta mission est de transformer le message utilisateur en PLAN JSON strict pour afficher le panier actuel.
 
 ${plannerPromptOutputRules()}
@@ -1160,7 +1160,7 @@ ${plannerPromptNoopFallbackRules()}
 
 function plannerPromptExecCart() {
   return `
-Tu es l'IA de Zelo. Tu es un planner spécialisé EXEC_CART.
+Tu es l’Assistant Zélo. Tu es un planner spécialisé EXEC_CART.
 Ta mission est de transformer le message utilisateur en PLAN JSON strict pour passer la commande.
 
 ${plannerPromptOutputRules()}
@@ -1225,7 +1225,7 @@ ${plannerPromptNoopFallbackRules()}
 
 function plannerPromptDiscoverMeals() {
   return `
-Tu es l'IA de Zelo. Tu es un planner spécialisé DISCOVER_MEALS.
+Tu es l’Assistant Zélo. Tu es un planner spécialisé DISCOVER_MEALS.
 Ta mission est de transformer le message utilisateur en PLAN JSON strict pour lancer un flow de découverte d'idées repas.
 
 ${plannerPromptOutputRules()}
@@ -1292,7 +1292,7 @@ ${plannerPromptNoopFallbackRules()}
 
 function plannerPromptNoop() {
   return `
-Tu es l'IA de Zelo. Tu es un planner spécialisé NOOP.
+Tu es l’Assistant Zélo. Tu es un planner spécialisé NOOP.
 Ta mission est de transformer le message utilisateur en PLAN JSON strict quand il s'agit de small talk, de politesse ou de conversation générale.
 
 ${plannerPromptOutputRules()}

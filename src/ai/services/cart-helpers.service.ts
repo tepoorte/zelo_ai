@@ -2,9 +2,10 @@ import { searchProducts, fetchFullProduct, type Product } from "../../swissdata/
 import { matchIngredientToProduct } from "../../domain/matcher.js";
 import { getPurchaseHistory } from "../../swissdata/history.js";
 import { timeAsync, timeSync } from "../../utils/perf.js";
+import { isBasketDeliveryDateFuture } from "../../swissdata/delivery-date.js";
 
 export function formatCartFr(basket: any): string {
-  if (!basket) return "Je n’ai pas pu récupérer votre panier.";
+  if (!basket) return "Je n’ai pas pu récupérer ton panier.";
 
   const products = Array.isArray(basket.products) ? basket.products : [];
   const manualItems = Array.isArray(basket.manualItems) ? basket.manualItems : [];
@@ -12,7 +13,7 @@ export function formatCartFr(basket: any): string {
   const currency = basket.currency ?? "";
 
   const lines: string[] = [];
-  lines.push("🧺 Voici votre panier :");
+  lines.push("🧺 Voici ton panier :");
 
   if (products.length === 0 && manualItems.length === 0) {
     lines.push("• Aucun produit dans le panier pour l’instant.");
@@ -51,8 +52,12 @@ export function formatCartFr(basket: any): string {
     lines.push(`Total : ${Number(basket.totalPrice).toFixed(2)} ${currency}`);
   }
 
-  if (basket.estimatedDeliveryDate) {
-    lines.push(`Livraison estimée : ${basket.estimatedDeliveryDate}`);
+  if ((products.length > 0 || manualItems.length > 0) && basket.estimatedDeliveryDate) {
+    lines.push(
+      isBasketDeliveryDateFuture(basket.estimatedDeliveryDate)
+        ? `Livraison estimée : ${basket.estimatedDeliveryDate}`
+        : "Livraison estimée : à confirmer"
+    );
   }
 
   return lines.join("\n");

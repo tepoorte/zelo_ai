@@ -1568,6 +1568,28 @@
       box-shadow:none;
     }
 
+    @media (max-width: 1280px){
+      .topbar{
+        grid-template-columns:1fr;
+        align-items:start;
+      }
+
+      .topActions{
+        justify-content:flex-start;
+        width:100%;
+      }
+
+      .sessionPill{
+        max-width:100%;
+      }
+
+      .heroTitle{
+        max-width:720px;
+        font-size:clamp(34px, 6.4vw, 54px);
+        line-height:1.04;
+      }
+    }
+
     .actionBtn,
     .feedbackBtn,
     .ideaChip,
@@ -1687,6 +1709,102 @@
       border:1px solid #5CB135 !important;
     }
 
+    .guideBubble{
+      white-space:normal;
+      max-width:min(92%, 760px);
+    }
+
+    .welcomeGuide{
+      display:grid;
+      gap:12px;
+    }
+
+    .welcomeGuideIntro{
+      display:grid;
+      gap:4px;
+    }
+
+    .welcomeGuideIntro strong{
+      font-family:"Comfortaa", Verdana, Geneva, sans-serif;
+      font-size:17px;
+      color:var(--text);
+    }
+
+    .welcomeGuideIntro span{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.45;
+    }
+
+    .guideStep{
+      border:1px solid rgba(92, 177, 53, 0.16);
+      border-radius:14px;
+      background:#FBFCFA;
+      overflow:hidden;
+    }
+
+    .guideStep summary{
+      cursor:pointer;
+      padding:11px 13px;
+      color:#3f7e28;
+      font-weight:700;
+      list-style-position:inside;
+    }
+
+    .guideStep summary::marker{
+      color:var(--success);
+    }
+
+    .guideStepBody{
+      padding:0 13px 13px;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.55;
+    }
+
+    .guideStepBody p{
+      margin:8px 0;
+    }
+
+    .guideRoot > summary{
+      background:rgba(92, 177, 53, 0.08);
+    }
+
+    .guideRootBody{
+      display:grid;
+      gap:8px;
+    }
+
+    .guideNested{
+      background:#fff;
+    }
+
+    .guideNested summary{
+      padding:10px 12px;
+      color:#496D3C;
+      font-size:13px;
+    }
+
+    .guideNested .guideStepBody{
+      padding:0 12px 12px;
+    }
+
+    .guideExamples{
+      display:flex;
+      flex-wrap:wrap;
+      gap:7px;
+      margin-top:8px;
+    }
+
+    .guideExamples span{
+      padding:6px 9px;
+      border-radius:999px;
+      color:#3f7e28;
+      background:rgba(92, 177, 53, 0.08);
+      border:1px solid rgba(92, 177, 53, 0.16);
+      font-size:12px;
+    }
+
     #input,
     .composer input,
     .field input{
@@ -1796,10 +1914,13 @@
 
       .topbar{
         border-radius:20px;
+        gap:18px;
       }
 
       .heroTitle{
-        font-size:34px;
+        max-width:100%;
+        font-size:clamp(30px, 10vw, 38px);
+        line-height:1.08;
       }
     }
   </style>
@@ -1842,7 +1963,7 @@
       </div>
 
       <div class="authActions">
-        <button id="loginBtn" class="primaryBtn magnetic" onclick="login()">Se connecter</button>
+        <button id="loginBtn" class="primaryBtn magnetic" onclick="login()">Connecte-toi</button>
       </div>
 
       <div id="authStatus" class="statusLine"></div>
@@ -1878,7 +1999,7 @@
           <span class="modeTag">Vue complète</span>
           <h3 class="modeOptionTitle">Assistant Zélo complet</h3>
           <p class="modeOptionText">
-            Une interface plus détaillée: suggestions, lecture de la demande, panier et corrections visibles.
+            Une interface plus détaillée : suggestions, lecture de la demande, panier et corrections visibles.
           </p>
           <ul class="modeList">
             <li>Affiche le contexte utile en direct.</li>
@@ -1906,7 +2027,7 @@
         <div class="eyebrow"><span class="eyebrowDot"></span> Assistant Zélo</div>
         <h1 class="heroTitle">Que veux-tu commander ?</h1>
         <p class="heroSub">
-          Écris simplement ce dont tu as besoin: produits, panier ou idées repas.
+          Écris simplement ce dont tu as besoin : produits, panier ou idées repas.
         </p>
       </div>
 
@@ -2002,7 +2123,7 @@
                   <span class="predictionLabel">Résumé</span>
                   <strong class="predictionValue small" id="predictionCanonical">Réponse générale</strong>
                   <span class="predictionNote" id="predictionPlannerTarget">
-                    Cible: commande
+                    Cible : commande
                   </span>
                 </div>
 
@@ -2202,7 +2323,8 @@
       unknownSearching: false,
       unknownDraftProducts: [],
       unknownBaseRecipe: false,
-      unknownSaving: false
+      unknownSaving: false,
+      matchSaving: false
     };
 
     const intentPalette = {
@@ -2297,6 +2419,7 @@
       buildMealFeedbackState.unknownDraftProducts = [];
       buildMealFeedbackState.unknownBaseRecipe = false;
       buildMealFeedbackState.unknownSaving = false;
+      buildMealFeedbackState.matchSaving = false;
     }
 
     function hideBuildMealFeedback(reset = true){
@@ -2317,22 +2440,22 @@
 
     function getMealIngredientStateLabel(ingredient){
       if (ingredient.missing) {
-        return ingredient.optional ? "Ingredient optionnel non resolu" : "Ingredient a corriger";
+        return ingredient.optional ? "Ingrédient optionnel non résolu" : "Ingrédient à corriger";
       }
       if (ingredient.resolvedProductName) {
-        return "Produit actuellement utilise pour cette recette";
+        return "Produit actuellement utilisé pour cette recette";
       }
       if (ingredient.preferredProductName) {
-        return "Produit prefere memorise dans le training";
+        return "Produit préféré mémorisé dans le training";
       }
-      return "Aucune preference enregistree";
+      return "Aucune préférence enregistrée";
     }
 
     function productToUnknownDraft(product, source){
       return {
         productId: String(product.productId || product.id || product.preferredProductId || ""),
         productName: product.productName || product.name || product.preferredProductName || product.label || "Produit",
-        label: product.label || product.productName || product.name || product.preferredProductName || "ingredient",
+        label: product.label || product.productName || product.name || product.preferredProductName || "ingrédient",
         qty: Number(product.qty || 1),
         unit: product.unit || "piece",
         role: product.role || "principal",
@@ -2366,7 +2489,7 @@
     function addUnknownRecipeProduct(product){
       const item = productToUnknownDraft(product, "manual");
       if (!item.productId) {
-        setMealFeedbackStatus("Produit catalogue invalide: impossible de l'ajouter a la recette.");
+        setMealFeedbackStatus("Produit catalogue invalide : impossible de l’ajouter à la recette.");
         return;
       }
 
@@ -2375,7 +2498,7 @@
       if (!exists) {
         buildMealFeedbackState.unknownDraftProducts.push(item);
       }
-      setMealFeedbackStatus(`${item.productName} ajoute a la recette en training.`);
+      setMealFeedbackStatus(`${item.productName} ajouté à la recette en training.`);
       renderUnknownBuildMealRecipe();
     }
 
@@ -2387,7 +2510,7 @@
     async function searchUnknownRecipeProducts(){
       const query = String(buildMealFeedbackState.unknownSearchQuery || "").trim();
       if (!query) {
-        setMealFeedbackStatus("Entre un produit du catalogue a chercher pour cette recette.");
+        setMealFeedbackStatus("Entre un produit du catalogue à chercher pour cette recette.");
         return;
       }
 
@@ -2404,10 +2527,10 @@
         setMealFeedbackStatus(
           buildMealFeedbackState.unknownSearchResults.length
             ? "Choisis les produits catalogue qui composent cette recette."
-            : "Aucun produit catalogue trouve pour cette recherche."
+            : "Aucun produit catalogue trouvé pour cette recherche."
         );
       }catch(error){
-        setMealFeedbackStatus("Recherche catalogue impossible: " + (error?.message || error));
+        setMealFeedbackStatus("Recherche catalogue impossible : " + (error?.message || error));
       }finally{
         buildMealFeedbackState.unknownSearching = false;
         renderUnknownBuildMealRecipe();
@@ -2422,7 +2545,7 @@
         return;
       }
       if (!products.length) {
-        setMealFeedbackStatus("Ajoute au moins un produit catalogue avant d'enregistrer cette recette.");
+        setMealFeedbackStatus("Ajoute au moins un produit catalogue avant d’enregistrer cette recette.");
         return;
       }
 
@@ -2461,13 +2584,13 @@
           }))
         });
 
-        setMealFeedbackStatus(`Recette « ${unknown.suggestedLabel} » enregistree dans le training. Elle peut maintenant etre relancee.`);
+        setMealFeedbackStatus(`Recette « ${unknown.suggestedLabel} » enregistrée dans le training. Elle peut maintenant être relancée.`);
         if (replayAfterSave) {
           handedOffToReplay = true;
           await sendText(buildMealFeedbackState.requestText || unknown.text);
         }
       }catch(error){
-        setMealFeedbackStatus("Impossible d'enregistrer cette recette: " + (error?.message || error));
+        setMealFeedbackStatus("Impossible d’enregistrer cette recette : " + (error?.message || error));
       }finally{
         buildMealFeedbackState.unknownSaving = false;
         if (!handedOffToReplay) {
@@ -2501,11 +2624,11 @@
         buildMealFeedbackState.searchResults[ingredientKey] = Array.isArray(data.products) ? data.products : [];
         setMealFeedbackStatus(
           buildMealFeedbackState.searchResults[ingredientKey].length
-            ? "Choisis le bon produit catalogue pour cet ingredient."
+            ? "Choisis le bon produit catalogue pour cet ingrédient."
             : "Aucun produit catalogue convaincant pour cette recherche."
         );
       }catch(error){
-        setMealFeedbackStatus("Recherche catalogue impossible: " + (error?.message || error));
+        setMealFeedbackStatus("Recherche catalogue impossible : " + (error?.message || error));
       }finally{
         buildMealFeedbackState.searchingKey = "";
         renderBuildMealFeedback();
@@ -2539,7 +2662,7 @@
       const context = buildMealFeedbackState.context;
       const ingredient = getBuildMealIngredientContext(ingredientKey);
       if (!context?.mealKey || !ingredient || !product?.id) {
-        setMealFeedbackStatus("Contexte recette incomplet: impossible d'enregistrer la correction.");
+        setMealFeedbackStatus("Contexte recette incomplet : impossible d’enregistrer la correction.");
         return;
       }
 
@@ -2551,7 +2674,7 @@
           productId: String(product.id),
           productName: product.name,
           userRef: USER_REF,
-          note: "Correction recette depuis l'interface avancée"
+          note: "Correction recette depuis l’interface avancée"
         });
 
         ingredient.preferredProductId = String(product.id);
@@ -2561,10 +2684,10 @@
         ingredient.missing = false;
         buildMealFeedbackState.openIngredientKey = null;
         delete buildMealFeedbackState.searchResults[ingredientKey];
-        setMealFeedbackStatus(`Correction memorisee pour ${ingredient.label}. Relance la recette pour valider le rendu complet.`);
+        setMealFeedbackStatus(`Correction mémorisée pour ${ingredient.label}. Relance la recette pour valider le rendu complet.`);
         renderBuildMealFeedback();
       }catch(error){
-        setMealFeedbackStatus("Impossible d'enregistrer cette preference: " + (error?.message || error));
+        setMealFeedbackStatus("Impossible d’enregistrer cette préférence : " + (error?.message || error));
       }
     }
 
@@ -2575,7 +2698,7 @@
       const currentProductName = ingredient?.resolvedProductName || ingredient?.preferredProductName;
 
       if (!context?.mealKey || !ingredient || (!currentProductId && !currentProductName)) {
-        setMealFeedbackStatus("Aucun produit actuel a bannir pour cet ingredient.");
+        setMealFeedbackStatus("Aucun produit actuel à bannir pour cet ingrédient.");
         return;
       }
 
@@ -2587,7 +2710,7 @@
           productId: currentProductId,
           productName: currentProductName,
           userRef: USER_REF,
-          note: "Produit incorrect signale depuis l'interface avancée"
+          note: "Produit incorrect signalé depuis l’interface avancée"
         });
 
         if (ingredient.preferredProductId === currentProductId) ingredient.preferredProductId = undefined;
@@ -2601,7 +2724,67 @@
         renderBuildMealFeedback();
         await searchBuildMealProducts(ingredientKey);
       }catch(error){
-        setMealFeedbackStatus("Impossible de bannir ce produit: " + (error?.message || error));
+        setMealFeedbackStatus("Impossible de bannir ce produit : " + (error?.message || error));
+      }
+    }
+
+    async function handleBuildMealConfirmRecipe(){
+      const context = buildMealFeedbackState.context;
+      if (!context?.mealKey || !buildMealFeedbackState.requestText) {
+        setMealFeedbackStatus("Contexte recette incomplet : impossible de confirmer cette recette.");
+        return;
+      }
+
+      buildMealFeedbackState.matchSaving = true;
+      renderBuildMealFeedback();
+      try{
+        await postJson("/ai/build-meal-match-feedback", {
+          mealKey: context.mealKey,
+          text: buildMealFeedbackState.requestText,
+          userRef: USER_REF,
+          action: "confirm",
+          servings: context.servings || 2
+        });
+        setMealFeedbackStatus("Recette confirmée : cette formulation peut maintenant servir au training.");
+      }catch(error){
+        setMealFeedbackStatus("Impossible de confirmer cette recette : " + (error?.message || error));
+      }finally{
+        buildMealFeedbackState.matchSaving = false;
+        renderBuildMealFeedback();
+      }
+    }
+
+    async function handleBuildMealRejectRecipe(){
+      const context = buildMealFeedbackState.context;
+      if (!context?.mealKey || !buildMealFeedbackState.requestText) {
+        setMealFeedbackStatus("Contexte recette incomplet : impossible de refuser cette recette.");
+        return;
+      }
+
+      buildMealFeedbackState.matchSaving = true;
+      renderBuildMealFeedback();
+      let handedOffToUnknown = false;
+      try{
+        const data = await postJson("/ai/build-meal-match-feedback", {
+          mealKey: context.mealKey,
+          text: buildMealFeedbackState.requestText,
+          userRef: USER_REF,
+          action: "reject",
+          servings: context.servings || 2,
+          reason: "Recette incorrecte signalée depuis l’interface avancée"
+        });
+        setMealFeedbackStatus("Match recette refusé. Tu peux maintenant créer la bonne recette depuis le catalogue.");
+        if (data?.unknownRecipe?.suggestedLabel) {
+          handedOffToUnknown = true;
+          activateBuildMealUnknown(data.unknownRecipe, buildMealFeedbackState.requestText);
+        }
+      }catch(error){
+        setMealFeedbackStatus("Impossible de refuser cette recette : " + (error?.message || error));
+      }finally{
+        buildMealFeedbackState.matchSaving = false;
+        if (!handedOffToUnknown) {
+          renderBuildMealFeedback();
+        }
       }
     }
 
@@ -2613,10 +2796,10 @@
       }
 
       mealFeedbackPanel.classList.remove("hidden");
-      mealFeedbackReplay.textContent = buildMealFeedbackState.unknownSaving ? "Sauvegarde..." : "Enregistrer + tester";
+      mealFeedbackReplay.textContent = buildMealFeedbackState.unknownSaving ? "Sauvegarde…" : "Enregistrer + tester";
       mealFeedbackTitle.textContent = `Créer « ${unknown.suggestedLabel} »`;
       mealFeedbackPrompt.textContent =
-        "Cette recette n'existe pas encore dans le training. Ajoute uniquement des produits réels du catalogue, puis enregistre-la.";
+        "Cette recette n’existe pas encore dans le training. Ajoute uniquement des produits réels du catalogue, puis enregistre-la.";
       mealFeedbackList.innerHTML = "";
 
       if (!unknown.draft?.ingredients?.length && unknown.suggestedFamily) {
@@ -2625,10 +2808,10 @@
         familyInfo.innerHTML = `
           <div class="mealIngredientTop">
             <div class="mealIngredientTitle">
-              <strong>Famille proposée: ${escapeHtml(unknown.suggestedFamily)}</strong>
+              <strong>Famille proposée : ${escapeHtml(unknown.suggestedFamily)}</strong>
               <span class="mealIngredientMeta">
-                Source: ${escapeHtml(unknown.familySource || "rule")} ·
-                Confiance: ${Math.round(Number(unknown.familyConfidence || 0) * 100)}%
+                Source : ${escapeHtml(unknown.familySource || "rule")} ·
+                Confiance : ${Math.round(Number(unknown.familyConfidence || 0) * 100)}%
               </span>
             </div>
           </div>
@@ -2644,9 +2827,9 @@
             <div class="mealIngredientTitle">
               <strong>Proposition préparée depuis les recettes validées</strong>
               <span class="mealIngredientMeta">
-                Famille: ${escapeHtml(unknown.draft.family || unknown.suggestedFamily || "non détectée")} ·
-                Base: ${escapeHtml(unknown.draft.baseMealLabel || "aucune")} ·
-                Confiance: ${Math.round(Number(unknown.draft.confidence || 0) * 100)}%
+                Famille : ${escapeHtml(unknown.draft.family || unknown.suggestedFamily || "non détectée")} ·
+                Base : ${escapeHtml(unknown.draft.baseMealLabel || "aucune")} ·
+                Confiance : ${Math.round(Number(unknown.draft.confidence || 0) * 100)}%
               </span>
             </div>
           </div>
@@ -2662,7 +2845,7 @@
           <div class="mealIngredientTitle">
             <strong>Produits choisis pour cette recette</strong>
             <span class="mealIngredientMeta">
-              ${selectedItems.length ? `${selectedItems.length} produit(s) catalogue` : "Aucun produit choisi pour l'instant"}
+              ${selectedItems.length ? `${selectedItems.length} produit(s) catalogue` : "Aucun produit choisi pour l’instant"}
             </span>
           </div>
         </div>
@@ -2678,7 +2861,7 @@
         text.className = "mealIngredientResultText";
         text.innerHTML = `
           <strong>${escapeHtml(item.productName)}</strong>
-          <span class="mealIngredientResultMeta">${escapeHtml(item.label)} · ${escapeHtml(item.slot || "ingredient")}</span>
+          <span class="mealIngredientResultMeta">${escapeHtml(item.label)} · ${escapeHtml(item.slot || "ingrédient")}</span>
         `;
 
         const removeBtn = document.createElement("button");
@@ -2729,7 +2912,7 @@
       input.className = "mealIngredientSearchInput";
       input.type = "text";
       input.value = buildMealFeedbackState.unknownSearchQuery;
-      input.placeholder = "Chercher un produit catalogue: jambon, mozzarella, pâte...";
+      input.placeholder = "Chercher un produit catalogue : jambon, mozzarella, pâte…";
       input.oninput = (event) => {
         buildMealFeedbackState.unknownSearchQuery = event.target.value;
       };
@@ -2742,7 +2925,7 @@
       const searchBtn = document.createElement("button");
       searchBtn.type = "button";
       searchBtn.className = "feedbackBtn magnetic";
-      searchBtn.textContent = buildMealFeedbackState.unknownSearching ? "Recherche..." : "Chercher";
+      searchBtn.textContent = buildMealFeedbackState.unknownSearching ? "Recherche…" : "Chercher";
       searchBtn.disabled = buildMealFeedbackState.unknownSearching;
       searchBtn.onclick = searchUnknownRecipeProducts;
 
@@ -2793,7 +2976,7 @@
       const saveBtn = document.createElement("button");
       saveBtn.type = "button";
       saveBtn.className = "feedbackBtn magnetic is-positive";
-      saveBtn.textContent = buildMealFeedbackState.unknownSaving ? "Sauvegarde..." : "Enregistrer la recette";
+      saveBtn.textContent = buildMealFeedbackState.unknownSaving ? "Sauvegarde…" : "Enregistrer la recette";
       saveBtn.disabled = buildMealFeedbackState.unknownSaving;
       saveBtn.onclick = () => saveUnknownBuildMealRecipe(false);
 
@@ -2826,8 +3009,43 @@
       mealFeedbackReplay.textContent = "Relancer";
       mealFeedbackTitle.textContent = `Ajuster « ${context.mealLabel} »`;
       mealFeedbackPrompt.textContent =
-        "Si un ingredient n'est pas bon, choisis le bon produit du catalogue. Le training sera corrige pour les prochains essais.";
+        "Si un ingrédient n’est pas bon, choisis le bon produit du catalogue. Le training sera corrigé pour les prochains essais.";
       mealFeedbackList.innerHTML = "";
+
+      const recipeCard = document.createElement("div");
+      recipeCard.className = "mealIngredientCard";
+      recipeCard.innerHTML = `
+        <div class="mealIngredientTop">
+          <div class="mealIngredientTitle">
+            <strong>Cette recette est-elle la bonne ?</strong>
+            <span class="mealIngredientMeta">
+              Demande : ${escapeHtml(buildMealFeedbackState.requestText || "recette récente")}
+            </span>
+          </div>
+        </div>
+      `;
+
+      const recipeActions = document.createElement("div");
+      recipeActions.className = "feedbackActions";
+
+      const confirmRecipeBtn = document.createElement("button");
+      confirmRecipeBtn.type = "button";
+      confirmRecipeBtn.className = "feedbackBtn magnetic is-positive";
+      confirmRecipeBtn.textContent = buildMealFeedbackState.matchSaving ? "Mémoire…" : "Confirmer recette";
+      confirmRecipeBtn.disabled = buildMealFeedbackState.matchSaving;
+      confirmRecipeBtn.onclick = handleBuildMealConfirmRecipe;
+
+      const rejectRecipeBtn = document.createElement("button");
+      rejectRecipeBtn.type = "button";
+      rejectRecipeBtn.className = "feedbackBtn magnetic is-negative";
+      rejectRecipeBtn.textContent = buildMealFeedbackState.matchSaving ? "Mémoire…" : "Mauvaise recette";
+      rejectRecipeBtn.disabled = buildMealFeedbackState.matchSaving;
+      rejectRecipeBtn.onclick = handleBuildMealRejectRecipe;
+
+      recipeActions.appendChild(confirmRecipeBtn);
+      recipeActions.appendChild(rejectRecipeBtn);
+      recipeCard.appendChild(recipeActions);
+      mealFeedbackList.appendChild(recipeCard);
 
       context.ingredients.forEach((ingredient) => {
         const card = document.createElement("div");
@@ -2841,7 +3059,7 @@
         title.innerHTML = `
           <strong>${escapeHtml(ingredient.label)}</strong>
           <span class="mealIngredientMeta">
-            ${escapeHtml(ingredient.role)} · ${ingredient.qty} ${escapeHtml(ingredient.unit)} · ${ingredient.isCore ? "coeur de recette" : "optionnel"}
+            ${escapeHtml(ingredient.role)} · ${ingredient.qty} ${escapeHtml(ingredient.unit)} · ${ingredient.isCore ? "cœur de recette" : "optionnel"}
           </span>
         `;
 
@@ -2849,7 +3067,7 @@
         const stateClass = ingredient.missing ? "mealIngredientState is-missing" : "mealIngredientState";
         product.className = "mealIngredientProduct";
         product.innerHTML = `
-          <strong>${escapeHtml(ingredient.resolvedProductName || ingredient.preferredProductName || "Aucun produit lie")}</strong>
+          <strong>${escapeHtml(ingredient.resolvedProductName || ingredient.preferredProductName || "Aucun produit lié")}</strong>
           <span class="${stateClass}">${escapeHtml(getMealIngredientStateLabel(ingredient))}</span>
         `;
 
@@ -2872,7 +3090,7 @@
           const banBtn = document.createElement("button");
           banBtn.type = "button";
           banBtn.className = "feedbackBtn magnetic is-negative";
-          banBtn.textContent = "Bannir l'actuel";
+          banBtn.textContent = "Bannir l’actuel";
           banBtn.onclick = () => handleBuildMealBanCurrentProduct(ingredient.key);
           actions.appendChild(banBtn);
         }
@@ -2904,7 +3122,7 @@
           searchBtn.type = "button";
           searchBtn.className = "feedbackBtn magnetic";
           searchBtn.textContent =
-            buildMealFeedbackState.searchingKey === ingredient.key ? "Recherche..." : "Chercher";
+            buildMealFeedbackState.searchingKey === ingredient.key ? "Recherche…" : "Chercher";
           searchBtn.disabled = buildMealFeedbackState.searchingKey === ingredient.key;
           searchBtn.onclick = () => searchBuildMealProducts(ingredient.key);
 
@@ -2943,7 +3161,7 @@
           if (!resultItems.length && buildMealFeedbackState.searchingKey !== ingredient.key) {
             const empty = document.createElement("div");
             empty.className = "mealIngredientResultMeta";
-            empty.textContent = "Aucun resultat charge pour l'instant. Lance une recherche ou ajuste le terme.";
+            empty.textContent = "Aucun résultat chargé pour l’instant. Lance une recherche ou ajuste le terme.";
             results.appendChild(empty);
           }
 
@@ -2986,8 +3204,8 @@
       mealFeedbackPanel.classList.remove("hidden");
       setMealFeedbackStatus(
         unknown.draft?.ingredients?.length
-          ? "Draft prepare depuis les recettes deja apprises. Verifie puis enregistre."
-          : "Recette inconnue. Ajoute les produits catalogue pour l'entrainer."
+          ? "Draft préparé depuis les recettes déjà apprises. Vérifie puis enregistre."
+          : "Recette inconnue. Ajoute les produits catalogue pour l’entraîner."
       );
       renderUnknownBuildMealRecipe();
     }
@@ -2999,10 +3217,10 @@
       }
 
       if (!buildMealFeedbackState.requestText) {
-        setMealFeedbackStatus("Aucune recette recente a relancer.");
+        setMealFeedbackStatus("Aucune recette récente à relancer.");
         return;
       }
-      setMealFeedbackStatus("Relance de la recette en cours...");
+      setMealFeedbackStatus("Relance de la recette en cours…");
       await sendText(buildMealFeedbackState.requestText);
     }
 
@@ -3103,7 +3321,7 @@
       await rebuildPredictor();
       feedbackChooser.classList.add("hidden");
       applyIntentState(text);
-      setFeedbackStatus("Apprentissage serveur mis à jour: cette prédiction est maintenant renforcée pour tout le monde.");
+      setFeedbackStatus("Apprentissage serveur mis à jour : cette prédiction est maintenant renforcée pour tout le monde.");
     }
 
     function showFeedbackChooser(){
@@ -3113,7 +3331,7 @@
       }
 
       feedbackChooser.classList.remove("hidden");
-      setFeedbackStatus("Choisis l'action correcte pour apprendre de cette phrase.");
+      setFeedbackStatus("Choisis l’action correcte pour apprendre de cette phrase.");
     }
 
     async function handleFeedbackCorrection(correctKey){
@@ -3121,7 +3339,7 @@
       const prediction = predictorState.latestPrediction;
 
       if (!canCollectFeedback(text) || !correctKey) {
-        setFeedbackStatus("Impossible d'enregistrer cette correction pour l'instant.");
+        setFeedbackStatus("Impossible d’enregistrer cette correction pour l’instant.");
         return;
       }
 
@@ -3137,17 +3355,17 @@
       feedbackChooser.classList.add("hidden");
       applyIntentState(text);
       const label = FEEDBACK_LABELS[correctKey] || correctKey;
-      setFeedbackStatus(`Correction memorisee cote serveur: cette phrase renforcera maintenant l'action ${label} pour tout le monde.`);
+      setFeedbackStatus(`Correction mémorisée côté serveur : cette phrase renforcera maintenant l’action ${label} pour tout le monde.`);
     }
 
     function exportFeedbackTraining(){
       if (!predictorState.training) {
-        setFeedbackStatus("Le training n'est pas encore charge.");
+        setFeedbackStatus("Le training n’est pas encore chargé.");
         return;
       }
 
       window.ZeloIntentFeedback.downloadTraining(predictorState.training, "intent-training-enriched.json");
-      setFeedbackStatus("Export du training enrichi lance.");
+      setFeedbackStatus("Export du training enrichi lancé.");
     }
 
     function addMessage(text, who){
@@ -3157,6 +3375,96 @@
       const bubble = document.createElement("div");
       bubble.className = "bubble " + (who === "user" ? "userBubble" : "aiBubble");
       bubble.textContent = text;
+
+      row.appendChild(bubble);
+      messages.appendChild(row);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function addWelcomeGuideMessage(){
+      const row = document.createElement("div");
+      row.className = "row aiRow";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble aiBubble guideBubble";
+      bubble.innerHTML = `
+        <div class="welcomeGuide">
+          <div class="welcomeGuideIntro">
+            <strong>Salut ! Que veux-tu commander aujourd’hui ?</strong>
+            <span>Écris naturellement ce dont tu as besoin. Si tu veux tester l’app, ouvre le petit guide ci-dessous.</span>
+          </div>
+
+          <details class="guideStep guideRoot">
+            <summary>Guide de test des fonctionnalités</summary>
+            <div class="guideStepBody guideRootBody">
+              <p>Si tu veux essayer les fonctions principales, ouvre uniquement les parties qui t’intéressent.</p>
+
+              <details class="guideStep guideNested">
+                <summary>Passer en vue complète</summary>
+                <div class="guideStepBody">
+                  <p>La vue complète affiche l’intention détectée, le feedback, les suggestions, ton panier et les outils pour corriger ou créer une recette.</p>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Ajouter des produits au panier</summary>
+                <div class="guideStepBody">
+                  <p>Tu peux demander un ou plusieurs produits du catalogue avec des formulations simples comme « ajoute », « mets » ou « je te prends ».</p>
+                  <div class="guideExamples">
+                    <span>ajoute 1 pain</span>
+                    <span>mets 6 œufs</span>
+                    <span>ajoute 1 pain, 6 œufs et 2 yogourts</span>
+                  </div>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Corriger l’intention si besoin</summary>
+                <div class="guideStepBody">
+                  <p>En vue complète, si l’intention détectée avant l’envoi n’est pas la bonne, utilise le feedback. La prochaine fois, la même formulation sera mieux reconnue.</p>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Préparer une recette</summary>
+                <div class="guideStepBody">
+                  <p>Pour tester build_meal, écris « de quoi faire… » suivi d’une recette. Les recettes déjà validées incluent hot dog, carbonara, hamburger, spaghetti bolognese, maccheroni carbonara, filet de perche et pomme de terre, salade césar et salade de riz.</p>
+                  <div class="guideExamples">
+                    <span>de quoi faire une carbonara</span>
+                    <span>de quoi faire une salade de riz</span>
+                  </div>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Créer une recette inconnue</summary>
+                <div class="guideStepBody">
+                  <p>Si une recette n’existe pas encore, crée-la depuis la vue complète avec des produits réels du catalogue. Plus les recettes sont validées, plus les prochains drafts deviennent utiles.</p>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Voir, vider ou modifier ton panier</summary>
+                <div class="guideStepBody">
+                  <p>Tu peux consulter le panier à tout moment, le vider entièrement, ou supprimer un produit précis.</p>
+                  <div class="guideExamples">
+                    <span>montre mon panier</span>
+                    <span>vide mon panier</span>
+                    <span>supprime le pain</span>
+                  </div>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Découvrir des idées ou passer commande</summary>
+                <div class="guideStepBody">
+                  <p>Demande des idées avec « qu’est-ce que tu me proposes aujourd’hui ? ». Pour finaliser, écris « passe la commande ». Pour l’instant, la commande part sur la prochaine date disponible.</p>
+                </div>
+              </details>
+            </div>
+          </details>
+        </div>
+      `;
 
       row.appendChild(bubble);
       messages.appendChild(row);
@@ -3387,7 +3695,7 @@
       return {
         signalValue: "Réponse naturelle",
         signalMeta: "Le texte ressemble à une conversation générale.",
-        narrative: "Pas d’action panier évidente: l’assistant reste disponible.",
+        narrative: "Pas d’action panier évidente : l’assistant reste disponible.",
         lead: "Conversation détectée. On reste en mode fluide.",
         hint: "Essaie aussi une question générale, une formule sociale ou une curiosité légère.",
         sendEyebrow: "Dialogue",
@@ -3487,6 +3795,30 @@
       return "rgba(255,255,255,0.72)";
     }
 
+    function parseBasketDeliveryDate(value){
+      const raw = String(value || "").trim();
+      if(!raw) return null;
+
+      let match = raw.match(/^(\d{2})-(\d{2})-(\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
+      if(match){
+        const date = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), Number(match[4] || 0), Number(match[5] || 0), 0, 0);
+        return Number.isNaN(date.getTime()) ? null : date;
+      }
+
+      match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?/);
+      if(match){
+        const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4] || 0), Number(match[5] || 0), 0, 0);
+        return Number.isNaN(date.getTime()) ? null : date;
+      }
+
+      return null;
+    }
+
+    function isBasketDeliveryDateFuture(value){
+      const date = parseBasketDeliveryDate(value);
+      return !!date && date.getTime() > Date.now();
+    }
+
     function renderBasket(basket){
       if(!basket){
         basketContent.innerHTML = `<div class="basketEmpty">Impossible de charger le panier.</div>`;
@@ -3499,6 +3831,10 @@
       const products = Array.isArray(basket.products) ? basket.products : [];
       const fees = Array.isArray(basket.fees) ? basket.fees : [];
       const currency = basket.currency || "";
+      const hasItems = products.length > 0;
+      const deliveryLabel = basket.estimatedDeliveryDate
+        ? (isBasketDeliveryDateFuture(basket.estimatedDeliveryDate) ? String(basket.estimatedDeliveryDate) : "À confirmer")
+        : "";
 
       let html = "";
 
@@ -3566,11 +3902,11 @@
         `;
       }
 
-      if(basket.estimatedDeliveryDate){
+      if(hasItems && deliveryLabel){
         html += `
           <div class="basketRow">
             <span class="basketMuted">Livraison</span>
-            <span>${escapeHtml(String(basket.estimatedDeliveryDate))}</span>
+            <span>${escapeHtml(deliveryLabel)}</span>
           </div>
         `;
       }
@@ -3584,8 +3920,8 @@
         : basket.totalPrice != null
           ? Number(basket.totalPrice).toFixed(2)
           : "0.00";
-      statDelivery.textContent = basket.estimatedDeliveryDate
-        ? String(basket.estimatedDeliveryDate).slice(0, 10)
+      statDelivery.textContent = hasItems && deliveryLabel
+        ? deliveryLabel.slice(0, 10)
         : "—";
     }
 
@@ -3620,7 +3956,7 @@
 
       loginBtn.disabled = true;
       loginBtn.textContent = "Connexion en cours…";
-      setAuthStatus("Connexion en cours...");
+      setAuthStatus("Connexion en cours…");
 
       try{
         const res = await fetch("/ai/login", {
@@ -3645,7 +3981,7 @@
         showModeChooser();
 
         if(messages.children.length === 0){
-          addMessage("Bonjour. Que veux-tu commander aujourd’hui ?", "ai");
+          addWelcomeGuideMessage();
         }
 
         await refreshBasket();
@@ -3653,7 +3989,7 @@
         setAuthStatus("Erreur: " + (e?.message || e), "error");
       }finally{
         loginBtn.disabled = false;
-        loginBtn.textContent = "Se connecter";
+        loginBtn.textContent = "Connecte-toi";
       }
     }
 
@@ -3922,7 +4258,7 @@
       const redirectedToSimple = applySavedModeOnRestore();
       if (!redirectedToSimple) {
         if(messages.children.length === 0){
-          addMessage("Bonjour. Que veux-tu commander aujourd’hui ?", "ai");
+          addWelcomeGuideMessage();
         }
         refreshBasket();
         setTimeout(() => input?.focus(), 40);

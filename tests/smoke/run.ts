@@ -114,7 +114,7 @@ const STEPS: Step[] = [
     name: "Reset basket",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -130,7 +130,7 @@ const STEPS: Step[] = [
     name: "Show cart",
     text: "montre-moi mon panier",
     hint: HINTS.show_cart,
-    expectMessageIncludes: ["Voici votre panier", "A. Lard de Begnins"],
+    expectMessageIncludes: ["Voici ton panier", "A. Lard de Begnins"],
     basketExpectation: {
       contains: [{ name: "A. Lard de Begnins", qty: 1 }],
     },
@@ -183,7 +183,7 @@ const STEPS: Step[] = [
     name: "Reset basket before Nadia order",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -202,7 +202,7 @@ const STEPS: Step[] = [
     name: "Reset basket before Oriana order",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -225,7 +225,7 @@ const STEPS: Step[] = [
     name: "Reset basket before milk and stracciatella order",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -244,7 +244,7 @@ const STEPS: Step[] = [
     name: "Reset basket before mixed long order",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -268,14 +268,14 @@ const STEPS: Step[] = [
     name: "Reset basket before panier budget 50 case",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
     name: "Reset basket before hot dog meal",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -296,7 +296,7 @@ const STEPS: Step[] = [
     name: "Reset basket before carbonara meal",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -318,7 +318,7 @@ const STEPS: Step[] = [
     name: "Reset basket before hamburger meal",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -339,7 +339,7 @@ const STEPS: Step[] = [
     name: "Reset basket before spaghetti bolognese meal",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -360,7 +360,7 @@ const STEPS: Step[] = [
     name: "Reset basket before maccheroni carbonara meal",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -382,7 +382,7 @@ const STEPS: Step[] = [
     name: "Reset basket before perche and potato meal",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -403,7 +403,7 @@ const STEPS: Step[] = [
     name: "Reset basket before salade cesar meal",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -427,7 +427,7 @@ const STEPS: Step[] = [
     name: "Reset basket before salade de riz meal",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
   {
@@ -477,7 +477,7 @@ const STEPS: Step[] = [
     name: "Final clear cart",
     text: "vide mon panier",
     hint: HINTS.clear_cart,
-    expectMessageIncludes: ["vide votre panier"],
+    expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
   },
 ];

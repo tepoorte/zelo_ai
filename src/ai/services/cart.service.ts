@@ -1,6 +1,7 @@
 import { getPending, setPending, clearPending } from "../pending.js";
 import {
   getCurrentBasket,
+  ensureCurrentBasketFutureDelivery,
   addProductToBasket,
   clearCurrentBasket,
   placeCurrentBasketOrder,
@@ -187,7 +188,7 @@ export async function tryResolvePendingOptions(
 
   const updated = await timeAsync(
     "pending.get_current_basket_after_add",
-    async () => await getCurrentBasket(userRef)
+    async () => await ensureCurrentBasketFutureDelivery(userRef)
   );
 
   const baseMessage =
@@ -325,7 +326,7 @@ export async function handleAddToCartAction(
 
   const updated = await timeAsync(
     "add.get_current_basket_after_items",
-    async () => await getCurrentBasket(targetUserRef)
+    async () => await ensureCurrentBasketFutureDelivery(targetUserRef)
   );
 
   console.log("[ADD_TO_CART RESULT]", JSON.stringify({
@@ -344,7 +345,7 @@ export async function handleAddToCartAction(
 }
 
 export async function handleShowCartAction(userRef: string, action?: { userRef?: string }) {
-  const basket = await getCurrentBasket(action?.userRef ?? userRef);
+  const basket = await ensureCurrentBasketFutureDelivery(action?.userRef ?? userRef);
   return basket;
 }
 
@@ -370,7 +371,7 @@ export async function handleClearCartAction(userRef: string, action?: { userRef?
       );
     }
 
-    const updated = await getCurrentBasket(targetUserRef);
+    const updated = await ensureCurrentBasketFutureDelivery(targetUserRef);
     return {
       ok: true,
       mode: "partial" as const,

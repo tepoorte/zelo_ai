@@ -58,7 +58,7 @@ async function formatBuildMealResult(
   }
 
   const lines = Array.isArray(mealResult.added)
-    ? mealResult.added.map((it: { productName?: string; ingredient?: string }) => `— ${it.productName ?? it.ingredient ?? "Produit"}`)
+    ? mealResult.added.map((it: { productName?: string; ingredient?: string }) => `• ${it.productName ?? it.ingredient ?? "Produit"}`)
     : [];
   const missingLines = Array.isArray(mealResult.missing)
     ? mealResult.missing.map((it: { ingredient?: string }) => `- ${it.ingredient ?? "Ingrédient"}`)
@@ -277,7 +277,7 @@ if (action.type === "discover_meal_ideas") {
     if (!removedItems.length) {
       return {
         message:
-          `Je n’ai pas trouvé clairement l’article à retirer dans votre panier.\n\n` +
+          `Je n’ai pas trouvé clairement l’article à retirer dans ton panier.\n\n` +
           formatCartFr(clearResult?.basket),
       };
     }
@@ -302,7 +302,7 @@ if (action.type === "discover_meal_ideas") {
 
   return {
     message:
-      `🧹 J’ai vidé votre panier.\n\n` +
+      `🧹 J’ai vidé ton panier.\n\n` +
       formatCartFr(clearResult?.basket),
   };
 }
@@ -317,10 +317,10 @@ if (plan.intent === "ADD_ITEMS") {
     for (const it of addResult.resolvedItems) {
       if (it.ok) {
         summaryLines.push(
-          `— ${it.requestedQty}${it.requestedUnit && it.requestedUnit !== "piece" ? it.requestedUnit : ""} de ${it.product?.name ?? it.query} → quantité panier: ${it.targetBasketQty ?? it.basketQty ?? "?"}`
+          `• ${it.requestedQty}${it.requestedUnit && it.requestedUnit !== "piece" ? it.requestedUnit : ""} de ${it.product?.name ?? it.query} → quantité du panier : ${it.targetBasketQty ?? it.basketQty ?? "?"}`
         );
       } else {
-        summaryLines.push(`— ${it.query} : introuvable`);
+        summaryLines.push(`• ${it.query} : introuvable`);
       }
     }
   }
@@ -333,7 +333,7 @@ if (plan.intent === "ADD_ITEMS") {
 
   return {
     message:
-      `✅ J’ai traité votre demande :\n` +
+      `✅ J’ai traité ta demande :\n` +
       summaryLines.join("\n") +
       `\n\n` +
       (basket ? formatCartFr(basket) : "Le panier a été mis à jour, mais je n’ai pas pu relire son contenu.")
@@ -360,7 +360,7 @@ if (plan.intent === "EXEC_CART") {
   return {
     message:
       `✅ J’ai bien passé la commande.` +
-      (orderId ? `\nRéférence: ${orderId}` : ""),
+      (orderId ? `\nRéférence : ${orderId}` : ""),
   };
 }
 
@@ -372,7 +372,7 @@ if (plan.intent === "DISCOVER_MEALS") {
   return {
     message:
       discoverResult?.message ??
-      "Je peux vous proposer quelques idees par categorie alimentaire.",
+      "Je peux te proposer quelques idées par catégorie alimentaire.",
   };
 }
 
@@ -385,7 +385,7 @@ if (plan.intent === "DISCOVER_MEALS") {
       {
         role: "user",
         content:
-          "Réponds UNIQUEMENT en français. Confirme ce que tu as compris et ce que tu as ajouté au panier, ou ce qui manque.",
+          "Réponds UNIQUEMENT en français. Tutoie toujours l’utilisateur : utilise tu/ton, jamais vous/votre/vos. Confirme ce que tu as compris et ce que tu as ajouté au panier, ou ce qui manque.",
       },
     ],
     0.4

@@ -80,6 +80,12 @@ const NAME_RULES: NameRule[] = [
     reasons: ["recipe-name:cream-custard-dessert"],
   },
   {
+    family: "dessert",
+    confidence: 0.88,
+    phrases: ["dessert", "desserts"],
+    reasons: ["recipe-name:dessert"],
+  },
+  {
     family: "dessert_gateau",
     confidence: 0.94,
     phrases: ["gateau", "cake", "muffin", "brownie", "fondant", "moelleux"],
@@ -508,6 +514,20 @@ export function relatedFamilyScore(left: string, right: string): number {
   const overlap = rightFacets.filter((facet) => leftFacets.has(facet));
   if (!overlap.length) return 0;
   return overlap.length / Math.max(leftFacets.size, rightFacets.length);
+}
+
+export function areBuildMealFamiliesCompatible(
+  requestedFamily?: string | null,
+  recipeFamily?: string | null
+): boolean {
+  const requested = makeKey(requestedFamily || "");
+  const recipe = makeKey(recipeFamily || "");
+
+  if (!requested || !recipe) return true;
+  if (requested === "recette_generale" || recipe === "recette_generale") return true;
+  if (requested === recipe) return true;
+
+  return relatedFamilyScore(requested, recipe) >= 0.45;
 }
 
 export function shouldTransferIngredientToFamily(

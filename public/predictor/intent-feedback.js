@@ -5,7 +5,7 @@
     const response = await fetch("/ai/intent-training");
     const data = await response.json();
     if (!response.ok || !data?.ok || !data?.training) {
-      throw new Error(data?.error || "Impossible de charger le training d'intentions.");
+      throw new Error(data?.error || "Impossible de charger le training d’intentions.");
     }
     return data.training;
   }
@@ -18,7 +18,7 @@
     });
     const data = await response.json();
     if (!response.ok || !data?.ok || !data?.training) {
-      throw new Error(data?.error || "Impossible d'enregistrer le feedback.");
+      throw new Error(data?.error || "Impossible d’enregistrer le feedback.");
     }
     return data;
   }

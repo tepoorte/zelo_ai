@@ -1324,6 +1324,155 @@
           ]
         }
       ]
+    },
+    {
+      "key": "crepe",
+      "label": "crepe",
+      "aliases": [
+        "crepe",
+        "de quoi faire une crèpe"
+      ],
+      "examples": [
+        "de quoi faire une crèpe"
+      ],
+      "family": "crepe",
+      "familySource": "provided",
+      "familyConfidence": 0.9,
+      "familyReasons": [
+        "provided-family"
+      ],
+      "baseRecipe": true,
+      "source": "user",
+      "userRef": "local-dev",
+      "createdFromText": "de quoi faire une crèpe",
+      "defaultServings": 2,
+      "ingredients": [
+        {
+          "key": "lait_pasteurise_non_bio",
+          "label": "Lait pasteurisé (Non Bio)",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "lait_pasteurise_non_bio",
+          "slot": "manual",
+          "categoryNames": [
+            "lait fromages oeufs",
+            "boissons"
+          ],
+          "preferredProductId": "63acbfcbb26bcb89e31f16f8",
+          "preferredProductName": "Lait pasteurisé (Non Bio)",
+          "fallbackSearchTerms": [
+            "Lait pasteurisé (Non Bio)"
+          ]
+        },
+        {
+          "key": "a_oeuf_a_piece_non_bio",
+          "label": "A. Oeuf à la pièce (Non Bio)",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "a_oeuf_a_piece_non_bio",
+          "slot": "manual",
+          "categoryNames": [
+            "lait fromages oeufs"
+          ],
+          "preferredProductId": "5dea24f07e6ac104dac9fd94",
+          "preferredProductName": "A. Oeuf à la pièce (Non Bio)",
+          "fallbackSearchTerms": [
+            "A. Oeuf à la pièce (Non Bio)"
+          ]
+        },
+        {
+          "key": "farine_fleur",
+          "label": "Farine fleur",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "farine_fleur",
+          "slot": "manual",
+          "categoryNames": [
+            "farines cereales noix"
+          ],
+          "preferredProductId": "5ecccbc3fd9b040006222c32",
+          "preferredProductName": "Farine fleur",
+          "fallbackSearchTerms": [
+            "Farine fleur"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "dessert_ananas",
+      "label": "dessert ananas",
+      "aliases": [
+        "dessert ananas",
+        "de quoi faire un dessert ananas"
+      ],
+      "examples": [
+        "de quoi faire un dessert ananas"
+      ],
+      "family": "dessert",
+      "familySource": "provided",
+      "familyConfidence": 0.9,
+      "familyReasons": [
+        "provided-family"
+      ],
+      "baseRecipe": true,
+      "source": "user",
+      "userRef": "local-dev",
+      "createdFromText": "de quoi faire un dessert ananas",
+      "defaultServings": 2,
+      "ingredients": [
+        {
+          "key": "sucre_de_betterave",
+          "label": "Sucre de betterave",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "sucre_de_betterave",
+          "slot": "manual",
+          "categoryNames": [
+            "epices huiles sauces"
+          ],
+          "preferredProductId": "5e119fbe961a2912fec4cc3f",
+          "preferredProductName": "Sucre de betterave",
+          "fallbackSearchTerms": [
+            "Sucre de betterave"
+          ]
+        },
+        {
+          "key": "ananas",
+          "label": "Ananas",
+          "qty": 1,
+          "unit": "piece",
+          "role": "principal",
+          "optional": false,
+          "isCore": true,
+          "scaling": "fixed",
+          "conceptKey": "ananas",
+          "slot": "manual",
+          "categoryNames": [
+            "fruits legumes"
+          ],
+          "preferredProductId": "60219c3392d477000754d058",
+          "preferredProductName": "Ananas",
+          "fallbackSearchTerms": [
+            "Ananas"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -3,6 +3,8 @@ import path from "node:path";
 import type {
   BuildMealLearnedExample,
   BuildMealLearnedExamplesStore,
+  BuildMealRejectedExample,
+  BuildMealRejectedExamplesStore,
   BuildMealRecipeCandidate,
   BuildMealUnknownRecipeInbox,
   BuildMealUnknownRecipeRecord,
@@ -10,6 +12,7 @@ import type {
 
 const CACHE_DIR = path.join(process.cwd(), ".cache");
 const LEARNED_EXAMPLES_FILE = path.join(CACHE_DIR, "build-meal-recipe-examples.json");
+const REJECTED_EXAMPLES_FILE = path.join(CACHE_DIR, "build-meal-recipe-rejections.json");
 const UNKNOWN_INBOX_FILE = path.join(CACHE_DIR, "build-meal-learning-inbox.json");
 
 async function ensureCacheDir(): Promise<void> {
@@ -38,11 +41,20 @@ export async function getBuildMealLearnedExamples(): Promise<BuildMealLearnedExa
   });
 }
 
+export async function getBuildMealRejectedExamples(): Promise<BuildMealRejectedExamplesStore> {
+  return await readJsonFile<BuildMealRejectedExamplesStore>(REJECTED_EXAMPLES_FILE, {
+    version: 1,
+    updatedAt: new Date(0).toISOString(),
+    items: [],
+  });
+}
+
 export async function rememberBuildMealConfirmedExample(input: {
   mealKey: string;
   text: string;
   normalizedText: string;
   userRef?: string | null;
+  source?: BuildMealLearnedExample["source"];
 }): Promise<BuildMealLearnedExample | null> {
   const normalizedText = String(input.normalizedText || "").trim();
   const text = String(input.text || "").trim();
@@ -57,6 +69,8 @@ export async function rememberBuildMealConfirmedExample(input: {
   if (existing) {
     existing.count += 1;
     existing.lastSeenAt = now;
+    existing.status = "verified";
+    existing.source = input.source || existing.source || "explicit";
     if (input.userRef) {
       const refs = new Set(existing.userRefs || []);
       refs.add(input.userRef);
@@ -75,12 +89,79 @@ export async function rememberBuildMealConfirmedExample(input: {
     firstSeenAt: now,
     lastSeenAt: now,
     userRefs: input.userRef ? [input.userRef] : [],
+    status: "verified",
+    source: input.source || "explicit",
   };
 
   store.items.push(created);
   store.updatedAt = now;
   await writeJsonFile(LEARNED_EXAMPLES_FILE, store);
   return created;
+}
+
+export async function rememberBuildMealRejectedExample(input: {
+  mealKey: string;
+  text: string;
+  normalizedText: string;
+  userRef?: string | null;
+  reason?: string;
+}): Promise<BuildMealRejectedExample | null> {
+  const mealKey = String(input.mealKey || "").trim();
+  const normalizedText = String(input.normalizedText || "").trim();
+  const text = String(input.text || "").trim();
+  if (!mealKey || !normalizedText || !text) return null;
+
+  const now = new Date().toISOString();
+  const [rejectedStore, learnedStore] = await Promise.all([
+    getBuildMealRejectedExamples(),
+    getBuildMealLearnedExamples(),
+  ]);
+
+  const existingRejected = rejectedStore.items.find(
+    (item) => item.mealKey === mealKey && item.normalizedText === normalizedText
+  );
+
+  if (existingRejected) {
+    existingRejected.count += 1;
+    existingRejected.lastSeenAt = now;
+    existingRejected.reason = input.reason || existingRejected.reason;
+    if (input.userRef) {
+      const refs = new Set(existingRejected.userRefs || []);
+      refs.add(input.userRef);
+      existingRejected.userRefs = [...refs];
+    }
+  } else {
+    rejectedStore.items.push({
+      mealKey,
+      text,
+      normalizedText,
+      reason: input.reason,
+      count: 1,
+      firstSeenAt: now,
+      lastSeenAt: now,
+      userRefs: input.userRef ? [input.userRef] : [],
+    });
+  }
+
+  for (const item of learnedStore.items) {
+    if (item.mealKey === mealKey && item.normalizedText === normalizedText) {
+      item.status = "rejected";
+      item.lastSeenAt = now;
+    }
+  }
+
+  rejectedStore.updatedAt = now;
+  learnedStore.updatedAt = now;
+  await Promise.all([
+    writeJsonFile(REJECTED_EXAMPLES_FILE, rejectedStore),
+    writeJsonFile(LEARNED_EXAMPLES_FILE, learnedStore),
+  ]);
+
+  return (
+    rejectedStore.items.find(
+      (item) => item.mealKey === mealKey && item.normalizedText === normalizedText
+    ) || null
+  );
 }
 
 export async function getBuildMealUnknownInbox(): Promise<BuildMealUnknownRecipeInbox> {
@@ -156,16 +237,19 @@ export async function rememberUnknownBuildMealRequest(input: {
 }
 
 export async function getBuildMealLearningState() {
-  const [examples, inbox] = await Promise.all([
+  const [examples, rejectedExamples, inbox] = await Promise.all([
     getBuildMealLearnedExamples(),
+    getBuildMealRejectedExamples(),
     getBuildMealUnknownInbox(),
   ]);
 
   return {
     examples,
+    rejectedExamples,
     inbox,
     summary: {
       learnedExampleCount: examples.items.length,
+      rejectedExampleCount: rejectedExamples.items.length,
       unknownRecipeCount: inbox.items.length,
       topUnknownRecipes: [...inbox.items]
         .sort((left, right) => right.count - left.count)

@@ -3,10 +3,7 @@ import { normalizeText } from "../../domain/normalizer.js";
 import { computeBasketQty } from "../services/cart-helpers.service.js";
 import { resolveCatalogProduct } from "./catalog-resolver.js";
 import { getBuildMealTrainingRuntime } from "./training.service.js";
-import {
-  rememberBuildMealConfirmedExample,
-  rememberUnknownBuildMealRequest,
-} from "./learning.service.js";
+import { rememberUnknownBuildMealRequest } from "./learning.service.js";
 import {
   detectRecipeRequest,
   getRecipeCandidates,
@@ -58,7 +55,7 @@ function buildUserMessage(
     lines.push(`J’ai ajouté des ingrédients pour préparer « ${meal} » :`);
     lines.push("");
     for (const item of added) {
-      lines.push(`— ${item.productName}`);
+      lines.push(`• ${item.productName}`);
     }
   }
 
@@ -270,18 +267,11 @@ export class BuildMealEngine {
         missing: [],
         resolvedItems: [],
         unknownRecipe,
-        message: "Je n’ai pas encore appris cette recette dans le modèle de training build_meal.",
+        message: "Je n’ai pas encore appris cette recette.",
       };
     }
 
-    const result = await this.handleRecipe(userRef, detection.recipe, detection.servings);
-    await rememberBuildMealConfirmedExample({
-      mealKey: detection.recipe.key,
-      text: userText,
-      normalizedText: detection.normalizedText,
-      userRef,
-    });
-    return result;
+    return await this.handleRecipe(userRef, detection.recipe, detection.servings);
   }
 
   static async tryHandleDetectedRequest(
@@ -320,17 +310,10 @@ export class BuildMealEngine {
         missing: [],
         resolvedItems: [],
         unknownRecipe,
-        message: "Je n’ai pas encore appris cette recette dans le modèle de training build_meal.",
+        message: "Je n’ai pas encore appris cette recette.",
       };
     }
-    const result = await this.handleRecipe(userRef, detection.recipe, detection.servings);
-    await rememberBuildMealConfirmedExample({
-      mealKey: detection.recipe.key,
-      text: userText,
-      normalizedText: detection.normalizedText,
-      userRef,
-    });
-    return result;
+    return await this.handleRecipe(userRef, detection.recipe, detection.servings);
   }
 
   private static async handleRecipe(

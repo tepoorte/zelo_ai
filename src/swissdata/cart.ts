@@ -2,6 +2,16 @@ import { env } from "../config/env.js";
 import { swissdataClient } from "./client.js";
 import { getAllProducts } from "./products.js";
 import { timeAsync, timeSync } from "../utils/perf.js";
+import {
+  formatEstimatedDeliveryDate,
+  isBasketDeliveryDateFuture,
+  sortSelectableDeliverySlots,
+} from "./delivery-date.js";
+import {
+  type DeliveryType,
+  isLivraisonDeliveryType,
+  selectLivraisonDeliveryType,
+} from "./delivery-type.js";
 
 export type SwissdataPaymentMethod =
   | "credit-card"
@@ -12,9 +22,9 @@ export type SwissdataPaymentMethod =
 type BasketLike = {
   id?: string;
   region?: string;
-  deliveryType?: string;
-  deliverySlotId?: string;
-  estimatedDeliveryDate?: string;
+  deliveryType?: string | null;
+  deliverySlotId?: string | null;
+  estimatedDeliveryDate?: string | null;
   deliveryAddress?: Record<string, unknown>;
   billingAddress?: Record<string, unknown>;
   paymentMethod?: string;
@@ -36,13 +46,6 @@ type CustomerProfile = {
   region?: string;
   favoriteDeliveryType?: string;
   addresses?: CustomerAddress[];
-};
-
-type DeliveryType = {
-  id: string;
-  availableRegions?: string[];
-  zones?: string;
-  useDeliverySlots?: boolean;
 };
 
 type DeliverySlot = {
@@ -106,25 +109,26 @@ function isAddressComplete(address: Record<string, unknown> | undefined): boolea
   );
 }
 
+function basketAddressDiffersFromCustomer(
+  basketAddress: Record<string, unknown> | undefined,
+  customerAddress: CustomerAddress | undefined
+): boolean {
+  if (!customerAddress || !isAddressComplete(customerAddress as Record<string, unknown>)) {
+    return false;
+  }
+  if (!isAddressComplete(basketAddress)) return true;
+
+  return ["street", "zip", "city", "country"].some(
+    (key) => String(basketAddress?.[key] ?? "") !== String((customerAddress as any)[key] ?? "")
+  );
+}
+
 function todayAsBasketDate(): string {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, "0");
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const year = String(now.getFullYear());
   return `${day}-${month}-${year}`;
-}
-
-function formatEstimatedDeliveryDate(dateValue: string, timeStart: number): string {
-  const raw = String(dateValue ?? "").slice(0, 10);
-  const normalized = /^\d{2}-\d{2}-\d{4}$/.test(raw)
-    ? raw
-    : (() => {
-        const [year, month, day] = raw.split("-");
-        return `${day}-${month}-${year}`;
-      })();
-  const hours = String(Math.floor(timeStart / 60)).padStart(2, "0");
-  const minutes = String(timeStart % 60).padStart(2, "0");
-  return `${normalized} ${hours}:${minutes}`;
 }
 
 async function updateBasketProperties(userRef: string, basketId: string, body: Record<string, unknown>) {
@@ -177,55 +181,7 @@ async function fetchFutureDeliverySlots(userRef: string, region: string, deliver
     },
   });
 
-  return Array.isArray(res.data) ? res.data : [];
-}
-
-function formatDateForSlot(date: Date): string {
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = String(date.getFullYear());
-  return `${day}-${month}-${year}`;
-}
-
-function nextFutureSlotDate(): string {
-  const date = new Date();
-  date.setDate(date.getDate() + 3);
-  return formatDateForSlot(date);
-}
-
-async function fetchAdminDeliverySlots(
-  userRef: string,
-  region: string,
-  deliveryTypeId: string
-): Promise<DeliverySlot[]> {
-  const api = swissdataClient(userRef);
-  const shopId = env.swissdataShopId;
-
-  if (!shopId) throw new Error("Missing env SWISSDATA_SHOP_ID");
-
-  const res = await api.get(`/shop/admin/${shopId}/delivery-slot`, {
-    params: {
-      region,
-      deliveryTypeId,
-      limit: 100,
-      sort: "-date,-timeStart",
-    },
-  });
-
-  return Array.isArray(res.data) ? res.data : [];
-}
-
-async function updateAdminDeliverySlotDate(
-  userRef: string,
-  slotId: string,
-  date: string
-): Promise<void> {
-  const api = swissdataClient(userRef);
-  const shopId = env.swissdataShopId;
-
-  if (!shopId) throw new Error("Missing env SWISSDATA_SHOP_ID");
-
-  await api.put(`/shop/admin/${shopId}/delivery-slot/${slotId}`, { date });
+  return Array.isArray(res.data) ? sortSelectableDeliverySlots(res.data) : [];
 }
 
 async function ensureFutureDeliverySlots(
@@ -233,48 +189,7 @@ async function ensureFutureDeliverySlots(
   region: string,
   deliveryTypeId: string
 ): Promise<DeliverySlot[]> {
-  const available = await fetchFutureDeliverySlots(userRef, region, deliveryTypeId);
-  if (available.length || env.nodeEnv === "production") {
-    return available;
-  }
-
-  try {
-    const adminSlots = await fetchAdminDeliverySlots(userRef, region, deliveryTypeId);
-    const reusableSlots = adminSlots
-      .filter((slot) => {
-        const orders = Array.isArray(slot.ordersIds) ? slot.ordersIds : [];
-        const deliveries = Array.isArray(slot.deliveriesIds) ? slot.deliveriesIds : [];
-        return orders.length === 0 && deliveries.length === 0;
-      })
-      .slice(0, 3);
-
-    if (!reusableSlots.length) {
-      return available;
-    }
-
-    const futureDate = nextFutureSlotDate();
-    for (const slot of reusableSlots) {
-      await updateAdminDeliverySlotDate(userRef, slot.id, futureDate);
-    }
-
-    return await fetchFutureDeliverySlots(userRef, region, deliveryTypeId);
-  } catch {
-    return available;
-  }
-}
-
-function isDeliveryTypeAvailableInRegion(deliveryType: DeliveryType | undefined, region: string | undefined): boolean {
-  if (!deliveryType) return false;
-  const regions = Array.isArray(deliveryType.availableRegions) ? deliveryType.availableRegions : [];
-  return !region || regions.length === 0 || regions.includes(region);
-}
-
-function isDeliveryTypeAvailableInZone(deliveryType: DeliveryType | undefined, zip: string | undefined): boolean {
-  if (!deliveryType) return false;
-  const zones = typeof deliveryType.zones === "string"
-    ? deliveryType.zones.split(",").map((zone) => zone.trim()).filter(Boolean)
-    : [];
-  return !zip || zones.length === 0 || zones.includes(zip);
+  return await fetchFutureDeliverySlots(userRef, region, deliveryTypeId);
 }
 
 function selectDeliveryType(
@@ -283,23 +198,105 @@ function selectDeliveryType(
   deliveryTypes: DeliveryType[]
 ): string | undefined {
   const region = basket.region ?? customer?.region;
-  const zip = String((basket.deliveryAddress as CustomerAddress | undefined)?.zip ?? "");
+  const primaryAddress = Array.isArray(customer?.addresses) ? customer.addresses[0] : undefined;
+  const zip = String((basket.deliveryAddress as CustomerAddress | undefined)?.zip ?? primaryAddress?.zip ?? "");
 
-  const favorite = customer?.favoriteDeliveryType
-    ? deliveryTypes.find((deliveryType) => deliveryType.id === customer.favoriteDeliveryType)
-    : undefined;
+  return selectLivraisonDeliveryType(
+    {
+      region,
+      zip,
+      favoriteDeliveryType: customer?.favoriteDeliveryType,
+    },
+    deliveryTypes
+  );
+}
 
-  if (favorite && isDeliveryTypeAvailableInRegion(favorite, region) && isDeliveryTypeAvailableInZone(favorite, zip)) {
-    return favorite.id;
+async function prepareBasketDeliverySlot(userRef: string, basket: BasketLike) {
+  if (!basket?.id) return basket;
+  if (!basketNeedsDeliverySlot(basket)) return basket;
+
+  const customer = await fetchCurrentCustomer(userRef);
+  const primaryAddress = Array.isArray(customer?.addresses) ? customer.addresses[0] : undefined;
+  const patch: Record<string, unknown> = {};
+
+  if (basketAddressDiffersFromCustomer(basket.deliveryAddress, primaryAddress)) {
+    patch.deliveryAddress = primaryAddress;
   }
 
-  const firstAvailable = deliveryTypes.find(
-    (deliveryType) =>
-      isDeliveryTypeAvailableInRegion(deliveryType, region) &&
-      isDeliveryTypeAvailableInZone(deliveryType, zip)
-  );
+  if (basketAddressDiffersFromCustomer(basket.billingAddress, primaryAddress)) {
+    patch.billingAddress = primaryAddress;
+  }
 
-  return firstAvailable?.id;
+  if (!basket.region && customer?.region) {
+    patch.region = customer.region;
+  }
+
+  const candidateBasket: BasketLike = {
+    ...basket,
+    ...patch,
+  };
+
+  if (basketNeedsDeliverySlot(candidateBasket)) {
+    const deliveryTypes = await fetchDeliveryTypes(userRef);
+    const deliveryType = selectDeliveryType(customer, candidateBasket, deliveryTypes);
+    const currentDeliveryType = candidateBasket.deliveryType
+      ? deliveryTypes.find((item) => item.id === candidateBasket.deliveryType)
+      : undefined;
+
+    if (deliveryType) {
+      if (candidateBasket.deliveryType !== deliveryType) {
+        patch.deliveryType = deliveryType;
+      }
+    } else if (currentDeliveryType && !isLivraisonDeliveryType(currentDeliveryType)) {
+      patch.deliveryType = null;
+    }
+  }
+
+  const candidateWithDeliveryType: BasketLike = {
+    ...candidateBasket,
+    ...patch,
+  };
+
+  const deliverySlotNeedsRefresh =
+    !candidateWithDeliveryType.deliverySlotId ||
+    !isBasketDeliveryDateFuture(candidateWithDeliveryType.estimatedDeliveryDate);
+
+  if (
+    basketNeedsDeliverySlot(candidateWithDeliveryType) &&
+    candidateWithDeliveryType.region &&
+    candidateWithDeliveryType.deliveryType
+  ) {
+    const slots = await ensureFutureDeliverySlots(
+      userRef,
+      candidateWithDeliveryType.region,
+      candidateWithDeliveryType.deliveryType
+    );
+    const firstSlot = slots[0];
+    if (firstSlot?.id) {
+      const estimatedDeliveryDate = formatEstimatedDeliveryDate(firstSlot.date, firstSlot.timeStart);
+      const deliverySlotDiffers =
+        candidateWithDeliveryType.deliverySlotId !== firstSlot.id ||
+        candidateWithDeliveryType.estimatedDeliveryDate !== estimatedDeliveryDate;
+
+      if (deliverySlotNeedsRefresh || deliverySlotDiffers) {
+        patch.deliverySlotId = firstSlot.id;
+        patch.estimatedDeliveryDate = estimatedDeliveryDate;
+      }
+    } else if (
+      candidateWithDeliveryType.deliverySlotId ||
+      candidateWithDeliveryType.estimatedDeliveryDate
+    ) {
+      patch.deliverySlotId = null;
+      patch.estimatedDeliveryDate = null;
+    }
+  }
+
+  if (!Object.keys(patch).length) {
+    return basket;
+  }
+
+  await updateBasketProperties(userRef, basket.id, patch);
+  return await getCurrentBasket(userRef);
 }
 
 async function prepareBasketForCheckout(
@@ -313,16 +310,14 @@ async function prepareBasketForCheckout(
   const primaryAddress = Array.isArray(customer?.addresses) ? customer.addresses[0] : undefined;
   const patch: Record<string, unknown> = {};
 
-  if (!isAddressComplete(basket.deliveryAddress) && primaryAddress) {
+  if (basketAddressDiffersFromCustomer(basket.deliveryAddress, primaryAddress)) {
     patch.deliveryAddress = primaryAddress;
   }
 
-  if (!isAddressComplete(basket.billingAddress)) {
-    if (primaryAddress) {
-      patch.billingAddress = primaryAddress;
-    } else if (isAddressComplete(basket.deliveryAddress)) {
-      patch.billingAddress = basket.deliveryAddress;
-    }
+  if (basketAddressDiffersFromCustomer(basket.billingAddress, primaryAddress)) {
+    patch.billingAddress = primaryAddress;
+  } else if (!isAddressComplete(basket.billingAddress) && isAddressComplete(basket.deliveryAddress)) {
+    patch.billingAddress = basket.deliveryAddress;
   }
 
   if (!basket.region && customer?.region) {
@@ -342,11 +337,19 @@ async function prepareBasketForCheckout(
     ...patch,
   };
 
-  if (basketNeedsDeliverySlot(candidateBasket) && !candidateBasket.deliveryType) {
+  if (basketNeedsDeliverySlot(candidateBasket)) {
     const deliveryTypes = await fetchDeliveryTypes(userRef);
     const deliveryType = selectDeliveryType(customer, candidateBasket, deliveryTypes);
+    const currentDeliveryType = candidateBasket.deliveryType
+      ? deliveryTypes.find((item) => item.id === candidateBasket.deliveryType)
+      : undefined;
+
     if (deliveryType) {
-      patch.deliveryType = deliveryType;
+      if (candidateBasket.deliveryType !== deliveryType) {
+        patch.deliveryType = deliveryType;
+      }
+    } else if (currentDeliveryType && !isLivraisonDeliveryType(currentDeliveryType)) {
+      patch.deliveryType = null;
     }
   }
 
@@ -355,11 +358,14 @@ async function prepareBasketForCheckout(
     ...patch,
   };
 
+  const deliverySlotNeedsRefresh =
+    !candidateWithDeliveryType.deliverySlotId ||
+    !isBasketDeliveryDateFuture(candidateWithDeliveryType.estimatedDeliveryDate);
+
   if (
     basketNeedsDeliverySlot(candidateWithDeliveryType) &&
     candidateWithDeliveryType.region &&
-    candidateWithDeliveryType.deliveryType &&
-    !candidateWithDeliveryType.deliverySlotId
+    candidateWithDeliveryType.deliveryType
   ) {
     const slots = await ensureFutureDeliverySlots(
       userRef,
@@ -368,8 +374,21 @@ async function prepareBasketForCheckout(
     );
     const firstSlot = slots[0];
     if (firstSlot?.id) {
-      patch.deliverySlotId = firstSlot.id;
-      patch.estimatedDeliveryDate = formatEstimatedDeliveryDate(firstSlot.date, firstSlot.timeStart);
+      const estimatedDeliveryDate = formatEstimatedDeliveryDate(firstSlot.date, firstSlot.timeStart);
+      const deliverySlotDiffers =
+        candidateWithDeliveryType.deliverySlotId !== firstSlot.id ||
+        candidateWithDeliveryType.estimatedDeliveryDate !== estimatedDeliveryDate;
+
+      if (deliverySlotNeedsRefresh || deliverySlotDiffers) {
+        patch.deliverySlotId = firstSlot.id;
+        patch.estimatedDeliveryDate = estimatedDeliveryDate;
+      }
+    } else if (
+      candidateWithDeliveryType.deliverySlotId ||
+      candidateWithDeliveryType.estimatedDeliveryDate
+    ) {
+      patch.deliverySlotId = null;
+      patch.estimatedDeliveryDate = null;
     }
   }
 
@@ -379,6 +398,11 @@ async function prepareBasketForCheckout(
 
   await updateBasketProperties(userRef, basket.id, patch);
   return await getCurrentBasket(userRef);
+}
+
+export async function ensureCurrentBasketFutureDelivery(userRef: string) {
+  const basket = await getCurrentBasket(userRef);
+  return await prepareBasketDeliverySlot(userRef, basket);
 }
 
 export async function getCurrentBasket(userRef: string) {

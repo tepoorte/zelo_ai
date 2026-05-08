@@ -36,7 +36,7 @@ export function twilioWhatsAppRoutes() {
         .type("text/xml")
         .send(
           buildTwilioMessagingResponse(
-            "Je rencontre un petit souci technique. Reessayez dans un instant."
+            "Je rencontre un petit souci technique. Réessaie dans un instant."
           )
         );
     }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Zélo AI</title>
+  <title>Assistant Zélo</title>
   <style>
     :root{
       --bg:#0b0f16;
@@ -461,9 +461,9 @@
 
   <div id="authOverlay">
     <div class="authCard">
-      <h2 class="authTitle">Connexion Zelo AI</h2>
+      <h2 class="authTitle">Connexion à l’Assistant Zélo</h2>
       <p class="authSub">
-        Connecte-toi pour permettre à Zelo AI de lire et modifier ton panier réel.
+        Connecte-toi pour permettre à l’Assistant Zélo de lire et modifier ton panier réel.
       </p>
 
       <div class="field">
@@ -477,7 +477,7 @@
       </div>
 
       <div class="authActions">
-        <button id="loginBtn" class="primaryBtn" onclick="login()">Se connecter</button>
+        <button id="loginBtn" class="primaryBtn" onclick="login()">Connecte-toi</button>
       </div>
 
       <div id="authStatus" class="statusLine"></div>
@@ -486,7 +486,7 @@
 
   <div class="wrap">
     <header>
-      <h1>Zélo AI</h1>
+      <h1>Assistant Zélo</h1>
       <div class="topActions">
         <button id="refreshBasketBtn" class="ghostBtn hidden" onclick="refreshBasket()">Rafraîchir panier</button>
         <button id="logoutBtn" class="ghostBtn hidden" onclick="logout()">Déconnexion</button>
@@ -499,12 +499,12 @@
         <div id="messages"></div>
 
         <div class="hint">
-          Essay: “montre-moi mon panier”, “ajoute 1 lard de begnins à mon panier”
+          Essaie : “montre-moi mon panier”, “ajoute 1 lard de begnins à mon panier”
           ou une question quelconque.
         </div>
 
         <div id="inputBar" class="hidden">
-          <input id="input" placeholder="Écris quelque chose..." />
+          <input id="input" placeholder="Écris quelque chose…" />
           <button id="sendBtn" onclick="send()">Envoyer</button>
         </div>
       </div>
@@ -757,12 +757,12 @@
       const password = passwordInput.value;
 
       if(!username || !password){
-        setAuthStatus("Inserisci email e password.", "error");
+        setAuthStatus("Entre ton email et ton mot de passe.", "error");
         return;
       }
 
       loginBtn.disabled = true;
-      setAuthStatus("Connexion en cours...");
+      setAuthStatus("Connexion en cours…");
 
       try{
         const res = await fetch("/ai/login", {
@@ -831,7 +831,7 @@
         await refreshBasket();
       }catch(e){
         removeTypingMessage();
-        addMessage("Errore di rete: " + (e?.message || e), "ai");
+        addMessage("Erreur réseau : " + (e?.message || e), "ai");
       }finally{
         sendBtn.disabled = false;
       }

@@ -372,9 +372,9 @@
             actionKey: fallbackIntent?.key || "noop",
             actionLabel: fallbackIntent?.label || "NOOP",
             confidence: 0,
-            canonical: fallbackIntent?.canonical?.default || "Repondre naturellement",
+            canonical: fallbackIntent?.canonical?.default || "Répondre naturellement",
             planner: fallbackIntent?.planner || "planner/general",
-            reason: fallbackIntent?.reason || "Aucune action claire detectee pour l'instant."
+            reason: fallbackIntent?.reason || "Aucune action claire détectée pour l’instant."
           };
         }
 
@@ -389,7 +389,7 @@
               confidence: 99,
               canonical: buildCanonical(text, overrideIntent, commonStopwords, null),
               planner: overrideIntent.planner || ("planner/" + overrideIntent.key),
-              reason: "Prediction renforcee par un feedback explicite deja confirme.",
+              reason: "Prédiction renforcée par un feedback explicite déjà confirmé.",
               score: 1,
               example: ""
             };
@@ -470,7 +470,7 @@
         const extraReason = ambiguity
           ? `Alternative proche: ${second.intent.label || second.intent.key.toUpperCase()}.`
           : sameSignal
-            ? "Les couches exemple et apprentissage pointent dans la meme direction."
+            ? "Les couches exemple et apprentissage pointent dans la même direction."
             : "";
 
         return {
@@ -500,7 +500,7 @@
     if (typeof source === "string") {
       const response = await fetch(source);
       if (!response.ok) {
-        throw new Error("Impossible de charger le training d'intentions.");
+        throw new Error("Impossible de charger le training d’intentions.");
       }
       training = await response.json();
     }
