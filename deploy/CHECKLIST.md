@@ -12,16 +12,18 @@
 - [ ] L'image Docker est poussée sur `hub.mintello.com/ai-zelo:<version>`.
 - [ ] Le DNS du domaine choisi pointe vers le serveur production.
 - [ ] `docker network inspect traefik-net` fonctionne sur le serveur.
+- [ ] L'auth Docker registry existe sur le serveur.
 - [ ] Le resolver Traefik utilisé est `p5`.
+- [ ] Si une `.cache` serveur existe déjà, décider explicitement si elle doit rester active ou être remplacée avec `REPLACE_SERVER_CACHE=1`.
 
 ## Pendant
 
 - [ ] Connexion serveur SSH port `5222`.
-- [ ] Backup `.cache` serveur.
-- [ ] `git pull --ff-only origin main`.
-- [ ] `.env` production vérifié.
-- [ ] `docker compose pull`.
-- [ ] `docker compose up -d`.
+- [ ] Backup `.env`, `docker-compose.yml` et `.cache` serveur.
+- [ ] Runtime copié dans `/home/ubuntu/zelo-ai`.
+- [ ] `.env` production rendu depuis `.env.template`.
+- [ ] `docker compose pull` exécuté par le script.
+- [ ] `docker compose up -d` exécuté par le script.
 - [ ] Si Ollama local serveur : modèles `OLLAMA_MODEL`, `OLLAMA_PLANNER_MODEL`, `OLLAMA_EMBEDDING_MODEL` installés.
 
 ## Après
@@ -42,4 +44,3 @@
 - [ ] Ancienne version image connue.
 - [ ] Archive `.cache` précédente disponible.
 - [ ] Commandes rollback prêtes dans `deploy/README.md`.
-

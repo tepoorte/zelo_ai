@@ -31,13 +31,13 @@ Deux options sont possibles pour l'IA :
 
 ## Domaine
 
-Le compose accepte `AI_HOST`. La valeur la plus directe est :
+Le compose accepte `AI_HOST`. Pour la production principale, utiliser un sous-domaine qui pointe vers `195.15.215.113` :
 
 ```env
-AI_HOST=ai.zelo-epicerie.ch
+AI_HOST=assistant.zelo-epicerie.ch
 ```
 
-Si l'équipe veut remplacer `ai.` par un nom plus client, changer seulement `AI_HOST` et créer le DNS correspondant avant le deploy. Exemples possibles :
+`ai.zelo-epicerie.ch` ne doit pas être utilisé tant que son DNS pointe vers un autre serveur. Si l'équipe veut un autre nom client, changer seulement `AI_HOST` et créer le DNS correspondant avant le deploy. Exemples possibles :
 
 - `assistant.zelo-epicerie.ch`
 - `commande.zelo-epicerie.ch`
@@ -146,7 +146,13 @@ Ou avec le script complet build + serveur :
 VERSION=1.0.0 ./deploy/03-build-push-and-server-deploy.sh
 ```
 
-Ce script utilise l'archive `.cache` créée par `01-local-preflight.sh`, pousse l'image Docker, copie l'archive cache au serveur, sauvegarde l'ancien `.env` et l'ancien `.cache`, puis relance le compose.
+Ce script utilise l'archive `.cache` créée par `01-local-preflight.sh`, pousse l'image Docker, copie les fichiers runtime au serveur dans `/home/ubuntu/zelo-ai`, sauvegarde l'ancien `.env` et l'ancien `.cache`, puis relance le compose. Il ne clone pas le code source sur le serveur.
+
+Par défaut, si une `.cache` existe déjà sur le serveur, elle reste active et n'est pas remplacée par la `.cache` locale. Pour un premier déploiement sans `.cache` serveur, l'archive locale est restaurée automatiquement. Pour forcer volontairement le remplacement de la `.cache` serveur, lancer explicitement :
+
+```bash
+REPLACE_SERVER_CACHE=1 VERSION=1.0.0 ./deploy/03-build-push-and-server-deploy.sh
+```
 
 ## Préparation serveur
 
@@ -164,20 +170,10 @@ docker network inspect traefik-net
 docker compose version
 ```
 
-Préparer le repo :
+Préparer le dossier runtime :
 
 ```bash
-mkdir -p ~/Git
-cd ~/Git
-
-if [ ! -d zelo_ai ]; then
-  git clone https://git.mintello.com/samuel/zelo_ai.git zelo_ai
-fi
-
-cd ~/Git/zelo_ai
-git fetch origin main
-git status --short
-git pull --ff-only origin main
+mkdir -p ~/zelo-ai
 ```
 
 ## Restaurer `.cache` sur le serveur
@@ -185,7 +181,7 @@ git pull --ff-only origin main
 Avant de remplacer quoi que ce soit, sauvegarder ce qui existe déjà :
 
 ```bash
-cd ~/Git/zelo_ai
+cd ~/zelo-ai
 mkdir -p ~/zelo-ai-backups
 
 if [ -d .cache ]; then
@@ -196,7 +192,7 @@ fi
 Restaurer l'archive copiée depuis le Mac :
 
 ```bash
-cd ~/Git/zelo_ai
+cd ~/zelo-ai
 tar -xzf ~/zelo_ai_cache_YYYYMMDD_HHMMSS.tgz
 ```
 
@@ -214,19 +210,19 @@ Important : ne pas faire de `rm -rf .cache` en production. Si le serveur a déj�
 Créer `.env` sur le serveur depuis le template :
 
 ```bash
-cd ~/Git/zelo_ai
-cp deploy/production.env.example .env
+cd ~/zelo-ai
+cp .env.template .env
 nano .env
 ```
 
-Si un `.env` existe déjà sur le serveur, il ne doit pas rester tel quel par accident : il peut contenir une ancienne version, un mauvais `AI_HOST`, un mauvais resolver TLS ou une mauvaise image. Le script `03-build-push-and-server-deploy.sh` le sauvegarde d'abord dans `~/zelo-ai-backups/zelo_ai_env_before_YYYYMMDD_HHMMSS.env`, puis remplace `.env` avec `deploy/production.env.example` et injecte la `VERSION`.
+Si un `.env` existe déjà sur le serveur, il ne doit pas rester tel quel par accident : il peut contenir une ancienne version, un mauvais `AI_HOST`, un mauvais resolver TLS ou une mauvaise image. Le script `03-build-push-and-server-deploy.sh` le sauvegarde d'abord dans `~/zelo-ai-backups/zelo_ai_env_before_YYYYMMDD_HHMMSS.env`, puis remplace `.env` avec le template copié et injecte `VERSION` et `AI_HOST`.
 
 Valeurs importantes :
 
 ```env
 NODE_ENV=production
 PORT=3041
-AI_HOST=ai.zelo-epicerie.ch
+AI_HOST=assistant.zelo-epicerie.ch
 AI_PORT=3041
 
 AI_PROVIDER=ollama
@@ -253,7 +249,7 @@ VERSION=<VERSION_PUSHED>
 Si Ollama est déjà disponible ailleurs :
 
 ```bash
-cd ~/Git/zelo_ai
+cd ~/zelo-ai
 docker login hub.mintello.com
 docker compose --env-file .env -f docker-compose.yml pull
 docker compose --env-file .env -f docker-compose.yml up -d
@@ -263,12 +259,12 @@ docker compose --env-file .env -f docker-compose.yml ps
 Si Ollama doit tourner sur le même serveur, utiliser le compose proposé dans ce dossier :
 
 ```bash
-cd ~/Git/zelo_ai
-docker compose --env-file .env -f deploy/docker-compose.with-ollama.yml up -d
+cd ~/zelo-ai
+docker compose --env-file .env -f docker-compose.yml up -d
 docker exec zelo-ai-ollama ollama pull "$OLLAMA_MODEL"
 docker exec zelo-ai-ollama ollama pull "$OLLAMA_PLANNER_MODEL"
 docker exec zelo-ai-ollama ollama pull "$OLLAMA_EMBEDDING_MODEL"
-docker compose --env-file .env -f deploy/docker-compose.with-ollama.yml ps
+docker compose --env-file .env -f docker-compose.yml ps
 ```
 
 ## Vérifications post-deploy
@@ -276,13 +272,13 @@ docker compose --env-file .env -f deploy/docker-compose.with-ollama.yml ps
 Health :
 
 ```bash
-curl -fsS https://ai.zelo-epicerie.ch/health
+curl -fsS https://assistant.zelo-epicerie.ch/health
 ```
 
 Logs :
 
 ```bash
-cd ~/Git/zelo_ai
+cd ~/zelo-ai
 docker compose --env-file .env -f docker-compose.yml logs --tail=200 zelo_ai
 ```
 
@@ -295,7 +291,7 @@ docker exec zelo-ai-ollama ollama list
 
 Tests manuels dans l'UI :
 
-1. Ouvrir `https://ai.zelo-epicerie.ch`.
+1. Ouvrir `https://assistant.zelo-epicerie.ch`.
 2. Se connecter avec un compte test.
 3. Tester `montre mon panier`.
 4. Tester `ajoute 1 baguette`.
@@ -307,7 +303,7 @@ Tests manuels dans l'UI :
 Smoke prod possible mais risquée :
 
 ```bash
-ZELO_TEST_BASE_URL=https://ai.zelo-epicerie.ch \
+ZELO_TEST_BASE_URL=https://assistant.zelo-epicerie.ch \
 ZELO_TEST_USER_REF=prod-smoke-$(date +%s) \
 ZELO_TEST_USERNAME="TON_EMAIL_TEST" \
 ZELO_TEST_PASSWORD="TON_PASSWORD_TEST" \
@@ -321,7 +317,7 @@ Ne pas lancer avec un vrai panier client.
 Rollback image :
 
 ```bash
-cd ~/Git/zelo_ai
+cd ~/zelo-ai
 nano .env
 # remettre VERSION=<ancienne_version>
 docker compose --env-file .env -f docker-compose.yml pull
@@ -331,7 +327,7 @@ docker compose --env-file .env -f docker-compose.yml up -d
 Rollback cache :
 
 ```bash
-cd ~/Git/zelo_ai
+cd ~/zelo-ai
 tar -czf ~/zelo-ai-backups/zelo_ai_cache_bad_$(date +%Y%m%d_%H%M%S).tgz .cache
 tar -xzf ~/zelo-ai-backups/zelo_ai_cache_before_YYYYMMDD_HHMMSS.tgz
 docker compose --env-file .env -f docker-compose.yml restart zelo_ai

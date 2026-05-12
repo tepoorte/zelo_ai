@@ -41,7 +41,7 @@ tar -czf /tmp/zelo_ai_cache_$(date +%Y%m%d_%H%M%S).tgz .cache
 Serveur :
 
 ```bash
-cd ~/Git/zelo_ai
+cd ~/zelo-ai
 mkdir -p ~/zelo-ai-backups
 tar -czf ~/zelo-ai-backups/zelo_ai_cache_$(date +%Y%m%d_%H%M%S).tgz .cache
 ```
@@ -49,10 +49,9 @@ tar -czf ~/zelo-ai-backups/zelo_ai_cache_$(date +%Y%m%d_%H%M%S).tgz .cache
 ## Commandes inspection
 
 ```bash
-cd ~/Git/zelo_ai
+cd ~/zelo-ai
 find .cache -maxdepth 1 -type f -name '*.json' | sort
 du -sh .cache
 jq '.version // "no-version"' .cache/build-meal-user-recipes.json
 jq '.events | length' .cache/intent-feedback-ledger.json
 ```
-
