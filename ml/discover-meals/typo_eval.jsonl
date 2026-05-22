@@ -1,0 +1,10 @@
+{"text":"quelque chose avec bananne","labels":["healthy","balanced"],"expectedRoles":["fruit"]}
+{"text":"boir quelque chose frais","labels":["drink"],"expectedRoles":["drink"]}
+{"text":"un truc rapide san viande","labels":["vegetarian","balanced","quick"],"excludedRoles":["meat"]}
+{"text":"un plats san s sucre","labels":["healthy","dessert"],"excludedRoles":["sweet"]}
+{"text":"une idee vegetarienne pour ce soir","labels":["vegetarian","balanced","dinner"]}
+{"text":"un apero loccal","labels":["aperitif","local"]}
+{"text":"un truc rapid avec poisson","labels":["quick","dinner","healthy"],"expectedRoles":["fish"]}
+{"text":"des produit pour la maisson","labels":["cleaning"],"expectedRoles":["cleaning"]}
+{"text":"une boisson san alcool","labels":["drink"],"excludedRoles":["drink"]}
+{"text":"petit dejeuner san lait","labels":["breakfast","healthy"],"excludedRoles":["dairy"]}

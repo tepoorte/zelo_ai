@@ -1,0 +1,21 @@
+{"query":"je veux manger plus sain","labels":["healthy","balanced"],"acceptedRoles":["vegetable","fruit","protein","grain"],"rejectedRoles":["sweet"]}
+{"query":"apéro local","labels":["aperitif","local"],"acceptedRoles":["cheese","bread","meat","condiment","drink"]}
+{"query":"petit déjeuner","labels":["breakfast"],"acceptedRoles":["bread","dairy","grain","fruit","drink"]}
+{"query":"repas végétarien","labels":["vegetarian"],"acceptedRoles":["egg","cheese","dairy","vegetable","starch"],"rejectedRoles":["meat","fish"]}
+{"query":"repas rapide","labels":["quick","dinner"],"acceptedRoles":["prepared_meal","menu","bread","sauce"]}
+{"query":"idée cadeau","labels":["gift"],"acceptedRoles":["gift","sweet","drink"]}
+{"query":"produits de ménage","labels":["cleaning"],"acceptedRoles":["cleaning"]}
+{"query":"santé énergie sommeil","labels":["healthy","balanced"],"acceptedRoles":["vegetable","fruit","egg","grain","starch","dairy"],"rejectedRoles":["meat","menu","prepared_meal","sauce","dessert","sweet","basket"]}
+{"query":"végétarien strict","labels":["vegetarian","balanced"],"acceptedRoles":["egg","cheese","dairy","vegetable","starch","grain","fruit"],"rejectedRoles":["meat","fish","menu","prepared_meal"]}
+{"query":"petit déjeuner doux","labels":["breakfast"],"acceptedRoles":["breakfast","bread","grain","dairy","fruit","drink"],"rejectedRoles":["meat","fish","menu","prepared_meal","sauce"]}
+{"query":"poisson rapide","labels":["quick","dinner","healthy"],"acceptedRoles":["fish","protein","starch","grain","oil","vegetable"],"rejectedRoles":["meat","basket","dessert","sweet"]}
+{"query":"boisson uniquement","labels":["drink"],"acceptedRoles":["drink"],"rejectedRoles":["meat","fish","egg","vegetable","starch","basket"]}
+{"query":"enfants goûter matin","labels":["kids","breakfast"],"acceptedRoles":["breakfast","dairy","grain","bread","fruit","dessert"],"rejectedRoles":["meat","fish","sauce","prepared_meal"]}
+{"query":"viande rapide","labels":["quick","dinner"],"acceptedRoles":["meat","protein","starch","grain","oil","vegetable"],"rejectedRoles":["fish","egg","basket","dessert","sweet"]}
+{"query":"boeuf simple","labels":["quick","dinner"],"acceptedRoles":["meat","protein","starch","grain","oil","vegetable"],"rejectedRoles":["fish","basket","dessert","sweet"]}
+{"query":"pomme rapide","labels":["quick","healthy"],"acceptedRoles":["fruit"],"rejectedRoles":["starch","grain","oil","meat","fish","drink","prepared_meal","menu","snack","dessert","sweet","basket"]}
+{"query":"fruits rapides","labels":["quick","healthy"],"acceptedRoles":["fruit"],"rejectedRoles":["starch","grain","oil","meat","fish","drink","prepared_meal","menu","snack","dessert","sweet","basket"]}
+{"query":"selection fruits","labels":["healthy","weekly_basket"],"acceptedRoles":["fruit"],"rejectedRoles":["starch","grain","oil","meat","fish","drink","prepared_meal","menu","snack","dessert","sweet"]}
+{"query":"dessert pomme","labels":["dessert","healthy"],"acceptedRoles":["fruit"],"rejectedRoles":["starch","grain","oil","meat","fish","drink","prepared_meal","menu","basket"]}
+{"query":"boisson accompagner","labels":["drink"],"acceptedRoles":["drink"],"rejectedRoles":["fruit","vegetable","starch","grain","oil","meat","fish","egg","basket","prepared_meal","menu"]}
+{"query":"maison utile","labels":["cleaning"],"acceptedRoles":["cleaning","hygiene"],"rejectedRoles":["fruit","vegetable","starch","grain","dairy","drink","meat","fish","egg","prepared_meal","menu"]}

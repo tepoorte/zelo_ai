@@ -1,0 +1,20 @@
+{"name":"panier budget","roles":["basket"],"labels":["budget","weekly_basket"]}
+{"name":"panier de fruits","roles":["basket","fruit"],"labels":["healthy","local"]}
+{"name":"panier de légumes","roles":["basket","vegetable"],"labels":["healthy","local"]}
+{"name":"pain aux noix","roles":["bread","bakery","breakfast","aperitif"]}
+{"name":"filets de perche","roles":["fish","protein"],"labels":["healthy","dinner"]}
+{"name":"gruyère d'alpage","roles":["cheese","dairy","protein","aperitif"],"labels":["local"]}
+{"name":"oeuf bio","roles":["egg","protein","breakfast"],"labels":["healthy","vegetarian"]}
+{"name":"riz basmati","roles":["starch","grain","pantry"]}
+{"name":"sauce salvis","roles":["sauce","condiment"]}
+{"name":"jus de pomme","roles":["drink"]}
+{"name":"cadeau","roles":["gift"]}
+{"name":"savon","roles":["hygiene"]}
+{"name":"lessive","roles":["cleaning"]}
+{"name":"pommes bio ou vv","roles":["fruit"],"labels":["healthy"]}
+{"name":"bananes bio et fairtrade","roles":["fruit"],"labels":["healthy"]}
+{"name":"poires conférence bio","roles":["fruit"],"labels":["healthy"]}
+{"name":"ananas","roles":["fruit"],"labels":["healthy"]}
+{"name":"chips de bananes","roles":["snack","sweet"],"labels":["dessert"]}
+{"name":"kéfir","roles":["drink"],"labels":["drink"]}
+{"name":"pomme de terre","roles":["starch","vegetable"],"labels":["balanced"]}

@@ -1,6 +1,6 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { readJsonFile, writeJsonFile } from "../../utils/json-file.js";
 
 type IntentKey =
   | "add_items"
@@ -78,24 +78,6 @@ function normalizeText(input: string): string {
 
 function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
-}
-
-async function ensureCacheDir(): Promise<void> {
-  await fs.mkdir(CACHE_DIR, { recursive: true });
-}
-
-async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {
-  try {
-    const raw = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-async function writeJsonFile(filePath: string, data: unknown): Promise<void> {
-  await ensureCacheDir();
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
 }
 
 async function loadSeedTraining(): Promise<IntentTraining> {

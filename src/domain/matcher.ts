@@ -1,5 +1,6 @@
 import { Product } from "../swissdata/products.js";
-import { normalizeText, tokenizeForMatch } from "./normalizer.js";
+import { normalizeText } from "./normalizer.js";
+import { textSimilarity } from "./text-similarity.js";
 
 export function matchIngredientToProduct(
   ingredientName: string,
@@ -16,15 +17,19 @@ export function matchIngredientToProduct(
 
     const normProduct = normalizeText(p.name);
 
-    const textScore = similarity(normIngredient, normProduct);
+    const textScore = textSimilarity(normIngredient, normProduct);
 
     const historyScore = history[p.id]
       ? Math.min(1, history[p.id] / 5)
       : 0;
 
+    if (textScore < 0.25) {
+      continue;
+    }
+
     const finalScore =
-      textScore * 0.7 +
-      historyScore * 0.3;
+      textScore +
+      (textScore >= 0.75 ? historyScore * 0.015 : 0);
 
     if (finalScore > bestScore) {
       bestScore = finalScore;
@@ -33,22 +38,4 @@ export function matchIngredientToProduct(
   }
 
   return bestScore > 0.35 ? best : null;
-}
-
-function similarity(a: string, b: string): number {
-
-  if (a === b) return 1;
-
-  if (b.includes(a) || a.includes(b)) return 0.8;
-
-  const aWords = new Set(tokenizeForMatch(a));
-  const bWords = new Set(tokenizeForMatch(b));
-
-  const intersection = [...aWords].filter(w => bWords.has(w)).length;
-
-  if (intersection > 0 && [...aWords].every((word) => bWords.has(word))) {
-    return 0.92;
-  }
-
-  return intersection / Math.max(aWords.size, bWords.size);
 }

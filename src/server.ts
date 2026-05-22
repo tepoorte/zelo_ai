@@ -9,30 +9,25 @@ import { errorHandler } from "./middleware/error.js";
 
 import { healthRouter } from "./routes/health.routes.js";
 import { aiRoutes } from "./routes/ai.routes.js";
-import { webhookRoutes } from "./routes/webhook.routes.js";
 import { whatsappMetaRoutes } from "./integrations/meta/whatsapp.routes.js";
 import { twilioWhatsAppRoutes } from "./integrations/twilio/whatsapp.routes.js";
 
 const app = express();
 app.use(morgan("dev"));
 
-// raw body per signature webhook (ok lasciarlo)
+// Webhook signature checks need the original request body.
 app.use(express.json({ verify: (req, res, buf) => rawBodySaver(req as any, res as any, buf) }));
 
-// Static files
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "..", "public")));
 
-// Home -> la pagina HTML
 app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "..", "public", "index.html"));
 });
 
-// Routes API
-app.use("/health", healthRouter);   // healthRouter.get("/") -> /health
-app.use("/ai", aiRoutes());         // /ai/chat, /ai/test, ecc
-app.use("/webhooks", webhookRoutes());
+app.use("/health", healthRouter);
+app.use("/ai", aiRoutes());
 app.use("/integrations/meta/whatsapp", whatsappMetaRoutes());
 app.use("/integrations/twilio/whatsapp", twilioWhatsAppRoutes());
 

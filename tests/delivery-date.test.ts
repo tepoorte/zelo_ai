@@ -10,7 +10,7 @@ import {
   sortSelectableDeliverySlots,
 } from "../src/swissdata/delivery-date.js";
 import { selectLivraisonDeliveryType } from "../src/swissdata/delivery-type.js";
-import { formatCartFr } from "../src/ai/services/cart-helpers.service.js";
+import { formatCartFr } from "../src/ai/services/cart-format.service.js";
 
 const NOW = new Date(2026, 4, 6, 14, 25, 0, 0);
 

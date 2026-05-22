@@ -2,6 +2,7 @@ import { env } from "../config/env.js";
 import { swissdataClient } from "./client.js";
 import { timeAsync, timeSync } from "../utils/perf.js";
 import { normalizeText, tokenizeForMatch } from "../domain/normalizer.js";
+import { textSimilarity } from "../domain/text-similarity.js";
 
 const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -97,9 +98,17 @@ export async function searchProducts(
   query: string,
   limit = 10
 ): Promise<Product[]> {
-  const q = normalizeText(query);
   const items = await getCatalog(userRef);
-  const qTokens = q.split(" ").filter(Boolean);
+
+  return rankProductsByQuery(query, items, limit);
+}
+
+export function rankProductsByQuery(
+  query: string,
+  items: Product[],
+  limit = 10
+): Product[] {
+  const q = normalizeText(query);
   const qMatchTokens = tokenizeForMatch(query);
   const qMatchTokenSet = new Set(qMatchTokens);
 
@@ -109,20 +118,23 @@ export async function searchProducts(
       const nameMatchTokens = tokenizeForMatch(p?.name ?? "");
       const nameMatchTokenSet = new Set(nameMatchTokens);
       const overlap = [...qMatchTokenSet].filter((token) => nameMatchTokenSet.has(token)).length;
+      const fuzzy = textSimilarity(query, p?.name ?? "");
       const allQueryTokensIncluded =
-        qTokens.length > 0 &&
-        qTokens.every((token) => nameMatchTokenSet.has(token) || nameMatchTokenSet.has(token.endsWith("s") ? token.slice(0, -1) : token));
+        qMatchTokens.length > 0 &&
+        qMatchTokens.every((token) => nameMatchTokenSet.has(token));
 
       const score =
-        name.includes(q) ? 4 :
-        allQueryTokensIncluded ? 3 :
+        name.includes(q) ? 5 :
+        allQueryTokensIncluded ? 4 :
+        fuzzy >= 0.72 ? 3 :
         overlap >= 2 ? 2 :
-        overlap >= 1 ? 1 : 0;
+        overlap >= 1 ? 1 :
+        fuzzy >= 0.58 ? 0.5 : 0;
 
-      return { p, score };
+      return { p, score, fuzzy };
     })
     .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => (b.score - a.score) || (b.fuzzy - a.fuzzy))
     .slice(0, limit)
     .map((x) => x.p);
 }

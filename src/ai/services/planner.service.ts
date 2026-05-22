@@ -1,223 +1,23 @@
 import { ollamaChat, safeJsonParse } from "./ollama-client.js";
 import { timeAsync, timeSync } from "../../utils/perf.js";
 import { env } from "../../config/env.js";
+import {
+  discoverPlannerJsonSchema,
+  discoverPlannerPrompt,
+  discoverPlannerVocabularyFromTraining,
+  enrichDiscoverPlannerChoicesFromQuery,
+  filterDiscoverPlannerChoicesByQuery,
+  fallbackDiscoverPlannerVocabulary,
+  normalizeDiscoverPlannerChoices,
+} from "../discover/planner-vocabulary.js";
+import { loadDiscoverTrainingArtifacts } from "../discover/training-artifacts.js";
+import {
+  normalizePlan,
+  normalizePlannerUserText,
+} from "./planner-normalization.service.js";
+import type { FrontendIntentHint, Plan } from "./planner-types.js";
 
-type PlannedAction =
-  | { type: "search_products"; query: string; limit?: number }
-  | {
-      type: "add_to_cart";
-      userRef?: string;
-      items: Array<{
-        query: string;
-        qty: number;
-        unit?: string;
-        productId?: string;
-      }>;
-    }
-  | { type: "get_cart"; userRef?: string }
-  | {
-      type: "clear_cart";
-      userRef?: string;
-      mode?: "all" | "partial";
-      items?: Array<{
-        query: string;
-      }>;
-    }
-  | { type: "exec_cart"; userRef?: string }
-  | { type: "discover_meal_ideas"; userRef?: string }
-  | { type: "noop"; reason?: string };
-
-type Plan = {
-  intent: string;
-  actions: PlannedAction[];
-  userFacingDraft?: string;
-};
-
-function normalizeUnit(value: unknown): string | undefined {
-  const unit = String(value ?? "").trim().toLowerCase();
-  if (!unit) return undefined;
-
-  if (unit === "piece" || unit === "pieces" || unit === "piece(s)" || unit === "pièce" || unit === "pièces") {
-    return "piece";
-  }
-  if (
-    unit === "g" ||
-    unit === "gr" ||
-    unit === "gram" ||
-    unit === "grams" ||
-    unit === "gramme" ||
-    unit === "grammes" ||
-    unit === "grain" ||
-    unit === "grains"
-  ) {
-    return "g";
-  }
-  if (unit === "kg" || unit === "kilogramme" || unit === "kilogrammes") {
-    return "kg";
-  }
-  if (unit === "l" || unit === "litre") return "litre";
-  if (unit === "litres") return "litres";
-  if (unit === "ml") return "ml";
-  return undefined;
-}
-
-function parseLooseNumber(value: string): number | undefined {
-  const normalized = String(value || "").trim().replace(",", ".");
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function extractInlineQuantity(rawQuery: string): {
-  query: string;
-  qty?: number;
-  unit?: string;
-} {
-  const query = String(rawQuery ?? "").trim().replace(/\s+/g, " ");
-  if (!query) return { query: "" };
-
-  const unitPattern =
-    "(kg|kilogrammes?|g|gr|grammes?|grams?|grains?|ml|l|litres?|pieces?|piece\\(s\\)|pi[eè]ces?)";
-
-  const prefixWithUnit = query.match(
-    new RegExp(`^(\\d+(?:[\\.,]\\d+)?)\\s*${unitPattern}\\s+(?:de\\s+|du\\s+|des\\s+|d['’]\\s*)?(.+)$`, "i")
-  );
-  if (prefixWithUnit) {
-    return {
-      query: prefixWithUnit[3].trim(),
-      qty: parseLooseNumber(prefixWithUnit[1]),
-      unit: normalizeUnit(prefixWithUnit[2]),
-    };
-  }
-
-  const suffixWithUnit = query.match(
-    new RegExp(`^(.+?)\\s+(\\d+(?:[\\.,]\\d+)?)\\s*${unitPattern}$`, "i")
-  );
-  if (suffixWithUnit) {
-    return {
-      query: suffixWithUnit[1].trim(),
-      qty: parseLooseNumber(suffixWithUnit[2]),
-      unit: normalizeUnit(suffixWithUnit[3]),
-    };
-  }
-
-  const prefixNumberOnly = query.match(/^(\d+(?:[\.,]\d+)?)\s+(?:de\s+|du\s+|des\s+|d['’]\s*)?(.+)$/i);
-  if (prefixNumberOnly) {
-    return {
-      query: prefixNumberOnly[2].trim(),
-      qty: parseLooseNumber(prefixNumberOnly[1]),
-      unit: "piece",
-    };
-  }
-
-  const suffixNumberOnly = query.match(/^(.+?)\s+(\d+(?:[\.,]\d+)?)$/i);
-  if (suffixNumberOnly) {
-    return {
-      query: suffixNumberOnly[1].trim(),
-      qty: parseLooseNumber(suffixNumberOnly[2]),
-      unit: "piece",
-    };
-  }
-
-  return { query };
-}
-
-function normalizePlannedItem(item: any): {
-  query: string;
-  qty: number;
-  unit?: string;
-  productId?: string;
-} | null {
-  const rawQuery = String(item?.query ?? "").trim();
-  const extracted = extractInlineQuantity(rawQuery);
-  const normalizedUnit = normalizeUnit(item?.unit);
-  const normalizedQty = Number(item?.qty ?? 1);
-
-  const finalQuery = extracted.query || rawQuery;
-  const finalUnit = extracted.unit ?? normalizedUnit ?? "piece";
-  const finalQty =
-    extracted.qty != null && Number.isFinite(extracted.qty) && extracted.qty > 0
-      ? extracted.qty
-      : Number.isFinite(normalizedQty) && normalizedQty > 0
-        ? normalizedQty
-        : 1;
-
-  if (!finalQuery) return null;
-
-  return {
-    query: finalQuery,
-    qty: finalQty,
-    unit: finalUnit,
-    ...(item?.productId ? { productId: String(item.productId) } : {}),
-  };
-}
-
-function normalizePlannedAction(action: any): PlannedAction | null {
-  if (!action || typeof action !== "object") return null;
-
-  if (action.type === "discover_meal_ideas" || action.type === "DISCOVER_MEALS") {
-    return { type: "discover_meal_ideas", userRef: action.userRef };
-  }
-
-  if (action.type === "add_to_cart" && Array.isArray(action.items)) {
-    return {
-      type: "add_to_cart",
-      userRef: action.userRef,
-      items: action.items
-        .filter((item: any) => item && typeof item === "object")
-        .map((item: any) => normalizePlannedItem(item))
-        .filter((item: any) => item.query && Number.isFinite(item.qty) && item.qty > 0),
-    };
-  }
-
-  return action as PlannedAction;
-}
-
-function normalizePlan(parsed: Plan | null): Plan | null {
-  if (!parsed) return null;
-
-  const normalizedActions = Array.isArray(parsed.actions)
-    ? parsed.actions
-        .map((action) => normalizePlannedAction(action))
-        .filter(Boolean) as PlannedAction[]
-    : [];
-
-  if (parsed.intent === "DISCOVER_MEALS" && normalizedActions.length === 0) {
-    normalizedActions.push({ type: "discover_meal_ideas" });
-  }
-
-  const mergedActions: PlannedAction[] = [];
-  const mergedAddItems: Array<{
-    query: string;
-    qty: number;
-    unit?: string;
-    productId?: string;
-  }> = [];
-  let mergedAddUserRef: string | undefined;
-
-  for (const action of normalizedActions) {
-    if (action.type === "add_to_cart") {
-      mergedAddUserRef = mergedAddUserRef ?? action.userRef;
-      mergedAddItems.push(...action.items);
-      continue;
-    }
-
-    mergedActions.push(action);
-  }
-
-  if (mergedAddItems.length) {
-    mergedActions.unshift({
-      type: "add_to_cart",
-      ...(mergedAddUserRef ? { userRef: mergedAddUserRef } : {}),
-      items: mergedAddItems,
-    });
-  }
-
-  return {
-    ...parsed,
-    actions: mergedActions,
-  };
-}
-
+export type { FrontendIntentHint, Plan, PlannedAction } from "./planner-types.js";
 
 function plannerPrompt() {
   return `
@@ -264,7 +64,7 @@ Actions autorisées:
 3) {"type":"get_cart","userRef":"..."}
 4) {"type":"clear_cart","userRef":"...","mode":"all|partial","items":[{"query":"..."}]}
 5) {"type":"exec_cart","userRef":"..."}
-6) {"type":"discover_meal_ideas"}
+6) {"type":"discover_meal_ideas","query":"..."}
 7) {"type":"noop","reason":"..."}
 
 IMPORTANT:
@@ -293,11 +93,11 @@ IMPORTANT:
   {"intent":"CLEAR_CART","actions":[{"type":"clear_cart","mode":"partial","items":[{"query":"..."}]}]}
 - Si l'utilisateur veut passer la commande, finaliser le panier, checkout ou confirmer l'achat:
   {"intent":"EXEC_CART","actions":[{"type":"exec_cart"}]}
-- Si l'utilisateur écrit exactement:
-  "Qu'est-ce que tu me proposes aujourd'hui ?"
-  utilise:
-  {"intent":"DISCOVER_MEALS","actions":[{"type":"discover_meal_ideas"}]}
-- Pour toute autre phrase, n'utilise jamais DISCOVER_MEALS.
+- Si l'utilisateur demande des idées, propositions, suggestions, inspiration, conseils d'achat,
+  ou quoi choisir sans demander l'ajout direct d'un produit précis:
+  {"intent":"DISCOVER_MEALS","actions":[{"type":"discover_meal_ideas","query":"message utilisateur"}]}
+- DISCOVER_MEALS doit servir pour les demandes vagues comme santé, végétarien, apéro, petit déjeuner,
+  repas rapide, budget, local, dessert ou boissons.
 - Si l'utilisateur demande "de quoi faire ..." ou veut préparer un plat / repas / usage,
   retourne NOOP dans ce planner: le flow build_meal est traité ailleurs.
 
@@ -467,7 +267,7 @@ Réponse:
 {
   "intent":"DISCOVER_MEALS",
   "actions":[
-    {"type":"discover_meal_ideas"}
+    {"type":"discover_meal_ideas","query":"Qu'est-ce que tu me proposes aujourd'hui ?"}
   ]
 }
 
@@ -502,20 +302,6 @@ Réponse:
 }
 `;
 }
-
-export type FrontendIntentHint = {
-  actionKey?:
-    | "add_items"
-    | "clear_cart"
-    | "show_cart"
-    | "exec_cart"
-    | "build_meal"
-    | "discover_meals"
-    | "noop";
-  confidence?: number;
-  family?: string;
-  planner?: string;
-};
 
 function plannerPromptOutputRules() {
   return `
@@ -555,21 +341,6 @@ RÈGLE DE REPLI:
 - Exemple:
   {"intent":"NOOP","actions":[{"type":"noop","reason":"general_chat"}]}
 `;
-}
-
-function normalizePlannerUserText(userText: string): string {
-  return String(userText || "")
-    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, " ")
-    .replace(/\u00A0/g, " ")
-    .replace(/\r/g, "\n")
-    .replace(/\t/g, " ")
-    .replace(/[•●▪◦◉∙‣⁃◾◽]/g, "\n- ")
-    .replace(/\n\s*-\s*/g, "\n- ")
-    .replace(/[ ]+\n/g, "\n")
-    .replace(/\n[ ]+/g, "\n")
-    .replace(/[ ]{2,}/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
 }
 
 function plannerPromptAddItems2() {
@@ -792,152 +563,27 @@ ${plannerPromptNoopFallbackRules()}
 }
 
 
-function plannerPromptAddItems() {
+export function plannerPromptAddItems() {
   return `
-Tu es l’Assistant Zélo. Tu es un planner spécialisé ADD_ITEMS.
-Ta mission est de transformer le message utilisateur en PLAN JSON strict pour ajouter un ou plusieurs produits au panier.
+Message déjà classé ADD_ITEMS.
+Ta seule tâche: découper les produits demandés.
 
-${plannerPromptOutputRules()}
+Réponds uniquement avec ce JSON:
+{"intent":"ADD_ITEMS","actions":[{"type":"add_to_cart","items":[{"raw":"..."}]}]}
 
-Actions autorisées:
-1) {
-  "type":"add_to_cart",
-  "items":[
-    {
-      "query":"...",
-      "qty":1,
-      "unit":"piece|g|kg|litre|litres"
-    }
-  ]
-}
-2) {"type":"noop","reason":"..."}
+Règles:
+- 1 produit = 1 raw.
+- raw = extrait exact copié du message original.
+- Garde quantité et unité si elles sont dans cet extrait.
+- Ignore salutations, livraison, disponibilité, politesse, signature.
+- Ne modifie rien: pas de correction, pas de traduction, pas d’ajout.
+- Ne sépare jamais les mots d’un même produit.
+- Aucune autre clé.
 
-IMPORTANT:
-- Ton intent principal est ADD_ITEMS.
-- Si le message demande clairement d'ajouter des produits au panier, retourne ADD_ITEMS.
-- Si le message ne demande pas réellement un ajout panier, retourne NOOP.
-- Retourne une seule action "add_to_cart" avec un seul tableau "items".
-- N'écris jamais plusieurs actions "add_to_cart".
-- Ignore totalement les métadonnées techniques éventuelles:
-  "UserRef=...", "UserMessage=...", "local-dev", "anonymous", email, id, token.
-- L'expression "à mon panier", "dans mon panier", "au panier", "pour mon panier" indique seulement la destination.
-- N'invente jamais une query générique comme "courses", "courses pour 2", "apéro" ou "panier" si plusieurs produits précis sont présents.
-- Utilise "panier" dans "query" seulement si le produit demandé contient réellement ce mot, par exemple "Panier Budget 50", "panier de légumes", "panier de fruits".
-
-RÈGLES PAR ITEM:
-- "query" = nom du produit seulement.
-- "query" ne doit jamais contenir la quantité, l'unité, "et", "and", ni des mots de politesse.
-- "qty" = quantité numérique.
-- "unit" = uniquement "piece", "g", "kg", "litre" ou "litres".
-- N'utilise jamais d'autre unité.
-
-CANONISATION:
-- "pièce", "pièces", "pieces" -> "piece"
-- "gr", "gramme", "grammes", "grams", "grains" -> "g"
-- "kilogramme", "kilogrammes" -> "kg"
-- "l" -> "litre" ou "litres"
-
-RÈGLES DE QUANTITÉ:
-- Si un nombre est écrit sans unité de poids/volume, conserve ce nombre et utilise unit="piece".
-- Si aucun nombre n'est écrit, utilise qty=1 et unit="piece".
-- Si un poids est écrit en grammes, utilise unit="g".
-- Si un poids est écrit en kilogrammes, utilise unit="kg".
-- Si un volume est écrit en litres, utilise unit="litre" pour 1 et unit="litres" pour 2 ou plus.
-- Comprends aussi les quantités écrites en lettres:
-  un/une=1, deux=2, trois=3, quatre=4, cinq=5, six=6, sept=7, huit=8, neuf=9, dix=10.
-
-LISTES:
-- Si le message contient une liste, des virgules, des puces ou des retours à la ligne, traite chaque segment utile comme un item potentiel.
-- Continue jusqu'au dernier produit utile du message.
-- Ne perds jamais les derniers produits d'une liste longue.
-- Si plusieurs produits précis sont présents, extrais-les tous individuellement.
-- Ne remplace jamais une liste précise par un produit générique.
-
-Exemples:
-
-Message:
-"Ajoute 1 lard de Begnins à mon panier"
-Réponse:
-{
-  "intent":"ADD_ITEMS",
-  "actions":[
-    {
-      "type":"add_to_cart",
-      "items":[
-        {"query":"lard de Begnins","qty":1,"unit":"piece"}
-      ]
-    }
-  ]
-}
-
-Message:
-"Ajoute 150g de lard de Begnins à mon panier"
-Réponse:
-{
-  "intent":"ADD_ITEMS",
-  "actions":[
-    {
-      "type":"add_to_cart",
-      "items":[
-        {"query":"lard de Begnins","qty":150,"unit":"g"}
-      ]
-    }
-  ]
-}
-
-Message:
-"Salut André, je te prends volontiers 2 litres de lait sapalet, 8 œufs, 250 gr de fromage aléatoire gimelan et 2kg de pommes."
-Réponse:
-{
-  "intent":"ADD_ITEMS",
-  "actions":[
-    {
-      "type":"add_to_cart",
-      "items":[
-        {"query":"lait sapalet","qty":2,"unit":"litres"},
-        {"query":"œufs","qty":8,"unit":"piece"},
-        {"query":"fromage aléatoire gimelan","qty":250,"unit":"g"},
-        {"query":"pommes","qty":2,"unit":"kg"}
-      ]
-    }
-  ]
-}
-
-Message:
-"Bonjour. Un pain aux noix, 500g rhubarbs, 200g lard de begnins, deux pates vaudois, deux pizza margaritas, une botte chou plume, un sorbet fraise, une sauce lulu, une sauce salvis."
-Réponse:
-{
-  "intent":"ADD_ITEMS",
-  "actions":[
-    {
-      "type":"add_to_cart",
-      "items":[
-        {"query":"pain aux noix","qty":1,"unit":"piece"},
-        {"query":"rhubarbs","qty":500,"unit":"g"},
-        {"query":"lard de begnins","qty":200,"unit":"g"},
-        {"query":"pates vaudois","qty":2,"unit":"piece"},
-        {"query":"pizza margaritas","qty":2,"unit":"piece"},
-        {"query":"botte chou plume","qty":1,"unit":"piece"},
-        {"query":"sorbet fraise","qty":1,"unit":"piece"},
-        {"query":"sauce lulu","qty":1,"unit":"piece"},
-        {"query":"sauce salvis","qty":1,"unit":"piece"}
-      ]
-    }
-  ]
-}
-
-Message:
-"Comment ça va ?"
-Réponse:
-{
-  "intent":"NOOP",
-  "actions":[
-    {"type":"noop","reason":"general_chat"}
-  ]
-}
-
-${plannerPromptNoopFallbackRules()}
-`;
+Exemple:
+"Salut, 3l de lait et 2 grands yoghourt Straciatella, merci"
+=> {"intent":"ADD_ITEMS","actions":[{"type":"add_to_cart","items":[{"raw":"3l de lait"},{"raw":"2 grands yoghourt Straciatella"}]}]}
+`.trim();
 }
 
 
@@ -1224,70 +870,7 @@ ${plannerPromptNoopFallbackRules()}
 }
 
 function plannerPromptDiscoverMeals() {
-  return `
-Tu es l’Assistant Zélo. Tu es un planner spécialisé DISCOVER_MEALS.
-Ta mission est de transformer le message utilisateur en PLAN JSON strict pour lancer un flow de découverte d'idées repas.
-
-${plannerPromptOutputRules()}
-
-Actions autorisées:
-1) {"type":"discover_meal_ideas"}
-2) {"type":"noop","reason":"..."}
-
-IMPORTANT:
-- Ton intent principal est DISCOVER_MEALS.
-- Utilise DISCOVER_MEALS si l'utilisateur demande explicitement des idées, propositions ou suggestions du jour.
-- Cas de référence principal:
-  "Qu'est-ce que tu me proposes aujourd'hui ?"
-- Tu peux accepter des variantes proches comme:
-  "tu me proposes quoi aujourd'hui ?", "quelles idées de repas aujourd'hui ?"
-- Si l'utilisateur demande un plat précis ou "de quoi faire ..." retourne NOOP.
-- Ne retourne jamais ADD_ITEMS, SHOW_CART, CLEAR_CART, EXEC_CART ou BUILD_MEAL dans ce planner.
-
-Exemples:
-
-Message:
-"Qu'est-ce que tu me proposes aujourd'hui ?"
-Réponse:
-{
-  "intent":"DISCOVER_MEALS",
-  "actions":[
-    {"type":"discover_meal_ideas"}
-  ]
-}
-
-Message:
-"Tu me proposes quoi aujourd'hui ?"
-Réponse:
-{
-  "intent":"DISCOVER_MEALS",
-  "actions":[
-    {"type":"discover_meal_ideas"}
-  ]
-}
-
-Message:
-"Quelles idées de repas aujourd'hui ?"
-Réponse:
-{
-  "intent":"DISCOVER_MEALS",
-  "actions":[
-    {"type":"discover_meal_ideas"}
-  ]
-}
-
-Message:
-"De quoi faire une fondue"
-Réponse:
-{
-  "intent":"NOOP",
-  "actions":[
-    {"type":"noop","reason":"wrong_specialized_hint"}
-  ]
-}
-
-${plannerPromptNoopFallbackRules()}
-`;
+  return discoverPlannerPrompt(fallbackDiscoverPlannerVocabulary());
 }
 
 function plannerPromptNoop() {
@@ -1385,10 +968,79 @@ function selectPlannerBudget(intentHint?: FrontendIntentHint) {
     case "noop":
       return { numPredict: 96, numCtx: 2048 };
     case "discover_meals":
-      return { numPredict: 96, numCtx: 2048 };
+      return { numPredict: 160, numCtx: 2048 };
     default:
       return { numPredict: 160, numCtx: 2048 };
   }
+}
+
+export function buildDiscoverPlanFromPlannerChoices(
+  query: string,
+  choices: ReturnType<typeof normalizeDiscoverPlannerChoices>
+): Plan {
+  return {
+    intent: "DISCOVER_MEALS",
+    actions: [
+      {
+        type: "discover_meal_ideas",
+        query,
+        ...(choices.needs.length ? { needHints: choices.needs } : {}),
+        ...(choices.roles.length ? { roleHints: choices.roles } : {}),
+      },
+    ],
+  };
+}
+
+async function planDiscoverUserIntent(
+  userRef: string,
+  normalizedUserText: string,
+  intentHint?: FrontendIntentHint
+): Promise<Plan> {
+  const training = await loadDiscoverTrainingArtifacts();
+  const vocabulary = discoverPlannerVocabularyFromTraining(training);
+  const plannerBudget = selectPlannerBudget(intentHint);
+  const selectedPrompt = discoverPlannerPrompt(vocabulary);
+  const raw = await timeAsync(
+    "planner.ollama_chat",
+    async () =>
+      await ollamaChat(
+        [
+          { role: "system", content: selectedPrompt },
+          { role: "user", content: `UserRef=${userRef}\nUserMessage=${normalizedUserText}` },
+        ],
+        0,
+        {
+          model: env.ollamaPlannerModel,
+          format: discoverPlannerJsonSchema(vocabulary),
+          keepAlive: "30m",
+          numPredict: plannerBudget.numPredict,
+          numCtx: plannerBudget.numCtx,
+        }
+      )
+  );
+  const parsed = timeSync(
+    "planner.safe_json_parse",
+    () => safeJsonParse<unknown>(raw)
+  );
+  const choices = timeSync(
+    "planner.normalize_discover_choices",
+    () => enrichDiscoverPlannerChoicesFromQuery(
+      normalizedUserText,
+      filterDiscoverPlannerChoicesByQuery(
+        normalizedUserText,
+        normalizeDiscoverPlannerChoices(parsed, vocabulary)
+      ),
+      vocabulary
+    )
+  );
+  const plan = buildDiscoverPlanFromPlannerChoices(normalizedUserText, choices);
+
+  console.log("[PLAN RAW]", raw);
+  console.log("[PLAN DISCOVER VOCAB]", JSON.stringify(vocabulary));
+  console.log("[PLAN PARSED]", JSON.stringify(plan, null, 2));
+  console.log("[PLANNER HINT]", JSON.stringify(intentHint ?? null));
+
+  return plan;
 }
 
 
@@ -1397,9 +1049,18 @@ export async function planUserIntent(
   userText: string,
   intentHint?: FrontendIntentHint
 ): Promise<Plan | null> {
+  const normalizedUserText = normalizePlannerUserText(userText);
+
+  if (intentHint?.actionKey === "discover_meals") {
+    const plan = await planDiscoverUserIntent(userRef, normalizedUserText, intentHint);
+    if (normalizedUserText !== userText) {
+      console.log("[PLANNER USER TEXT NORMALIZED]", normalizedUserText);
+    }
+    return plan;
+  }
+
   const selectedPrompt = selectPlannerPrompt(intentHint);
   const plannerBudget = selectPlannerBudget(intentHint);
-  const normalizedUserText = normalizePlannerUserText(userText);
 
   const raw = await timeAsync(
     "planner.ollama_chat",

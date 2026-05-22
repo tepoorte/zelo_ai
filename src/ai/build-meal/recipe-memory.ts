@@ -1,7 +1,7 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { normalizeText, tokenizeForMatch } from "../../domain/normalizer.js";
+import { readJsonFile, writeJsonFile } from "../../utils/json-file.js";
 import { ollamaEmbed } from "../services/ollama-client.js";
 import {
   getBuildMealLearnedExamples,
@@ -335,24 +335,6 @@ function buildSignature(
     .digest("hex");
 }
 
-async function ensureCacheDir(): Promise<void> {
-  await fs.mkdir(CACHE_DIR, { recursive: true });
-}
-
-async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {
-  try {
-    const raw = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-async function writeJsonFile(filePath: string, data: unknown): Promise<void> {
-  await ensureCacheDir();
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
-}
-
 async function maybeEmbedText(text: string): Promise<number[] | undefined> {
   const normalized = normalizeText(text);
   if (!normalized) return undefined;
@@ -491,9 +473,21 @@ function buildCandidateScore(
 }
 
 export function looksLikeMealRequest(normalizedText: string, training: BuildMealTrainingSeed): boolean {
-  return (training.requestPatterns || []).some((pattern) =>
-    normalizedText.includes(normalizeText(pattern))
-  );
+  const text = normalizeText(normalizedText);
+  if (!text) return false;
+
+  if (/\bde quoi faire\b/.test(text)) return true;
+  if (/\bingredients?\s+pour\b/.test(text)) return true;
+  if (/\bpour\s+(?:preparer|cuisiner)\b/.test(text)) return true;
+  if (/\bquoi\s+prendre\s+pour\s+faire\b/.test(text)) return true;
+  if (/^(?:je\s+veux\s+|j\s+veux\s+|on\s+veut\s+)?faire\s+(?:un|une|des)\b/.test(text)) {
+    return true;
+  }
+
+  return (training.requestPatterns || [])
+    .map((pattern) => normalizeText(pattern))
+    .filter((pattern) => pattern && !/^faire\s+(?:un|une|des)$/.test(pattern))
+    .some((pattern) => text.includes(pattern));
 }
 
 export async function getRecipeCandidates(

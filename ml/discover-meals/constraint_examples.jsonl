@@ -1,0 +1,17 @@
+{"text":"un repas tranquille sans viande","labels":["vegetarian","balanced","dinner"],"excludedRoles":["meat"]}
+{"text":"un repas tranquille san viande","labels":["vegetarian","balanced","dinner"],"excludedRoles":["meat"]}
+{"text":"un repas tranquille san s viande","labels":["vegetarian","balanced","dinner"],"excludedRoles":["meat"]}
+{"text":"une option sans poisson ni viande","labels":["vegetarian","balanced"],"excludedRoles":["fish","meat"]}
+{"text":"quelque chose sans fromage","labels":["healthy","balanced"],"excludedRoles":["cheese"]}
+{"text":"un petit déjeuner sans lait","labels":["breakfast","healthy"],"excludedRoles":["dairy"]}
+{"text":"une boisson sans alcool","labels":["drink"],"excludedRoles":["drink"]}
+{"text":"un apéro sans alcool","labels":["aperitif","drink"],"excludedRoles":["drink"]}
+{"text":"un plat sans sucre","labels":["healthy","dessert"],"excludedRoles":["sweet"]}
+{"text":"un plats sans sucre","labels":["healthy","dessert"],"excludedRoles":["sweet"]}
+{"text":"un plats san s sucre","labels":["healthy","dessert"],"excludedRoles":["sweet"]}
+{"text":"un plat qui a pas de sucre","labels":["healthy","dessert"],"excludedRoles":["sweet"]}
+{"text":"une idée pas trop sucrée","labels":["healthy","dessert"],"excludedRoles":["sweet"]}
+{"text":"un goûter sans chocolat","labels":["kids","dessert"],"excludedRoles":["sweet"]}
+{"text":"je veux éviter les plats lourds","labels":["healthy","balanced"],"excludedRoles":["prepared_meal","menu"]}
+{"text":"je veux éviter les plats trop lourds","labels":["healthy","balanced"],"excludedRoles":["prepared_meal","menu"]}
+{"text":"produits maison sans lessive","labels":["cleaning","hygiene"],"excludedRoles":["cleaning"]}

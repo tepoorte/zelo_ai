@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-05-08T09:55:19.606Z",
+  "updatedAt": "2026-05-21T16:28:58.381Z",
   "items": [
     {
       "normalizedText": "de quoi faire une pizza jambon",
@@ -1215,6 +1215,58 @@
       "lastSeenAt": "2026-05-08T09:55:19.606Z",
       "userRefs": [
         "local-dev"
+      ]
+    },
+    {
+      "normalizedText": "je veux une farine pour une pizza",
+      "sampleText": "je veux une farine pour une pizza",
+      "count": 1,
+      "firstSeenAt": "2026-05-20T11:21:57.008Z",
+      "lastSeenAt": "2026-05-20T11:21:57.008Z",
+      "userRefs": [
+        "local-dev"
+      ],
+      "topCandidates": [
+        {
+          "mealKey": "pizza",
+          "mealLabel": "pizza",
+          "matchedText": "pizza",
+          "score": 0.9005,
+          "lexicalScore": 0.9005,
+          "semanticScore": 0.7141022440987617,
+          "source": "alias"
+        }
+      ]
+    },
+    {
+      "normalizedText": "de quoi faire une machheroni carbonara",
+      "sampleText": "de quoi faire une machheroni carbonara",
+      "count": 4,
+      "firstSeenAt": "2026-05-20T11:36:56.071Z",
+      "lastSeenAt": "2026-05-20T11:37:48.720Z",
+      "userRefs": [
+        "local-dev"
+      ],
+      "topCandidates": [
+        {
+          "mealKey": "carbonara",
+          "mealLabel": "carbonara",
+          "matchedText": "carbonara",
+          "score": 0.9009,
+          "lexicalScore": 0.9009,
+          "semanticScore": 0.7544301431660393,
+          "source": "alias"
+        }
+      ]
+    },
+    {
+      "normalizedText": "des produits pour faire un apero",
+      "sampleText": "des produits pour faire un apéro",
+      "count": 2,
+      "firstSeenAt": "2026-05-21T14:50:26.820Z",
+      "lastSeenAt": "2026-05-21T16:28:58.381Z",
+      "userRefs": [
+        "discover-ui-audit"
       ]
     }
   ]

@@ -1,4 +1,3 @@
-// src/swissdata/session.ts
 type Session = { token: string; refresh?: string; expires?: string };
 
 const SESSIONS = new Map<string, Session>();

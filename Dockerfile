@@ -24,6 +24,7 @@ RUN npm ci --omit=dev
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public
+COPY ml ./ml
 
 EXPOSE 3041
 

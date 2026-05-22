@@ -8,9 +8,14 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test:delivery": "node --loader ts-node/esm ./tests/delivery-date.test.ts",
+    "test:add-items": "node --loader ts-node/esm ./tests/add-items-extractor.test.ts",
+    "test:add-items-random": "node --loader ts-node/esm ./tests/add-items-random-catalog.test.ts",
     "test:build-meal-family": "node --loader ts-node/esm ./tests/build-meal-family.test.ts",
     "test:build-meal-matching": "node --loader ts-node/esm ./tests/build-meal-matching.test.ts",
-    "test:smoke": "node --loader ts-node/esm ./tests/smoke/run.ts"
+    "test:discover-meals": "node --loader ts-node/esm ./tests/discover-meals.test.ts",
+    "test:smoke": "node --loader ts-node/esm ./tests/smoke/run.ts",
+    "setup:discover-meals": "node ./ml/discover-meals/setup.mjs",
+    "train:discover-meals": "node ./ml/discover-meals/build-artifacts.mjs"
   },
   "dependencies": {
     "axios": "^1.7.7",

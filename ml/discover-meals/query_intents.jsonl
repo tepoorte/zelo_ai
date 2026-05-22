@@ -1,0 +1,201 @@
+{"text":"je veux manger plus sain","labels":["healthy","balanced"]}
+{"text":"tu me proposes quoi pour ce soir","labels":["dinner","discovery_open"]}
+{"text":"une idée végétarienne","labels":["vegetarian","balanced"]}
+{"text":"un apéro local","labels":["aperitif","local"]}
+{"text":"quelque chose pour le petit déjeuner","labels":["breakfast"]}
+{"text":"un truc rapide avec du poisson","labels":["quick","dinner","healthy"]}
+{"text":"des idées pas trop chères","labels":["budget","weekly_basket"]}
+{"text":"quel dessert simple tu proposes","labels":["dessert"]}
+{"text":"des boissons pour accompagner","labels":["drink","aperitif"]}
+{"text":"une idée cadeau","labels":["gift"]}
+{"text":"quelque chose pour le ménage","labels":["cleaning"]}
+{"text":"des produits d'hygiène","labels":["hygiene"]}
+{"text":"je ne sais pas quoi commander cette semaine","labels":["weekly_basket","discovery_open"]}
+{"text":"propose-moi quelque chose de sain pour cette semaine","labels":["healthy","balanced","weekly_basket"]}
+{"text":"j'aimerais manger plus léger aujourd'hui","labels":["healthy","balanced"]}
+{"text":"je cherche des idées bonnes pour la santé","labels":["healthy","balanced","discovery_open"]}
+{"text":"tu as une idée fraîche et équilibrée","labels":["healthy","balanced","discovery_open"]}
+{"text":"quelque chose de simple pour reprendre de bonnes habitudes","labels":["healthy","balanced"]}
+{"text":"je veux éviter les plats trop lourds","labels":["healthy","balanced","quick"]}
+{"text":"des produits frais pour me sentir mieux","labels":["healthy","balanced"]}
+{"text":"un panier avec légumes et protéines","labels":["healthy","balanced","weekly_basket"]}
+{"text":"une idée légère mais nourrissante","labels":["healthy","balanced","dinner"]}
+{"text":"je voudrais manger sain sans réfléchir","labels":["healthy","balanced","discovery_open"]}
+{"text":"une idée pour le repas de ce soir","labels":["dinner","balanced"]}
+{"text":"tu me proposes quoi comme dîner","labels":["dinner","discovery_open"]}
+{"text":"je ne sais pas quoi cuisiner ce soir","labels":["dinner","discovery_open"]}
+{"text":"un repas complet pour aujourd'hui","labels":["dinner","balanced"]}
+{"text":"quelque chose pour le souper","labels":["dinner","balanced"]}
+{"text":"un plat simple pour la fin de journée","labels":["dinner","quick"]}
+{"text":"une assiette facile avec accompagnement","labels":["dinner","balanced"]}
+{"text":"une idée de repas familial","labels":["dinner","weekly_basket"]}
+{"text":"je veux préparer un repas concret","labels":["dinner","balanced"]}
+{"text":"propose-moi trois idées pour ce soir","labels":["dinner","discovery_open"]}
+{"text":"une option rapide sans trop cuisiner","labels":["quick","dinner"]}
+{"text":"quelque chose prêt en peu de temps","labels":["quick","dinner"]}
+{"text":"j'ai besoin d'un repas facile","labels":["quick","dinner","balanced"]}
+{"text":"pas envie de cuisiner longtemps","labels":["quick","dinner"]}
+{"text":"un truc vite prêt pour midi","labels":["quick","dinner"]}
+{"text":"une solution pratique pour ce soir","labels":["quick","dinner"]}
+{"text":"des idées express avec le catalogue","labels":["quick","discovery_open"]}
+{"text":"un repas sans préparation compliquée","labels":["quick","dinner"]}
+{"text":"quelque chose que je peux faire rapidement","labels":["quick","dinner"]}
+{"text":"une proposition simple et rapide","labels":["quick","discovery_open"]}
+{"text":"une idée végétarienne équilibrée","labels":["vegetarian","balanced","dinner"]}
+{"text":"je veux manger sans viande ce soir","labels":["vegetarian","dinner"]}
+{"text":"propose-moi un panier veggie","labels":["vegetarian","balanced","weekly_basket"]}
+{"text":"une option sans poisson ni viande","labels":["vegetarian","balanced"]}
+{"text":"quelque chose végétarien mais nourrissant","labels":["vegetarian","balanced"]}
+{"text":"un repas avec oeufs fromage et légumes","labels":["vegetarian","balanced","dinner"]}
+{"text":"des idées végétariennes pour la semaine","labels":["vegetarian","weekly_basket"]}
+{"text":"je cherche une alternative veggie","labels":["vegetarian","discovery_open"]}
+{"text":"un dîner végétarien simple","labels":["vegetarian","dinner","quick"]}
+{"text":"tu as quoi comme idée sans viande","labels":["vegetarian","discovery_open"]}
+{"text":"un apéro à partager","labels":["aperitif"]}
+{"text":"des produits locaux pour l'apéritif","labels":["aperitif","local"]}
+{"text":"je reçois des amis ce soir","labels":["aperitif","dinner"]}
+{"text":"une planche apéro simple","labels":["aperitif","local"]}
+{"text":"que proposer pour boire un verre","labels":["aperitif","drink"]}
+{"text":"des idées pour l'apéro avec du fromage","labels":["aperitif","local"]}
+{"text":"un apéritif facile avec pain et fromage","labels":["aperitif","local"]}
+{"text":"quelque chose à grignoter local","labels":["aperitif","local"]}
+{"text":"un petit apéro pas compliqué","labels":["aperitif","quick"]}
+{"text":"des produits à poser sur la table","labels":["aperitif","local"]}
+{"text":"une base pour le petit déjeuner","labels":["breakfast"]}
+{"text":"je veux préparer le déjeuner de demain","labels":["breakfast"]}
+{"text":"des produits pour le matin","labels":["breakfast"]}
+{"text":"pain lait muesli pour commencer la journée","labels":["breakfast"]}
+{"text":"une idée douce pour le matin","labels":["breakfast"]}
+{"text":"un panier petit déjeuner","labels":["breakfast","weekly_basket"]}
+{"text":"quelque chose pour les enfants au déjeuner","labels":["breakfast","kids"]}
+{"text":"un petit déjeuner simple et sain","labels":["breakfast","healthy"]}
+{"text":"des idées pour accompagner le café","labels":["breakfast"]}
+{"text":"que prendre pour demain matin","labels":["breakfast","discovery_open"]}
+{"text":"des idées pas trop chères pour la semaine","labels":["budget","weekly_basket"]}
+{"text":"je veux limiter mon budget","labels":["budget"]}
+{"text":"un panier économique","labels":["budget","weekly_basket"]}
+{"text":"des bases utiles et abordables","labels":["budget","weekly_basket"]}
+{"text":"quelque chose de simple et pas cher","labels":["budget","quick"]}
+{"text":"propose-moi des produits raisonnables","labels":["budget","discovery_open"]}
+{"text":"un repas bon marché","labels":["budget","dinner"]}
+{"text":"je veux éviter de dépasser le budget","labels":["budget"]}
+{"text":"une idée économique pour ce soir","labels":["budget","dinner"]}
+{"text":"des courses pas trop coûteuses","labels":["budget","weekly_basket"]}
+{"text":"une idée dessert pour ce soir","labels":["dessert"]}
+{"text":"quelque chose de gourmand","labels":["dessert"]}
+{"text":"un dessert simple avec fruit","labels":["dessert"]}
+{"text":"une douceur pour finir le repas","labels":["dessert"]}
+{"text":"que proposer comme dessert","labels":["dessert","discovery_open"]}
+{"text":"un dessert facile à ajouter au panier","labels":["dessert","quick"]}
+{"text":"quelque chose de sucré","labels":["dessert"]}
+{"text":"une idée pour le goûter","labels":["dessert","kids"]}
+{"text":"un petit plaisir gourmand","labels":["dessert"]}
+{"text":"un dessert pas compliqué","labels":["dessert","quick"]}
+{"text":"des boissons pour ce soir","labels":["drink"]}
+{"text":"quelque chose à boire avec le repas","labels":["drink","dinner"]}
+{"text":"une boisson sympa pour l'apéro","labels":["drink","aperitif"]}
+{"text":"des jus pour accompagner","labels":["drink"]}
+{"text":"tu proposes quoi comme boisson","labels":["drink","discovery_open"]}
+{"text":"une idée de boisson locale","labels":["drink","local"]}
+{"text":"de quoi boire avec des amis","labels":["drink","aperitif"]}
+{"text":"des boissons pour les enfants","labels":["drink","kids"]}
+{"text":"un truc à boire pas alcoolisé","labels":["drink"]}
+{"text":"une sélection de boissons simples","labels":["drink","weekly_basket"]}
+{"text":"quelque chose pour les enfants","labels":["kids"]}
+{"text":"un goûter pour les petits","labels":["kids","dessert"]}
+{"text":"des produits que les enfants aiment","labels":["kids","breakfast"]}
+{"text":"une idée simple pour la famille","labels":["kids","dinner"]}
+{"text":"un panier pratique pour enfants","labels":["kids","weekly_basket"]}
+{"text":"un repas facile pour les petits","labels":["kids","quick","dinner"]}
+{"text":"quelque chose de doux pour le goûter","labels":["kids","dessert"]}
+{"text":"des idées petit déjeuner enfants","labels":["kids","breakfast"]}
+{"text":"des produits simples pour la maison avec enfants","labels":["kids","weekly_basket"]}
+{"text":"propose-moi quelque chose familial","labels":["kids","discovery_open"]}
+{"text":"une idée cadeau gourmande","labels":["gift","dessert"]}
+{"text":"quelque chose à offrir","labels":["gift"]}
+{"text":"un petit cadeau local","labels":["gift","local"]}
+{"text":"une attention pour quelqu'un","labels":["gift"]}
+{"text":"un cadeau avec produits du coin","labels":["gift","local"]}
+{"text":"que prendre pour offrir","labels":["gift","discovery_open"]}
+{"text":"une idée cadeau simple","labels":["gift"]}
+{"text":"un coffret ou une douceur à offrir","labels":["gift","dessert"]}
+{"text":"je veux faire plaisir à quelqu'un","labels":["gift"]}
+{"text":"un cadeau alimentaire sympa","labels":["gift","dessert"]}
+{"text":"un panier local","labels":["local","weekly_basket"]}
+{"text":"des produits du coin","labels":["local"]}
+{"text":"quelque chose de la région","labels":["local","discovery_open"]}
+{"text":"je veux soutenir les producteurs locaux","labels":["local","weekly_basket"]}
+{"text":"une idée avec produits locaux","labels":["local","balanced"]}
+{"text":"un repas local pour ce soir","labels":["local","dinner"]}
+{"text":"un apéro local et simple","labels":["local","aperitif"]}
+{"text":"des produits frais locaux","labels":["local","healthy"]}
+{"text":"une sélection locale","labels":["local","discovery_open"]}
+{"text":"que proposes-tu de local","labels":["local","discovery_open"]}
+{"text":"un panier pour toute la semaine","labels":["weekly_basket"]}
+{"text":"je ne sais pas quoi prendre cette semaine","labels":["weekly_basket","discovery_open"]}
+{"text":"des bases pour remplir le panier","labels":["weekly_basket"]}
+{"text":"un panier complet sans réfléchir","labels":["weekly_basket","balanced"]}
+{"text":"surprends-moi avec une sélection","labels":["weekly_basket","discovery_open"]}
+{"text":"des courses simples pour plusieurs jours","labels":["weekly_basket"]}
+{"text":"une offre découverte pour commencer","labels":["weekly_basket","budget"]}
+{"text":"un panier équilibré pour la semaine","labels":["weekly_basket","balanced","healthy"]}
+{"text":"des produits essentiels à avoir","labels":["weekly_basket","budget"]}
+{"text":"compose-moi un panier utile","labels":["weekly_basket","discovery_open"]}
+{"text":"des produits pour le ménage","labels":["cleaning"]}
+{"text":"il me faut de la lessive","labels":["cleaning"]}
+{"text":"quelque chose pour nettoyer","labels":["cleaning"]}
+{"text":"des produits pratiques pour la maison","labels":["cleaning"]}
+{"text":"une idée côté entretien","labels":["cleaning"]}
+{"text":"je cherche du savon ou soin","labels":["hygiene"]}
+{"text":"des produits d'hygiène pour la salle de bain","labels":["hygiene"]}
+{"text":"quelque chose pour se laver","labels":["hygiene"]}
+{"text":"un produit de soin simple","labels":["hygiene"]}
+{"text":"hygiène et maison","labels":["hygiene","cleaning"]}
+{"text":"je veux éviter le gaspillage","labels":["zero_waste","budget"]}
+{"text":"des produits anti-gaspi","labels":["zero_waste","budget"]}
+{"text":"une sélection zéro déchet","labels":["zero_waste","local"]}
+{"text":"quelque chose de durable","labels":["zero_waste","healthy"]}
+{"text":"des idées responsables","labels":["zero_waste","local","healthy"]}
+{"text":"des produits avec moins de perte","labels":["zero_waste"]}
+{"text":"un panier durable pour la semaine","labels":["zero_waste","weekly_basket"]}
+{"text":"aide-moi à acheter mieux","labels":["zero_waste","healthy","balanced"]}
+{"text":"une proposition responsable et locale","labels":["zero_waste","local"]}
+{"text":"des courses plus durables","labels":["zero_waste","weekly_basket"]}
+{"text":"propose moi quelque chose pour ma santé","labels":["healthy","balanced"]}
+{"text":"quelque chose pour mieux dormir","labels":["healthy","balanced"]}
+{"text":"des produits pour avoir plus d'énergie","labels":["healthy","breakfast"]}
+{"text":"un panier pour le sommeil","labels":["healthy"]}
+{"text":"des idées pour me sentir en forme","labels":["healthy","balanced"]}
+{"text":"propose quelque chose de végétarien","labels":["vegetarian","balanced"]}
+{"text":"une boisson pour accompagner","labels":["drink"]}
+{"text":"un apéro local sans trop réfléchir","labels":["aperitif","local","quick"]}
+{"text":"des produits pour les enfants","labels":["kids","breakfast"]}
+{"text":"un goûter simple pour les enfants","labels":["kids","dessert"]}
+{"text":"un truc rapide avec de la viande","labels":["quick","dinner"]}
+{"text":"une idée rapide avec du boeuf","labels":["quick","dinner"]}
+{"text":"propose-moi quelque chose avec de la viande","labels":["dinner","balanced"]}
+{"text":"je veux une proposition avec du boeuf","labels":["dinner"]}
+{"text":"quelque chose avec du poulet","labels":["quick","dinner"]}
+{"text":"un repas simple avec du lard","labels":["dinner"]}
+{"text":"une option viande pour ce soir","labels":["dinner"]}
+{"text":"un truc rapide avec de la dinde","labels":["quick","dinner"]}
+{"text":"un truc rapide avec de la pomme","labels":["quick","healthy"]}
+{"text":"quelque chose rapide avec des pommes","labels":["quick","healthy"]}
+{"text":"un snack frais avec de la pomme","labels":["quick","healthy"]}
+{"text":"un truc rapide de fruits","labels":["quick","healthy"]}
+{"text":"des fruits rapides","labels":["quick","healthy"]}
+{"text":"une sélection de fruits","labels":["healthy","weekly_basket"]}
+{"text":"quelque chose avec des fruits","labels":["healthy","dessert"]}
+{"text":"un dessert avec de la pomme","labels":["dessert","healthy"]}
+{"text":"un dessert fruité","labels":["dessert","healthy"]}
+{"text":"quelque chose a boir","labels":["drink"]}
+{"text":"quelque chose à boire","labels":["drink"]}
+{"text":"je veux un truc à boir","labels":["drink"]}
+{"text":"propose des boissons","labels":["drink"]}
+{"text":"une boisson pour accompagner","labels":["drink"]}
+{"text":"des produits pour la maison","labels":["cleaning"]}
+{"text":"quelque chose pour nettoyer la maison","labels":["cleaning"]}
+{"text":"des produits maison et hygiène","labels":["cleaning","hygiene"]}
+{"text":"quelque chose avec de la viande","labels":["dinner","quick"]}
+{"text":"un repas avec du poisson","labels":["dinner","quick","healthy"]}
+{"text":"une idée sport et énergie","labels":["healthy","breakfast"]}

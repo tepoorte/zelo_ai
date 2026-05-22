@@ -9,6 +9,28 @@ export function normalizeText(input: string): string {
     .trim();
 }
 
+const MATCH_STOPWORDS = new Set([
+  "a",
+  "au",
+  "aux",
+  "avec",
+  "de",
+  "des",
+  "du",
+  "d",
+  "dans",
+  "en",
+  "et",
+  "la",
+  "le",
+  "les",
+  "l",
+  "par",
+  "pour",
+  "un",
+  "une",
+]);
+
 function singularizeMatchToken(token: string): string {
   if (token.length <= 3) return token;
 
@@ -20,7 +42,9 @@ function singularizeMatchToken(token: string): string {
 }
 
 export function tokenizeForMatch(input: string): string[] {
-  const tokens = normalizeText(input).split(" ").filter(Boolean);
+  const tokens = normalizeText(input)
+    .split(" ")
+    .filter((token) => token && !MATCH_STOPWORDS.has(token));
   const expanded = new Set<string>();
 
   for (const token of tokens) {

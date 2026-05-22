@@ -7,7 +7,7 @@ const EMBEDDING_MODEL = env.ollamaEmbeddingModel || "nomic-embed-text";
 
 type OllamaChatConfig = {
   model?: string;
-  format?: "json";
+  format?: "json" | Record<string, unknown>;
   keepAlive?: string;
   numPredict?: number;
   numCtx?: number;

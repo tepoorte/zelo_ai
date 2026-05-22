@@ -1,14 +1,20 @@
 .env
 node_modules/
 dist/
+.venv/
+ml/discover-meals/.venv/
+__pycache__/
+*.pyc
 
 # macOS / editor noise
 .DS_Store
 **/.DS_Store
 
 # Local archives and temporary deployment backups
+docs/
 *.zip
 *.tgz
 *.tar.gz
 tmp_deploy.server/
 pre_stage_merge_backup/
+.cache/tmp/

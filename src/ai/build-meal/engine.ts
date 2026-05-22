@@ -1,6 +1,6 @@
 import { addProductToBasket, getCurrentBasket } from "../../swissdata/cart.js";
 import { normalizeText } from "../../domain/normalizer.js";
-import { computeBasketQty } from "../services/cart-helpers.service.js";
+import { computeBasketQty } from "../services/cart-quantity.service.js";
 import { resolveCatalogProduct } from "./catalog-resolver.js";
 import { getBuildMealTrainingRuntime } from "./training.service.js";
 import { rememberUnknownBuildMealRequest } from "./learning.service.js";

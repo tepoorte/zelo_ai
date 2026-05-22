@@ -1,8 +1,8 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { normalizeText } from "../../domain/normalizer.js";
 import { fetchFullProduct, type Product } from "../../swissdata/products.js";
+import { readJsonFile, writeJsonFile } from "../../utils/json-file.js";
 import { CATEGORY_NAME_BY_ID, EXCLUDED_CATEGORY_IDS } from "../food-taxonomy.js";
 import {
   makeBuildMealIngredientKey,
@@ -38,24 +38,6 @@ function runtimeFileForUser(userRef?: string | null): string {
 
 function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
-}
-
-async function ensureCacheDir(): Promise<void> {
-  await fs.mkdir(CACHE_DIR, { recursive: true });
-}
-
-async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {
-  try {
-    const raw = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-async function writeJsonFile(filePath: string, data: unknown): Promise<void> {
-  await ensureCacheDir();
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
 }
 
 async function loadSeedTraining(): Promise<BuildMealTrainingSeed> {

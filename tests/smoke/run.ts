@@ -95,7 +95,7 @@ const LONG_ORDER_TEXT =
 const NADIA_TEXT =
   "Salut André,\nJe te prends volontiers un filet de brochet et du Gruyère d'alpage pour la fin de journée.\nMerci d'avance.\n\nBelle journée ☀️\nNadia";
 const ORIANA_TEXT =
-  "Bonjour André, je veux bien selon dispos :\n- 1 pain noix\n- 1 pain balance\n- 250g filets perche frais\n- 1 grand yaourt brebis nature\n- 1 grand yaourt nature\nMerci bien, Oriana";
+  "Bonjour André, je veux bien selon dispos :\n- 1 pain noix\n- 1 pain balance\n- 400g lard du begnin\n- 1 grand yaourt brebis nature\n- 1 grand yaourt nature\nMerci bien, Oriana";
 const MILK_STRAZZIATELLA_TEXT =
   "Salut André. Je te prends volontiers 3l de lait et 2 grands yoghourt Straciatella, si tu en as. Merci!";
 const LONG_MIXED_ORDER_TEXT =
@@ -209,13 +209,13 @@ const STEPS: Step[] = [
     name: "Add Oriana order",
     text: ORIANA_TEXT,
     hint: HINTS.add_items,
-    expectMessageIncludes: ["Pain Balance", "Aucune"],
+    expectMessageIncludes: ["Pain Balance", "A. Lard de Begnins"],
     autoReplyNoOptions: true,
     basketExpectation: {
       contains: [
         { name: "Pain aux noix", qty: 1 },
         { name: "Pain Balance", qty: 1 },
-        { name: "Filets de perche congelés", qty: 1 },
+        { name: "A. Lard de Begnins", qty: 4 },
         { name: "Yaourt de brebis nature (Grand pot)", qty: 1 },
         { name: "Yaourt nature (Grand pot)", qty: 1 },
       ],
@@ -252,11 +252,12 @@ const STEPS: Step[] = [
     text: LONG_MIXED_ORDER_TEXT,
     hint: HINTS.add_items,
     expectMessageIncludes: ["Pain aux noix", "A. Lard de Begnins", "Sauce"],
+    autoReplyNoOptions: true,
     basketExpectation: {
       contains: [
         { name: "Pain aux noix", qty: 1 },
         { name: "A. Lard de Begnins", qty: 2 },
-        { name: "Pâté vaudois", qty: 2 },
+        { name: "Pâtés vaudois par 2", qty: 2 },
         { name: "Pizza Marguerite", qty: 2 },
         { name: "Sorbet Fraise", qty: 1 },
         { name: "Sauce à Lulu", qty: 1 },
@@ -270,6 +271,25 @@ const STEPS: Step[] = [
     hint: HINTS.clear_cart,
     expectMessageIncludes: ["vidé ton panier"],
     basketExpectation: { empty: true },
+  },
+  {
+    name: "Add one panier budget 50",
+    text: "ajoute 1 panier budget 50 à mon panier",
+    hint: HINTS.add_items,
+    expectMessageIncludes: ["Panier Budget 50"],
+    basketExpectation: {
+      contains: [{ name: "Panier Budget 50", qty: 1 }],
+    },
+  },
+  {
+    name: "Remove one panier budget 50 only",
+    text: "supprime 1 panier budget 50",
+    hint: HINTS.clear_cart,
+    expectMessageIncludes: ["retiré du panier"],
+    basketExpectation: {
+      empty: true,
+      absent: ["Panier Budget 50"],
+    },
   },
   {
     name: "Reset basket before hot dog meal",
@@ -449,29 +469,6 @@ const STEPS: Step[] = [
       ],
     },
     waitForBasketMs: 12000,
-  },
-  {
-    name: "Add one panier budget 50",
-    text: "ajoute 1 panier budget 50 à mon panier",
-    hint: HINTS.add_items,
-    expectMessageIncludes: ["Panier Budget 50"],
-    basketExpectation: {
-      contains: [{ name: "Panier Budget 50", qty: 1 }],
-    },
-  },
-  {
-    name: "Remove one panier budget 50 only",
-    text: "supprime 1 panier budget 50",
-    hint: HINTS.clear_cart,
-    expectMessageIncludes: ["retiré du panier"],
-    basketExpectation: {
-      absent: ["Panier Budget 50"],
-      contains: [
-        { name: "A. Lait Bio pasteurisé (Sapalet)", qty: 2 },
-        { name: "Gimelan aléatoire", qty: 1 },
-        { name: "Pommes Bio ou VV", qty: 2 },
-      ],
-    },
   },
   {
     name: "Final clear cart",
@@ -708,7 +705,6 @@ async function runStep(step: Step): Promise<void> {
   let response = await sendChat(step);
 
   assert(response.ok, `${step.name}: /ai/chat returned ok=false`);
-  assertMessage(step, response.message);
 
   if (step.autoReplyNoOptions) {
     const maxReplies = step.maxAutoNoOptionsReplies ?? 5;
@@ -728,6 +724,7 @@ async function runStep(step: Step): Promise<void> {
     }
   }
 
+  assertMessage(step, response.message);
   await assertBasketEventually(step);
 
   const elapsedMs = Date.now() - startedAt;

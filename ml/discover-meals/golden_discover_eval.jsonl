@@ -1,0 +1,16 @@
+{"text":"j’ai envie d’un truc simple mais bon","labels":["quick","balanced"]}
+{"text":"tu me conseilles quoi si je reçois deux amis","labels":["aperitif","local","drink"]}
+{"text":"une sélection pas trop chère pour deux jours","labels":["budget","weekly_basket"]}
+{"text":"un repas tranquille sans viande","labels":["vegetarian","balanced","dinner"]}
+{"text":"je veux une option rapide pour midi","labels":["quick","dinner"]}
+{"text":"des produits pour faire un apéro","labels":["aperitif","local"]}
+{"text":"un panier de base pour la semaine","labels":["weekly_basket","budget"]}
+{"text":"quelque chose de frais","labels":["healthy","balanced"]}
+{"text":"une idée gourmande mais simple","labels":["dessert","quick"]}
+{"text":"que prendre avec du fromage","labels":["aperitif","local"]}
+{"text":"je veux éviter les plats lourds","labels":["healthy","balanced"]}
+{"text":"un truc local à partager","labels":["aperitif","local"]}
+{"text":"que proposer pour un goûter","labels":["kids","dessert"]}
+{"text":"quelque chose de durable","labels":["zero_waste","healthy"]}
+{"text":"une idée cadeau","labels":["gift","dessert"]}
+{"text":"un dessert léger","labels":["dessert","healthy"]}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-05-08T11:03:55.920Z",
+  "updatedAt": "2026-05-21T14:43:11.508Z",
   "events": [
     {
       "id": "b57624e0-2d89-4be3-aa2a-fd4dba06387e",
@@ -80,6 +80,56 @@
       "predictedAction": "clear_cart",
       "correctAction": "noop",
       "createdAt": "2026-05-08T11:03:55.920Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "b8589715-fd5a-4ee8-b1c7-c50b631bf229",
+      "kind": "correction",
+      "text": "je veux une farine pour une pizz",
+      "normalizedText": "je veux une farine pour une pizz",
+      "predictedAction": "build_meal",
+      "correctAction": "add_items",
+      "createdAt": "2026-05-20T11:22:40.306Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "90d3ba9e-bbc5-4d12-8ec9-b87dec08e861",
+      "kind": "correction",
+      "text": "quels tomates as-tu ?",
+      "normalizedText": "quels tomates as tu",
+      "predictedAction": "noop",
+      "correctAction": "add_items",
+      "createdAt": "2026-05-20T11:25:48.620Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "80257260-ee66-4787-b2b6-6cd0801221b4",
+      "kind": "correction",
+      "text": "une boisson pour accompagner",
+      "normalizedText": "une boisson pour accompagner",
+      "predictedAction": "build_meal",
+      "correctAction": "discover_meals",
+      "createdAt": "2026-05-21T13:03:46.448Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "178e4163-d81a-48df-bcf6-2741ac4422fd",
+      "kind": "correction",
+      "text": "j’ai envie d’un truc simple mais bon",
+      "normalizedText": "j ai envie d un truc simple mais bon",
+      "predictedAction": "add_items",
+      "correctAction": "discover_meals",
+      "createdAt": "2026-05-21T14:39:57.202Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "716bddf9-1eba-46f9-a709-342ff108330f",
+      "kind": "correction",
+      "text": "je veux compléter mon panier pour demain matin",
+      "normalizedText": "je veux completer mon panier pour demain matin",
+      "predictedAction": "show_cart",
+      "correctAction": "discover_meals",
+      "createdAt": "2026-05-21T14:43:11.508Z",
       "userRef": "local-dev"
     }
   ]

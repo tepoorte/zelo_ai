@@ -1,5 +1,5 @@
-import fs from "node:fs/promises";
 import path from "node:path";
+import { readJsonFile, writeJsonFile } from "../../utils/json-file.js";
 import type {
   BuildMealLearnedExample,
   BuildMealLearnedExamplesStore,
@@ -14,24 +14,6 @@ const CACHE_DIR = path.join(process.cwd(), ".cache");
 const LEARNED_EXAMPLES_FILE = path.join(CACHE_DIR, "build-meal-recipe-examples.json");
 const REJECTED_EXAMPLES_FILE = path.join(CACHE_DIR, "build-meal-recipe-rejections.json");
 const UNKNOWN_INBOX_FILE = path.join(CACHE_DIR, "build-meal-learning-inbox.json");
-
-async function ensureCacheDir(): Promise<void> {
-  await fs.mkdir(CACHE_DIR, { recursive: true });
-}
-
-async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {
-  try {
-    const raw = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-async function writeJsonFile(filePath: string, data: unknown): Promise<void> {
-  await ensureCacheDir();
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
-}
 
 export async function getBuildMealLearnedExamples(): Promise<BuildMealLearnedExamplesStore> {
   return await readJsonFile<BuildMealLearnedExamplesStore>(LEARNED_EXAMPLES_FILE, {
