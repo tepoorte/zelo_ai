@@ -51,6 +51,8 @@ const catalog: Product[] = [
   { id: "oranges-sicile", name: "Oranges de Sicile", size: "2kg" },
   { id: "citron-bio", name: "A. Citron Bio", size: "1 pièce" },
   { id: "penne-complete", name: "Penne complète", size: "500g" },
+  { id: "fricandeaux", name: "Fricandeaux", size: "1 pièce" },
+  { id: "ballon-pavot", name: "Ballon au pavot", size: "1 pièce" },
 ];
 
 function items(text: string) {
@@ -356,6 +358,19 @@ Si par hasard il reste 2 Birchers de feuillantine ? Sinon ce n’est pas grave �
   assert.equal(parsed[0].productId, undefined);
   assert.equal(parsed[0].query, "pizza margaritas and");
   assert.equal(parsed[0].qty, 2);
+}
+
+{
+  const parsed = items(`Bonjour
+Si ce n’est pas trop tard, puis-je commander
+Fdicandeaux
+Ballon au pavop
+Un grand merci`);
+
+  assert.deepEqual(parsed.map((item) => item.productId), [
+    "fricandeaux",
+    "ballon-pavot",
+  ]);
 }
 
 {

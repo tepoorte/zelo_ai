@@ -99,7 +99,7 @@ IMPORTANT:
 - DISCOVER_MEALS doit servir pour les demandes vagues comme santé, végétarien, apéro, petit déjeuner,
   repas rapide, budget, local, dessert ou boissons.
 - Si l'utilisateur demande "de quoi faire ..." ou veut préparer un plat / repas / usage,
-  retourne NOOP dans ce planner: le flow build_meal est traité ailleurs.
+  utilise DISCOVER_MEALS: le flow build_meal est actuellement désactivé côté client.
 
 RÈGLE POUR LE SMALL TALK ET LES QUESTIONS GÉNÉRALES:
 - Si le message est un salut, un remerciement, une formule de politesse,
@@ -589,8 +589,8 @@ Exemple:
 
 function plannerPromptClearCart() {
   return `
-Tu es l’Assistant Zélo. Tu es un planner spécialisé CLEAR_CART.
-Ta mission est de transformer le message utilisateur en PLAN JSON strict pour retirer des produits du panier, soit totalement, soit de manière ciblée.
+Message déjà classé CLEAR_CART.
+Ta seule tâche: choisir si la demande vide tout le panier ou retire des articles précis.
 
 ${plannerPromptOutputRules()}
 
@@ -598,25 +598,14 @@ Actions autorisées:
 1) {"type":"clear_cart","userRef":"...","mode":"all|partial","items":[{"query":"..."}]}
 2) {"type":"noop","reason":"..."}
 
-IMPORTANT:
-- Ton intent principal est CLEAR_CART.
-- Utilise {"type":"clear_cart","mode":"all"} si l'utilisateur veut que le panier devienne vide.
-- Cela inclut les formulations explicites ou indirectes comme:
-  "vide mon panier", "supprime tout", "enlève tout", "je ne veux plus rien",
-  "mon panier ne doit rien contenir", "fais en sorte que mon panier soit vide".
-- Utilise {"type":"clear_cart","mode":"partial","items":[...]} si l'utilisateur veut retirer un ou plusieurs produits précis du panier.
-- Cela inclut des formulations comme:
-  "supprime Crottins de chèvre par 2", "enlève le lait bio de mon panier",
-  "retire le lard de begnins", "enlève seulement le pain anglais".
-- Attention: le mot "panier" peut faire partie du nom d'un produit, par exemple
-  "Panier Budget 50", "Panier de légumes Bio", "Panier de fruits exotiques".
-- Si l'utilisateur demande de supprimer / enlever / retirer un produit précis dont le nom contient "panier",
-  cela reste un retrait ciblé en mode "partial", pas un vidage total.
-- N'utilise le mode "all" que si la demande parle clairement de tout vider:
-  "tout", "rien", "vide", "complètement", "entièrement", "tout le panier".
-- En mode partial, mets dans "items" une ou plusieurs queries produit simples et exploitables.
-- Ne retourne jamais SHOW_CART, ADD_ITEMS, EXEC_CART, BUILD_MEAL ou DISCOVER_MEALS dans ce planner.
-- Si le message parle du panier mais ne demande pas clairement une suppression totale ou ciblée, retourne NOOP.
+Règles:
+- mode="all" seulement si le client veut vider tout le panier.
+- mode="partial" si le client parle d'un ou plusieurs articles précis.
+- En partial, query doit être un extrait exact du message original.
+- Ne corrige pas, ne reformule pas, n’invente aucun produit.
+- Si "panier" fait partie du nom d’un article, garde partial.
+- Si la suppression n’est pas claire, retourne NOOP.
+- Ne retourne jamais un autre intent.
 
 Exemples:
 
@@ -631,48 +620,12 @@ Réponse:
 }
 
 Message:
-"Supprime tout de mon panier"
+"Je ne veux plus rien"
 Réponse:
 {
   "intent":"CLEAR_CART",
   "actions":[
     {"type":"clear_cart","mode":"all"}
-  ]
-}
-
-Message:
-"Je veux que mon panier soit vide"
-Réponse:
-{
-  "intent":"CLEAR_CART",
-  "actions":[
-    {"type":"clear_cart","mode":"all"}
-  ]
-}
-
-Message:
-"Ahh, je voudrais que mon panier ne contienne rien non plus"
-Réponse:
-{
-  "intent":"CLEAR_CART",
-  "actions":[
-    {"type":"clear_cart","mode":"all"}
-  ]
-}
-
-Message:
-"Supprime Crottins de chèvre par 2"
-Réponse:
-{
-  "intent":"CLEAR_CART",
-  "actions":[
-    {
-      "type":"clear_cart",
-      "mode":"partial",
-      "items":[
-        {"query":"crottins de chèvre par 2"}
-      ]
-    }
   ]
 }
 
@@ -686,14 +639,14 @@ Réponse:
       "type":"clear_cart",
       "mode":"partial",
       "items":[
-        {"query":"lait bio"}
+        {"query":"le lait bio"}
       ]
     }
   ]
 }
 
 Message:
-"Supprime 1 panier budget 50"
+"Enfin, je veux pas non plus le lard"
 Réponse:
 {
   "intent":"CLEAR_CART",
@@ -702,7 +655,39 @@ Réponse:
       "type":"clear_cart",
       "mode":"partial",
       "items":[
-        {"query":"panier budget 50"}
+        {"query":"le lard"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Non attends, enlève 2 pommes"
+Réponse:
+{
+  "intent":"CLEAR_CART",
+  "actions":[
+    {
+      "type":"clear_cart",
+      "mode":"partial",
+      "items":[
+        {"query":"2 pommes"}
+      ]
+    }
+  ]
+}
+
+Message:
+"Garde seulement 2 pommes"
+Réponse:
+{
+  "intent":"CLEAR_CART",
+  "actions":[
+    {
+      "type":"clear_cart",
+      "mode":"partial",
+      "items":[
+        {"query":"2 pommes"}
       ]
     }
   ]
@@ -718,7 +703,7 @@ Réponse:
       "type":"clear_cart",
       "mode":"partial",
       "items":[
-        {"query":"panier budget 50"}
+        {"query":"le panier budget 50"}
       ]
     }
   ]

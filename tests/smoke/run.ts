@@ -51,6 +51,7 @@ type ChatResponse = {
 const DEFAULT_BASE_URL = process.env.ZELO_TEST_BASE_URL ?? "http://127.0.0.1:3041";
 const DEFAULT_USER_REF = process.env.ZELO_TEST_USER_REF ?? `smoke-${Date.now()}`;
 const ONLY_MODE = String(process.env.ZELO_TEST_ONLY ?? "").trim().toLowerCase();
+const INCLUDE_BUILD_MEAL = process.env.ZELO_TEST_INCLUDE_BUILD_MEAL === "1";
 
 const USERNAME = process.env.ZELO_TEST_USERNAME ?? "";
 const PASSWORD = process.env.ZELO_TEST_PASSWORD ?? "";
@@ -480,7 +481,11 @@ const STEPS: Step[] = [
 ];
 
 function filteredSteps(): Step[] {
-  if (!ONLY_MODE) return STEPS;
+  if (!ONLY_MODE) {
+    return INCLUDE_BUILD_MEAL
+      ? STEPS
+      : STEPS.filter((step) => step.hint?.actionKey !== "build_meal");
+  }
 
   if (ONLY_MODE === "build_meal") {
     return STEPS.filter(
@@ -488,6 +493,10 @@ function filteredSteps(): Step[] {
         step.hint?.actionKey === "build_meal" ||
         /^reset basket before .* meal$/i.test(step.name)
     );
+  }
+
+  if (ONLY_MODE === "non_build" || ONLY_MODE === "no_build_meal") {
+    return STEPS.filter((step) => step.hint?.actionKey !== "build_meal");
   }
 
   return STEPS.filter((step) => normalizeText(step.name).includes(normalizeText(ONLY_MODE)));

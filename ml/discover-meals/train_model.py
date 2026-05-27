@@ -256,6 +256,12 @@ BUNDLE_ALLOWED_PATTERNS = [
     "découverte",
 ]
 
+BUDGET_CURRENCY_TERMS = ["chf", "fr", "frs", "franc", "francs", "franchs", "balle", "balles", ".-"]
+BUDGET_TARGET_CUES = ["budget", "max", "maximum", "environ", "autour", "avec", "mettre", "depenser", "dépenser", "prix"]
+BUDGET_ECONOMIC_CUES = ["pas cher", "pas chere", "pas cheres", "pas chers", "pas trop cher", "pas trop chere", "pas trop cheres", "pas trop chers", "economique", "économique", "raisonnable", "bon marche", "bon marché", "limiter budget"]
+BUDGET_PREMIUM_CUES = ["tres cher", "très cher", "tres chere", "très chère", "tres cheres", "très chères", "tres chers", "très chers", "premium", "gourmand", "riche", "genereux", "généreux"]
+BUDGET_HARD_NEGATIVE_CUES = ["personne", "personnes", "kilo", "kilos", "kg", "gramme", "grammes", "g", "litre", "litres", "heure", "heures"]
+
 CONTEXT_NON_ANCHOR_TERMS = {
     "actuel",
     "actuelle",
@@ -263,20 +269,27 @@ CONTEXT_NON_ANCHOR_TERMS = {
     "adaptee",
     "ami",
     "amis",
+    "autour",
+    "balle",
+    "balles",
     "aujourd",
     "aujourdhui",
     "avec",
     "base",
     "bon",
     "bonne",
+    "budget",
     "cher",
     "chere",
     "cheres",
     "chers",
+    "chf",
+    "chose",
     "concret",
     "concrete",
     "concretes",
     "deux",
+    "disponible",
     "durable",
     "facile",
     "fatigue",
@@ -284,12 +297,21 @@ CONTEXT_NON_ANCHOR_TERMS = {
     "frais",
     "fraiche",
     "fraiches",
+    "fr",
+    "franc",
+    "francs",
+    "franch",
+    "franchs",
+    "frs",
     "gourmand",
     "gourmande",
     "idee",
     "idees",
     "jour",
     "jours",
+    "jeudi",
+    "livraison",
+    "lundi",
     "leger",
     "legere",
     "legeres",
@@ -303,26 +325,39 @@ CONTEXT_NON_ANCHOR_TERMS = {
     "manger",
     "manges",
     "matin",
+    "mardi",
+    "max",
+    "maximum",
+    "mercredi",
+    "mettre",
     "midi",
     "moins",
+    "premium",
     "option",
+    "personne",
+    "personnes",
     "partager",
     "plat",
     "plats",
     "possible",
+    "proposition",
     "produit",
     "produits",
     "quelque",
     "rapide",
     "recevoir",
     "recois",
+    "repa",
     "repas",
+    "samedi",
+    "dimanche",
     "simple",
     "soir",
     "soiree",
     "temps",
     "truc",
     "utile",
+    "vendredi",
 }
 
 NEGATION_TEMPLATES = [
@@ -833,6 +868,60 @@ def generated_constraint_examples() -> list[dict[str, Any]]:
         {"text": "un goûter sans chocolat", "labels": ["kids", "dessert"]},
         {"text": "produits maison sans lessive", "labels": ["cleaning", "hygiene"]},
     ])
+    return rows
+
+
+def generated_budget_examples() -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    amounts = [25, 30, 40, 50, 75, 100, 120, 150]
+    target_templates = [
+        "quelque chose avec {amount} francs",
+        "quelque chose avec {amount} franchs",
+        "j ai un budget de {amount} fr",
+        "je peux mettre {amount} CHF",
+        "un repas autour de {amount} francs",
+        "une idée pour environ {amount}.-",
+        "un apéro avec max {amount} chf",
+        "une idée avec du lard pour {amount} francs",
+        "un repas avec du poisson budget {amount} fr",
+        "quelque chose mais j ai {amount} francs disponible",
+    ]
+    for amount in amounts:
+        for template in target_templates:
+            text = template.format(amount=amount)
+            labels = ["budget", "dinner"] if "repas" in text or "lard" in text or "poisson" in text else ["budget", "discovery_open"]
+            rows.append({"text": text, "labels": labels})
+
+    for text in [
+        "des idées pas trop chères",
+        "un panier économique",
+        "je veux limiter mon budget",
+        "quelque chose de simple et raisonnable",
+        "un repas bon marché",
+        "propose moi une option économique",
+    ]:
+        rows.append({"text": text, "labels": ["budget", "weekly_basket"]})
+
+    for text in [
+        "un repas très cher",
+        "quelque chose de premium",
+        "une idée gourmande et généreuse",
+        "je veux un repas riche",
+        "un truc gourmand mais simple",
+    ]:
+        rows.append({"text": text, "labels": ["dinner", "discovery_open"]})
+
+    for text in [
+        "repas pour 4 personnes",
+        "livraison vendredi à 18h",
+        "2 kilos de pommes",
+        "3 produits pour ce soir",
+        "vendredi 22 mai",
+        "un repas pour deux amis",
+        "une idée avec 3 produits",
+    ]:
+        rows.append({"text": text, "labels": ["discovery_open"]})
+
     return rows
 
 
@@ -1445,6 +1534,48 @@ def build_proposal_blueprints(
     return blueprints
 
 
+def build_budget_policy(
+    budget_examples: list[dict[str, Any]],
+    hard_negatives: list[dict[str, Any]],
+) -> dict[str, Any]:
+    target_examples = [
+        row for row in budget_examples
+        if re.search(r"\d", str(row.get("text", ""))) and any(term in normalize(row.get("text", "")) for term in ["fr", "chf", "budget", ".-"])
+    ]
+    economic_examples = [
+        row for row in budget_examples
+        if any(cue in normalize(row.get("text", "")) for cue in ["pas cher", "economique", "raisonnable", "bon marche"])
+    ]
+    premium_examples = [
+        row for row in budget_examples
+        if any(cue in normalize(row.get("text", "")) for cue in ["tres cher", "premium", "gourmand", "riche"])
+    ]
+    hard_negative_examples = hard_negatives or [
+        {"text": "repas pour 4 personnes"},
+        {"text": "livraison vendredi à 18h"},
+        {"text": "2 kilos de pommes"},
+        {"text": "3 produits pour ce soir"},
+    ]
+
+    return {
+        "schemaVersion": 1,
+        "currencyTerms": BUDGET_CURRENCY_TERMS,
+        "targetCues": BUDGET_TARGET_CUES,
+        "economicCues": BUDGET_ECONOMIC_CUES,
+        "premiumCues": BUDGET_PREMIUM_CUES,
+        "hardNegativeCues": BUDGET_HARD_NEGATIVE_CUES,
+        "toleranceRatio": 0.15,
+        "toleranceMinCHF": 5,
+        "metrics": {
+            "targetExamples": len(target_examples),
+            "economicExamples": len(economic_examples),
+            "premiumExamples": len(premium_examples),
+            "hardNegativeExamples": len(hard_negative_examples),
+            "generatedExamples": len(generated_budget_examples()),
+        },
+    }
+
+
 def read_response_styles(styles: list[dict[str, Any]]) -> list[dict[str, Any]]:
     output = []
     for style in styles:
@@ -1481,6 +1612,8 @@ def main() -> None:
     constraint_examples = read_jsonl(TRAINING_DIR / "constraint_examples.jsonl")
     typo_eval_examples = read_jsonl(TRAINING_DIR / "typo_eval.jsonl")
     golden_eval_examples = read_jsonl(TRAINING_DIR / "golden_discover_eval.jsonl")
+    budget_examples = read_jsonl(TRAINING_DIR / "budget_examples.jsonl")
+    budget_hard_negatives = read_jsonl(TRAINING_DIR / "budget_hard_negatives.jsonl")
     role_examples = read_jsonl(TRAINING_DIR / "product_roles.jsonl")
     ranking_examples = read_jsonl(TRAINING_DIR / "ranking_examples.jsonl") + read_jsonl(TRAINING_DIR / "proposal_ranking.jsonl")
     proposal_examples = read_jsonl(TRAINING_DIR / "proposal_examples.jsonl")
@@ -1491,12 +1624,17 @@ def main() -> None:
         constraint_examples,
         typo_eval_examples,
         golden_eval_examples,
+        budget_examples,
+        budget_hard_negatives,
         ranking_examples,
         proposal_examples,
         response_style_rows,
     )
     response_styles = read_response_styles(response_style_rows)
-    query_examples = build_query_examples(manual_queries + constraint_examples + typo_eval_examples + golden_eval_examples)
+    budget_training_examples = budget_examples + budget_hard_negatives + generated_budget_examples()
+    query_examples = build_query_examples(
+        manual_queries + constraint_examples + typo_eval_examples + golden_eval_examples + budget_training_examples
+    )
 
     print(f"[discover-train] catalog products: {len(products)}")
     print(f"[discover-train] query examples: {len(query_examples)}")
@@ -1513,6 +1651,7 @@ def main() -> None:
         "roles": collect_role_universe(role_examples, ranking_examples, profiles, label_role_weights),
     }
     focus_policy = build_focus_policy(profiles, planner_vocabulary["roles"])
+    budget_policy = build_budget_policy(budget_examples + generated_budget_examples(), budget_hard_negatives)
 
     product_embeddings, query_embeddings, embedding_mode = build_embeddings(
         products,
@@ -1592,10 +1731,13 @@ def main() -> None:
             "plannerVocabulary": planner_vocabulary,
             "anchorPolicies": ANCHOR_POLICIES,
             "focusPolicy": focus_policy,
+            "budgetPolicy": budget_policy,
             "evaluationReport": {
                 "constraintExamples": len(constraint_examples),
                 "typoEvalExamples": len(typo_eval_examples),
                 "goldenEvalExamples": len(golden_eval_examples),
+                "budgetExamples": len(budget_examples),
+                "budgetHardNegatives": len(budget_hard_negatives),
                 "syntheticQueryExamples": len(query_examples) - len(manual_queries),
                 "focusPolicy": {
                     "roleAliases": sum(len(values) for values in focus_policy["roleAliasIndex"].values()),
@@ -1613,6 +1755,7 @@ def main() -> None:
                 "responseStyles": len(response_styles),
                 "intentTrainer": intent_trainer,
                 "ranker": ranker_metrics,
+                "budgetMetrics": budget_policy["metrics"],
                 "sklearnAvailable": bool(LogisticRegression and OneVsRestClassifier and np is not None),
             },
         },

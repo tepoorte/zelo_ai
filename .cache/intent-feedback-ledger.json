@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-05-21T14:43:11.508Z",
+  "updatedAt": "2026-05-26T15:18:00.116Z",
   "events": [
     {
       "id": "b57624e0-2d89-4be3-aa2a-fd4dba06387e",
@@ -130,6 +130,16 @@
       "predictedAction": "show_cart",
       "correctAction": "discover_meals",
       "createdAt": "2026-05-21T14:43:11.508Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "2771d729-05e9-4728-8939-6fc4f33d9a4b",
+      "kind": "correction",
+      "text": "lard",
+      "normalizedText": "lard",
+      "predictedAction": "clear_cart",
+      "correctAction": "add_items",
+      "createdAt": "2026-05-26T15:17:24.468Z",
       "userRef": "local-dev"
     }
   ]

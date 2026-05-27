@@ -424,6 +424,34 @@ export async function addProductToBasket(
   return res.data;
 }
 
+export async function setProductQuantityInBasket(
+  userRef: string,
+  basketId: string,
+  productId: string,
+  qty: number,
+  optionsIds: string[] = []
+) {
+  const api = swissdataClient(userRef);
+  const shopId = env.swissdataShopId;
+  const country = env.swissdataCountry;
+
+  if (!shopId) throw new Error("Missing env SWISSDATA_SHOP_ID");
+  if (!country) throw new Error("Missing SWISSDATA_COUNTRY");
+
+  const res = await timeAsync(
+    "swissdata.set_product_quantity_api",
+    async () =>
+      await api.put(
+        `/shop/${shopId}/order/basket/${basketId}/add/${productId}/${qty}`,
+        { optionsIds },
+        { params: { country, quantityMode: "exact" } }
+      ),
+    { productId, qty, optionsCount: optionsIds.length }
+  );
+
+  return res.data;
+}
+
 export async function removeProductFromBasket(
   userRef: string,
   basketId: string,

@@ -65,6 +65,8 @@ const PUBLIC_DIR = path.join(process.cwd(), "public", "predictor");
 const SEED_FILE = path.join(PUBLIC_DIR, "intent-training.json");
 const LEDGER_FILE = path.join(CACHE_DIR, "intent-feedback-ledger.json");
 const RUNTIME_FILE = path.join(CACHE_DIR, "intent-training.runtime.json");
+const MODEL_FILE = path.join(CACHE_DIR, "intent-classifier-model.json");
+const HIDDEN_INTENT_KEYS = new Set<IntentKey>(["build_meal"]);
 
 function normalizeText(input: string): string {
   return String(input || "")
@@ -185,10 +187,79 @@ function mergeTraining(baseTraining: IntentTraining, feedback: IntentTraining["f
   return merged;
 }
 
+async function loadIntentClassifierModel(): Promise<Record<string, unknown> | null> {
+  const model = await readJsonFile<Record<string, unknown> | null>(MODEL_FILE, null);
+  if (!model || typeof model !== "object") {
+    return null;
+  }
+  return model;
+}
+
+function modelTrainingExamples(model: Record<string, unknown>): Record<string, string[]> {
+  const raw = model.trainingExamplesByIntent;
+  if (!raw || typeof raw !== "object") {
+    return {};
+  }
+
+  return Object.entries(raw as Record<string, unknown>).reduce<Record<string, string[]>>(
+    (acc, [key, value]) => {
+      if (!Array.isArray(value)) return acc;
+      acc[key] = value.map(String).filter(Boolean);
+      return acc;
+    },
+    {}
+  );
+}
+
+function applyIntentClassifierModel(
+  training: IntentTraining,
+  model: Record<string, unknown> | null
+): IntentTraining {
+  const merged = deepClone(training);
+  const activeIntents = new Set(
+    Array.isArray(model?.activeIntents)
+      ? (model!.activeIntents as unknown[]).map(String)
+      : []
+  );
+  const generatedExamples = model ? modelTrainingExamples(model) : {};
+
+  merged.intents = (merged.intents || []).filter((intent) => {
+    if (HIDDEN_INTENT_KEYS.has(intent.key)) return false;
+    if (activeIntents.size > 0 && !activeIntents.has(intent.key)) return false;
+    return true;
+  });
+
+  merged.intents.forEach((intent) => {
+    const additions = generatedExamples[intent.key] || [];
+    if (!Array.isArray(intent.examples)) {
+      intent.examples = [];
+    }
+    for (const example of additions) {
+      const normalized = normalizeText(example);
+      if (normalized && !hasExample(intent, normalized)) {
+        intent.examples.push(example);
+      }
+    }
+  });
+
+  if (model?.intentModel && typeof model.intentModel === "object") {
+    (merged as Record<string, unknown>).intentModel = model.intentModel;
+    (merged as Record<string, unknown>).intentModelMeta = {
+      generatedAt: model.generatedAt,
+      validationReport: model.validationReport,
+      uiHoldoutReport: model.uiHoldoutReport,
+      hiddenIntents: Array.from(HIDDEN_INTENT_KEYS),
+    };
+  }
+
+  return merged;
+}
+
 export async function getIntentTrainingRuntime(): Promise<IntentTraining> {
   const cached = await readJsonFile<IntentTraining | null>(RUNTIME_FILE, null);
   if (cached?.intents?.length) {
-    return cached;
+    const model = await loadIntentClassifierModel();
+    return applyIntentClassifierModel(cached, model);
   }
 
   return await rebuildIntentTrainingRuntime();
@@ -198,7 +269,8 @@ export async function rebuildIntentTrainingRuntime(): Promise<IntentTraining> {
   const baseTraining = await loadSeedTraining();
   const ledger = await loadLedger();
   const feedback = aggregateFeedback(ledger);
-  const runtime = mergeTraining(baseTraining, feedback);
+  const model = await loadIntentClassifierModel();
+  const runtime = applyIntentClassifierModel(mergeTraining(baseTraining, feedback), model);
   await writeJsonFile(RUNTIME_FILE, runtime);
   return runtime;
 }

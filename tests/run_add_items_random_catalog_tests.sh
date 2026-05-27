@@ -4,9 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+read_env_value() {
+  local key="$1"
+  if [[ -f .env ]]; then
+    grep -E "^${key}=" .env | tail -n 1 | sed -E "s/^${key}=//; s/^\"//; s/\"$//"
+  fi
+}
+
 : "${ZELO_TEST_BASE_URL:=http://127.0.0.1:3041}"
 : "${ZELO_TEST_USER_REF:=random-add-items-$(date +%s)}"
+: "${ZELO_TEST_USERNAME:=$(read_env_value ZELO_TEST_USERNAME)}"
 : "${ZELO_TEST_USERNAME:=public-contact-003@example.invalid}"
+: "${ZELO_TEST_PASSWORD:=$(read_env_value ZELO_TEST_PASSWORD)}"
 : "${ZELO_RANDOM_ADD_ITEMS_CASES:=20}"
 : "${ZELO_RANDOM_ADD_ITEMS_MIN_PRODUCTS:=3}"
 : "${ZELO_RANDOM_ADD_ITEMS_MAX_PRODUCTS:=6}"

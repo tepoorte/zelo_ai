@@ -9,13 +9,20 @@
     "start": "node dist/server.js",
     "test:delivery": "node --loader ts-node/esm ./tests/delivery-date.test.ts",
     "test:add-items": "node --loader ts-node/esm ./tests/add-items-extractor.test.ts",
+    "test:clear-cart": "node --loader ts-node/esm ./tests/clear-cart-extractor.test.ts",
+    "test:agent-formatting": "node --loader ts-node/esm ./tests/agent-action-formatting.test.ts",
     "test:add-items-random": "node --loader ts-node/esm ./tests/add-items-random-catalog.test.ts",
     "test:build-meal-family": "node --loader ts-node/esm ./tests/build-meal-family.test.ts",
     "test:build-meal-matching": "node --loader ts-node/esm ./tests/build-meal-matching.test.ts",
     "test:discover-meals": "node --loader ts-node/esm ./tests/discover-meals.test.ts",
+    "test:intents": "node --loader ts-node/esm ./tests/intent-classifier.test.ts",
+    "audit:intents": "node ./tests/intent-ui-audit.mjs",
+    "audit:discover-budget": "node ./tests/discover-budget-ui-audit.mjs",
     "test:smoke": "node --loader ts-node/esm ./tests/smoke/run.ts",
     "setup:discover-meals": "node ./ml/discover-meals/setup.mjs",
-    "train:discover-meals": "node ./ml/discover-meals/build-artifacts.mjs"
+    "train:discover-meals": "node ./ml/discover-meals/build-artifacts.mjs",
+    "setup:intents": "node ./ml/intent-classifier/setup.mjs",
+    "train:intents": "node ./ml/intent-classifier/build-artifacts.mjs"
   },
   "dependencies": {
     "axios": "^1.7.7",

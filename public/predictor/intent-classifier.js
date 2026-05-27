@@ -313,6 +313,168 @@
     }, {});
   }
 
+  function artifactVectorizeCounts(counts, idf){
+    const weights = Object.create(null);
+    let normSquared = 0;
+
+    counts.forEach((count, feature) => {
+      if (!Object.prototype.hasOwnProperty.call(idf || {}, feature)) {
+        return;
+      }
+      const weight = (1 + Math.log(count)) * (idf[feature] || 1);
+      weights[feature] = weight;
+      normSquared += weight * weight;
+    });
+
+    const norm = Math.sqrt(normSquared) || 1;
+    Object.keys(weights).forEach((feature) => {
+      weights[feature] = weights[feature] / norm;
+    });
+    return weights;
+  }
+
+  function dotArtifactWeights(bucket, vector){
+    const vectorKeys = Object.keys(vector || {});
+    let score = 0;
+    for (const feature of vectorKeys) {
+      score += (bucket?.[feature] || 0) * vector[feature];
+    }
+    return score;
+  }
+
+  function artifactSoftmax(scores){
+    const values = Object.values(scores || {});
+    const max = values.length ? Math.max(...values) : 0;
+    const exp = Object.entries(scores || {}).map(([key, value]) => [
+      key,
+      Math.exp((value - max) * 1.65)
+    ]);
+    const total = exp.reduce((sum, entry) => sum + entry[1], 0) || 1;
+    return exp.reduce((acc, [key, value]) => {
+      acc[key] = value / total;
+      return acc;
+    }, {});
+  }
+
+  function buildArtifactClassifier(training, intentModel){
+    const intents = Array.isArray(training.intents) ? training.intents : [];
+    const intentsByKey = intents.reduce((acc, intent) => {
+      acc[intent.key] = intent;
+      return acc;
+    }, {});
+    const fallbackIntent =
+      intentsByKey[intentModel.fallbackIntent] ||
+      intentsByKey[training.fallbackIntent] ||
+      intents[intents.length - 1];
+    const commonStopwords = training.common?.stopwords || [];
+    const overrideMap = buildOverrideMap(training);
+    const labels = Array.isArray(intentModel.labels)
+      ? intentModel.labels.filter((label) => intentsByKey[label])
+      : intents.map((intent) => intent.key);
+    const idf = intentModel.idf || {};
+    const weights = intentModel.weights || {};
+    const biases = intentModel.biases || {};
+    const acceptance = intentModel.acceptance || {};
+    const thresholds = acceptance.confidenceThresholds || {};
+    const minMargin = Number.isFinite(Number(acceptance.minMargin))
+      ? Number(acceptance.minMargin)
+      : 0.075;
+    const allowAmbiguous = acceptance.allowAmbiguous === true;
+
+    function emptyPrediction(){
+      return {
+        family: fallbackIntent?.family || "general",
+        actionKey: fallbackIntent?.key || "noop",
+        actionLabel: fallbackIntent?.label || "NOOP",
+        confidence: 0,
+        canonical: fallbackIntent?.canonical?.default || "Répondre naturellement",
+        planner: fallbackIntent?.planner || "planner/general",
+        reason: fallbackIntent?.reason || "Aucune action claire détectée pour l’instant.",
+        accepted: false,
+        ambiguity: true
+      };
+    }
+
+    return {
+      predict(text){
+        const normalized = normalizeText(text);
+        if (!normalized) {
+          return emptyPrediction();
+        }
+
+        const overrideIntentKey = overrideMap[normalized];
+        if (overrideIntentKey && intentsByKey[overrideIntentKey]) {
+          const overrideIntent = intentsByKey[overrideIntentKey];
+          return {
+            family: overrideIntent.family || "general",
+            actionKey: overrideIntent.key,
+            actionLabel: overrideIntent.label || overrideIntent.key.toUpperCase(),
+            confidence: 99,
+            canonical: buildCanonical(text, overrideIntent, commonStopwords, null),
+            planner: overrideIntent.planner || ("planner/" + overrideIntent.key),
+            reason: "Prédiction renforcée par un feedback explicite déjà confirmé.",
+            score: 1,
+            example: "",
+            accepted: true,
+            ambiguity: false
+          };
+        }
+
+        const inputCounts = buildFeatureCounts(normalized);
+        const vector = artifactVectorizeCounts(inputCounts, idf);
+        const rawScores = {};
+        labels.forEach((label) => {
+          rawScores[label] = (biases[label] || 0) + dotArtifactWeights(weights[label] || {}, vector);
+        });
+
+        const ranking = Object.entries(rawScores).sort((left, right) => right[1] - left[1]);
+        const bestEntry = ranking[0];
+        const secondEntry = ranking[1] || [fallbackIntent?.key || "noop", bestEntry?.[1] || 0];
+        if (!bestEntry || !intentsByKey[bestEntry[0]]) {
+          return emptyPrediction();
+        }
+
+        const probabilities = artifactSoftmax(rawScores);
+        const bestIntent = intentsByKey[bestEntry[0]];
+        const secondIntent = intentsByKey[secondEntry[0]] || fallbackIntent;
+        const probability = probabilities[bestEntry[0]] || 0;
+        const margin = (bestEntry[1] || 0) - (secondEntry[1] || 0);
+        const marginComponent = clamp(margin / 1.4, 0, 1);
+        const confidence = Math.round(clamp((probability * 0.68 + marginComponent * 0.32) * 100, 1, 99));
+        const ambiguity = Boolean(
+          secondIntent?.key &&
+          secondIntent.key !== bestIntent.key &&
+          (margin < minMargin || probability < 0.42)
+        );
+        const threshold = Number(thresholds[bestIntent.key] || 68);
+        const accepted = confidence >= threshold && margin >= minMargin && (allowAmbiguous || !ambiguity);
+        const reasonSuffix = accepted
+          ? "Modèle ML offline calibré sur le corpus d’intentions."
+          : "Prédiction à confirmer: confiance ou marge insuffisante.";
+
+        return {
+          family: bestIntent.family || "general",
+          actionKey: bestIntent.key,
+          actionLabel: bestIntent.label || bestIntent.key.toUpperCase(),
+          confidence,
+          canonical: buildCanonical(text, bestIntent, commonStopwords, null),
+          planner: bestIntent.planner || ("planner/" + bestIntent.key),
+          reason: buildReason(bestIntent, null, reasonSuffix),
+          score: bestEntry[1],
+          example: "",
+          secondChoice: secondIntent ? {
+            actionKey: secondIntent.key,
+            actionLabel: secondIntent.label || secondIntent.key.toUpperCase(),
+            score: secondEntry[1]
+          } : null,
+          ambiguity,
+          accepted,
+          margin
+        };
+      }
+    };
+  }
+
   function buildOverrideMap(training){
     return Object.entries(training.feedback?.overrides || {}).reduce((acc, [key, value]) => {
       acc[normalizeText(key)] = value;
@@ -321,6 +483,10 @@
   }
 
   function buildClassifier(training){
+    if (training?.intentModel?.type === "linear_tfidf_v1") {
+      return buildArtifactClassifier(training, training.intentModel);
+    }
+
     const intents = Array.isArray(training.intents) ? training.intents : [];
     const fallbackIntent = intents.find((intent) => intent.key === training.fallbackIntent) || intents[intents.length - 1];
     const commonStopwords = training.common?.stopwords || [];

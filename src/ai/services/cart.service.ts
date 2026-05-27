@@ -6,11 +6,16 @@ import {
   clearCurrentBasket,
   placeCurrentBasketOrder,
   removeProductFromBasket,
+  setProductQuantityInBasket,
 } from "../../swissdata/cart.js";
 import { fetchFullProduct, type Product } from "../../swissdata/products.js";
 import { computeBasketQty } from "./cart-quantity.service.js";
 import { formatCartFr } from "./cart-format.service.js";
 import { basketLineName, selectBasketLinesForRemoval } from "./cart-line-matcher.service.js";
+import {
+  extractClearCartPartialFromBasket,
+  isExplicitClearAllRequest,
+} from "./clear-cart-extractor.service.js";
 import {
   formatOptionQuestion,
   resolveOptionsFromText,
@@ -255,9 +260,27 @@ export async function handleShowCartAction(userRef: string, action?: { userRef?:
   return basket;
 }
 
-export async function handleClearCartAction(userRef: string, action?: { userRef?: string }) {
+function lineQuantity(line: any): number {
+  const quantity = Number(line?.quantity ?? line?.qty ?? 1);
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+}
+
+export async function handleClearCartAction(
+  userRef: string,
+  action?: { userRef?: string },
+  userText = ""
+) {
   const targetUserRef = action?.userRef ?? userRef;
   const typedAction = (action ?? {}) as ClearCartAction;
+
+  if (typedAction.mode !== "all" && isExplicitClearAllRequest(userText)) {
+    const updated = await clearCurrentBasket(targetUserRef);
+    return {
+      ok: true,
+      mode: "all" as const,
+      basket: updated,
+    };
+  }
 
   if (typedAction.mode === "partial" && Array.isArray(typedAction.items) && typedAction.items.length) {
     const basket = await getCurrentBasket(targetUserRef);
@@ -265,26 +288,96 @@ export async function handleClearCartAction(userRef: string, action?: { userRef?
       .map((item) => String(item?.query ?? "").trim())
       .filter(Boolean);
 
-    const { matched, unmatched } = selectBasketLinesForRemoval(basket, queries);
+    const extraction = extractClearCartPartialFromBasket(userText || queries.join(", "), basket, queries);
+    const matched = extraction.items;
+    const unmatched = extraction.items.length
+      ? extraction.unmatchedQueries
+      : selectBasketLinesForRemoval(basket, queries).unmatched;
+    const removedItems: Array<{ name: string; quantity: number }> = [];
 
-    for (const line of matched) {
+    for (const item of matched) {
+      const line = item.line;
       if (!line?.productId) continue;
+      const currentQuantity = lineQuantity(line);
+      const optionsIds = Array.isArray(line.optionsIds) ? line.optionsIds : [];
+
+      if (item.operation === "set_exact") {
+        const targetQuantity = Math.max(0, Number(item.targetQuantity ?? currentQuantity));
+        const removedQuantity = Math.max(0, currentQuantity - targetQuantity);
+        if (removedQuantity <= 0) continue;
+
+        if (targetQuantity <= 0) {
+          await removeProductFromBasket(
+            targetUserRef,
+            basket.id,
+            String(line.productId),
+            optionsIds
+          );
+        } else {
+          await setProductQuantityInBasket(
+            targetUserRef,
+            basket.id,
+            String(line.productId),
+            targetQuantity,
+            optionsIds
+          );
+        }
+
+        removedItems.push({
+          name: basketLineName(line),
+          quantity: removedQuantity,
+        });
+        continue;
+      }
+
+      if (item.operation === "decrease") {
+        const requestedQuantity = Math.max(0, Number(item.quantity ?? currentQuantity));
+        const removedQuantity = Math.min(currentQuantity, requestedQuantity);
+        const targetQuantity = Math.max(0, currentQuantity - requestedQuantity);
+        if (removedQuantity <= 0) continue;
+
+        if (targetQuantity <= 0) {
+          await removeProductFromBasket(
+            targetUserRef,
+            basket.id,
+            String(line.productId),
+            optionsIds
+          );
+        } else {
+          await setProductQuantityInBasket(
+            targetUserRef,
+            basket.id,
+            String(line.productId),
+            targetQuantity,
+            optionsIds
+          );
+        }
+
+        removedItems.push({
+          name: basketLineName(line),
+          quantity: removedQuantity,
+        });
+        continue;
+      }
+
       await removeProductFromBasket(
         targetUserRef,
         basket.id,
         String(line.productId),
-        Array.isArray(line.optionsIds) ? line.optionsIds : []
+        optionsIds
       );
+
+      removedItems.push({
+        name: basketLineName(line),
+        quantity: currentQuantity,
+      });
     }
 
     const updated = await ensureCurrentBasketFutureDelivery(targetUserRef);
     return {
       ok: true,
       mode: "partial" as const,
-      removedItems: matched.map((line) => ({
-        name: basketLineName(line),
-        quantity: line?.quantity ?? line?.qty ?? 1,
-      })),
+      removedItems,
       unmatchedQueries: unmatched,
       basket: updated,
     };

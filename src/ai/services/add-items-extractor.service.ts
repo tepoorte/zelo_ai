@@ -9,7 +9,7 @@ import {
   isQuantityUnitToken,
   quantityUnitPatternSource,
 } from "../../domain/quantity-units.js";
-import { bestTokenSimilarity, textSimilarity } from "../../domain/text-similarity.js";
+import { bestTokenSimilarity, levenshteinDistance, textSimilarity } from "../../domain/text-similarity.js";
 import { getAllProducts, type Product } from "../../swissdata/products.js";
 import { ollamaChat, safeJsonParse } from "./ollama-client.js";
 import { plannerPromptAddItems } from "./planner.service.js";
@@ -624,7 +624,15 @@ function hasCompatibleFuzzyTokenStart(token: string, candidate?: string): boolea
   if (!token || !candidate) return false;
   if (token[0] !== candidate[0]) return false;
   if (Math.min(token.length, candidate.length) < 5) return true;
-  return token.slice(0, 2) === candidate.slice(0, 2);
+
+  const prefixLength = Math.min(3, token.length, candidate.length);
+  const tokenPrefix = token.slice(0, prefixLength);
+  const candidatePrefix = candidate.slice(0, prefixLength);
+
+  return (
+    token.slice(0, 2) === candidate.slice(0, 2) ||
+    levenshteinDistance(tokenPrefix, candidatePrefix) <= 1
+  );
 }
 
 function tokenMatchesProductToken(token: string, productTokenList: string[]): boolean {

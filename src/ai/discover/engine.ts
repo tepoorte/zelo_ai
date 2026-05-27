@@ -3,11 +3,14 @@ import { normalizeText, tokenizeForMatch } from "../../domain/normalizer.js";
 import { textSimilarity, tokenSimilarity } from "../../domain/text-similarity.js";
 import { getPurchaseHistory, type PurchaseHistory } from "../../swissdata/history.js";
 import { getAllProducts, type Product } from "../../swissdata/products.js";
+import { buildBudgetAwareProposal } from "./budget-composer.js";
+import { extractDiscoverBudgetSignal } from "./budget-extractor.js";
 import { profileCatalog } from "./catalog-profiler.js";
 import { classifyDiscoverNeeds, discoverConfidence } from "./need-classifier.js";
 import { loadDiscoverTrainingArtifacts } from "./training-artifacts.js";
 import type {
   DiscoverAnchorPolicy,
+  DiscoverBudgetSignal,
   DiscoverFocusPolicy,
   DiscoverMlModel,
   DiscoverMlProposalBlueprint,
@@ -91,26 +94,64 @@ const BROAD_CONSTRAINT_ROLES = new Set<DiscoverProductRole>([
 ]);
 const QUERY_FOCUS_STOPWORDS = new Set([
   "avec",
+  "autour",
+  "balle",
+  "balles",
+  "budget",
+  "cher",
+  "chere",
+  "cheres",
+  "chers",
+  "chf",
+  "chose",
   "dans",
   "des",
+  "dimanche",
+  "disponible",
   "donne",
   "faire",
+  "fr",
+  "franc",
+  "francs",
+  "franch",
+  "franchs",
+  "frs",
+  "gourmand",
+  "gourmande",
+  "heure",
+  "heures",
   "idee",
   "idees",
+  "jeudi",
+  "livraison",
+  "lundi",
   "maison",
+  "mardi",
   "mange",
   "manger",
   "manges",
+  "max",
+  "maximum",
+  "mercredi",
+  "mettre",
   "moi",
+  "personne",
+  "personnes",
+  "premium",
   "pour",
   "produit",
   "produits",
+  "proposition",
   "propose",
   "proposes",
   "quelque",
   "quoi",
   "rapide",
+  "repa",
+  "repas",
+  "samedi",
   "truc",
+  "vendredi",
   "veux",
 ]);
 const MAX_DIRECT_FOCUS_MATCHES_PER_TERM = 12;
@@ -734,6 +775,29 @@ function mergeNeedHints(
     .slice(0, 5);
 }
 
+function adjustNeedsForBudgetSignal(
+  needs: DiscoverNeedScore[],
+  budget: DiscoverBudgetSignal
+): DiscoverNeedScore[] {
+  const scoreByLabel = new Map<DiscoverNeedLabel, number>();
+  for (const need of needs) scoreByLabel.set(need.label, need.score);
+
+  if (budget.kind === "target") {
+    scoreByLabel.set("budget", Math.max(scoreByLabel.get("budget") ?? 0, 0.76));
+  } else if (budget.kind === "economic") {
+    scoreByLabel.set("budget", Math.max(scoreByLabel.get("budget") ?? 0, 0.82));
+  } else if (budget.kind === "premium") {
+    scoreByLabel.delete("budget");
+    scoreByLabel.delete("weekly_basket");
+    scoreByLabel.set("discovery_open", Math.max(scoreByLabel.get("discovery_open") ?? 0, 0.58));
+  }
+
+  return [...scoreByLabel.entries()]
+    .map(([label, score]) => ({ label, score }))
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 5);
+}
+
 function analyzeQueryFocus(
   query: string,
   profiles: DiscoverProductProfile[],
@@ -1327,14 +1391,27 @@ function formatDiscoverMessage(result: Omit<DiscoverResult, "message">, style: D
     return style.lowConfidence || FALLBACK_RESPONSE_STYLE.lowConfidence;
   }
 
-  const lines = [style.intro || FALLBACK_RESPONSE_STYLE.intro, ""];
+  const hasBudgetTarget = result.budget?.kind === "target";
+  const lines = [
+    hasBudgetTarget
+      ? "Avec le budget indiqué, je peux te proposer :"
+      : style.intro || FALLBACK_RESPONSE_STYLE.intro,
+    "",
+  ];
 
   result.proposals.forEach((proposal, index) => {
     lines.push(`${index + 1}. ${proposal.title}`);
     for (const product of proposal.products) {
-      lines.push(`• ${product.name}`);
+      const price = product.estimatedPriceCHF != null
+        ? ` (~${product.estimatedPriceCHF.toFixed(2)} CHF)`
+        : "";
+      lines.push(`• ${product.name}${price}`);
+    }
+    if (proposal.estimatedTotalCHF != null) {
+      lines.push(`Total estimé : env. ${proposal.estimatedTotalCHF.toFixed(2)} CHF`);
     }
     lines.push(`Pourquoi : ${proposal.why}.`);
+    if (proposal.budgetNote) lines.push(`Budget : ${proposal.budgetNote}.`);
     lines.push("");
   });
 
@@ -1351,8 +1428,13 @@ export async function buildDiscoverMealIdeas(
   const products = options.products ?? await getAllProducts(userRef);
   const history = options.history ?? await getPurchaseHistory(userRef).catch(() => ({}));
   const model = training.model;
-  const needs = mergeNeedHints(classifyDiscoverNeeds(query, training), options.hints?.needHints);
-  const confidence = discoverConfidence(needs);
+  const budget = extractDiscoverBudgetSignal(query, model?.budgetPolicy);
+  const needs = adjustNeedsForBudgetSignal(
+    mergeNeedHints(classifyDiscoverNeeds(query, training), options.hints?.needHints),
+    budget
+  );
+  const rawConfidence = discoverConfidence(needs);
+  const confidence = budget.kind === "target" ? Math.max(rawConfidence, 0.72) : rawConfidence;
   const style = chooseResponseStyle(needs, model);
 
   if (!model || confidence < MIN_CONFIDENCE) {
@@ -1361,6 +1443,7 @@ export async function buildDiscoverMealIdeas(
       query,
       needs,
       confidence,
+      budget,
       proposals: [],
     };
 
@@ -1409,6 +1492,24 @@ export async function buildDiscoverMealIdeas(
   const proposals: DiscoverProposal[] = [];
   const maxProposals = proposalLimit(needs);
   const maxProducts = productLimit(needs);
+
+  const budgetProposal = buildBudgetAwareProposal({
+    signal: budget,
+    entries: scoredProducts.map((entry) => ({
+      ...entry,
+      allowed: productAllowedByFocus(entry.profile, focus),
+      anchor: productMatchesAnchor(entry.profile, focus),
+      directFocus: productMatchesDirectFocus(entry.profile, focus),
+    })),
+    labels: activeNeedLabelsForFocus(needs, focus, model),
+    focusTerms: focus.terms,
+    policy: model?.budgetPolicy,
+  });
+
+  if (budgetProposal) {
+    proposals.push(budgetProposal);
+    for (const product of budgetProposal.products) globallyUsedIds.add(product.productId);
+  }
 
   const blueprintCandidates = fallbackBlueprints(model)
     .filter((blueprint) => blueprintLabelActive(blueprint, needs, isOpenQuery, anchorLabel))
@@ -1494,6 +1595,7 @@ export async function buildDiscoverMealIdeas(
     query,
     needs,
     confidence,
+    budget,
     proposals: ranked,
   };
 

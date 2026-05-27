@@ -21,7 +21,6 @@ import {
   handleShowCartAction,
   tryResolvePendingOptions,
 } from "./services/cart.service.js";
-import { runGeneralChat } from "./services/chat.service.js";
 import { handleDiscoverMealIdeasAction } from "./services/meal-discovery.service.js";
 import { ollamaChat } from "./services/ollama-client.js";
 import {
@@ -37,6 +36,11 @@ type ToolResult = {
   action: PlannedAction;
   result: any;
 };
+
+// BuildMeal is intentionally silenced for the customer flow while the intent
+// router is trained on the four main routes. To re-enable it: set this flag to
+// true and add `build_meal` back to the active intent training/model.
+const BUILD_MEAL_FLOW_ENABLED = false;
 
 function isExplicitShowCartRequest(normalizedText: string): boolean {
   return /(carrello|basket|panier|cart)/i.test(normalizedText) &&
@@ -125,7 +129,7 @@ async function executePlannedAction(
   if (action.type === "clear_cart") {
     const result = await timeAsync(
       "agent.action.clear_cart",
-      async () => await handleClearCartAction(userRef, action)
+      async () => await handleClearCartAction(userRef, action, userText)
     );
     return { action, result };
   }
@@ -172,7 +176,21 @@ async function runPlannedActions(
   return toolResults;
 }
 
-async function handleMissingPlan(userRef: string, userText: string, normalizedText: string): Promise<AgentResponse> {
+function formatControlledNoopResponse(intentHint?: FrontendIntentHint): AgentResponse {
+  if (intentHint?.actionKey && intentHint.actionKey !== "noop") {
+    return {
+      message:
+        "Je ne suis pas assez sûr d’avoir compris l’action à faire. Peux-tu reformuler plus directement ? Par exemple : « ajoute ... », « montre mon panier », « vide mon panier » ou « propose-moi une idée ... ».",
+    };
+  }
+
+  return {
+    message:
+      "Je suis là. Tu peux me demander d’ajouter des produits, de voir ou vider ton panier, ou de te proposer des idées.",
+  };
+}
+
+async function handleMissingPlan(userRef: string, normalizedText: string, intentHint?: FrontendIntentHint): Promise<AgentResponse> {
   if (/(carrello|basket|panier|cart)/i.test(normalizedText)) {
     const basket = await timeAsync(
       "agent.show_cart_fallback",
@@ -181,10 +199,7 @@ async function handleMissingPlan(userRef: string, userText: string, normalizedTe
     return { message: formatCartFr(basket) };
   }
 
-  return await timeAsync(
-    "agent.general_chat",
-    async () => await runGeneralChat(userRef, userText)
-  );
+  return formatControlledNoopResponse(intentHint);
 }
 
 function findToolResult(toolResults: ToolResult[], type: PlannedAction["type"]): any {
@@ -192,23 +207,23 @@ function findToolResult(toolResults: ToolResult[], type: PlannedAction["type"]):
 }
 
 function formatPlannedIntentResponse(plan: Plan, toolResults: ToolResult[]): AgentResponse | null {
-  if (plan.intent === "SHOW_CART") {
+  if (findToolResult(toolResults, "get_cart")) {
     return { message: formatCartFr(findToolResult(toolResults, "get_cart")) };
   }
 
-  if (plan.intent === "CLEAR_CART") {
+  if (findToolResult(toolResults, "clear_cart")) {
     return formatClearCartResponse(findToolResult(toolResults, "clear_cart"));
   }
 
-  if (plan.intent === "ADD_ITEMS") {
+  if (findToolResult(toolResults, "add_to_cart")) {
     return formatAddItemsResponse(findToolResult(toolResults, "add_to_cart"));
   }
 
-  if (plan.intent === "EXEC_CART") {
+  if (findToolResult(toolResults, "exec_cart")) {
     return formatExecCartResponse(findToolResult(toolResults, "exec_cart"));
   }
 
-  if (plan.intent === "DISCOVER_MEALS") {
+  if (findToolResult(toolResults, "discover_meal_ideas")) {
     return formatDiscoverMealResponse(findToolResult(toolResults, "discover_meal_ideas"));
   }
 
@@ -264,14 +279,16 @@ export async function runAgentOllama(
     return await handleForcedAddItems(userRef, userText);
   }
 
-  if (intentHint?.actionKey === "build_meal") {
+  if (BUILD_MEAL_FLOW_ENABLED && intentHint?.actionKey === "build_meal") {
     const response = await handleBuildMeal(userRef, userText, true);
     if (response) return response;
   }
 
-  const detectedMealResponse = await handleBuildMeal(userRef, userText, false);
-  if (detectedMealResponse) {
-    return detectedMealResponse;
+  if (BUILD_MEAL_FLOW_ENABLED) {
+    const detectedMealResponse = await handleBuildMeal(userRef, userText, false);
+    if (detectedMealResponse) {
+      return detectedMealResponse;
+    }
   }
 
   const plan = await timeAsync(
@@ -280,14 +297,14 @@ export async function runAgentOllama(
   );
 
   if (!plan || !Array.isArray(plan.actions)) {
-    return await handleMissingPlan(userRef, userText, normalizedText);
+    return await handleMissingPlan(userRef, normalizedText, intentHint);
   }
 
   if (plan.intent === "NOOP" || plan.actions.some((action) => action.type === "noop")) {
-    return await timeAsync(
-      "agent.general_chat_noop",
-      async () => await runGeneralChat(userRef, userText)
-    );
+    // Keep NOOP as a valid route, but do not fall back to free-form chat here:
+    // specialized planners may return NOOP when they refuse an action, and a
+    // generic LLM answer can invent behavior outside the routed flow.
+    return formatControlledNoopResponse(intentHint);
   }
 
   const toolResults = await runPlannedActions(userRef, plan.actions, userText);

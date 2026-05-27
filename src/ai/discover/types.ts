@@ -142,6 +142,29 @@ export type DiscoverAnchorPolicy = {
   blockedRoles?: DiscoverProductRole[];
 };
 
+export type DiscoverBudgetKind = "none" | "economic" | "target" | "premium";
+
+export type DiscoverBudgetSignal = {
+  kind: DiscoverBudgetKind;
+  confidence: number;
+  targetAmountCHF?: number;
+  minAmountCHF?: number;
+  maxAmountCHF?: number;
+  source?: string;
+};
+
+export type DiscoverBudgetPolicy = {
+  schemaVersion: number;
+  currencyTerms: string[];
+  targetCues: string[];
+  economicCues: string[];
+  premiumCues: string[];
+  hardNegativeCues: string[];
+  toleranceRatio: number;
+  toleranceMinCHF: number;
+  metrics?: Record<string, unknown>;
+};
+
 export type DiscoverFocusPolicy = {
   schemaVersion: number;
   nonAnchorTerms: string[];
@@ -178,6 +201,7 @@ export type DiscoverMlModel = {
   plannerVocabulary?: DiscoverPlannerVocabulary;
   anchorPolicies?: Partial<Record<DiscoverProductRole, DiscoverAnchorPolicy>>;
   focusPolicy?: DiscoverFocusPolicy;
+  budgetPolicy?: DiscoverBudgetPolicy;
   evaluationReport?: Record<string, unknown>;
   metrics: Record<string, unknown>;
 };
@@ -207,6 +231,8 @@ export type DiscoverProposalProduct = {
   roles: DiscoverProductRole[];
   reason: string;
   hasOptions: boolean;
+  estimatedPriceCHF?: number;
+  priceEstimateReliable?: boolean;
 };
 
 export type DiscoverProposal = {
@@ -216,6 +242,11 @@ export type DiscoverProposal = {
   score: number;
   needs: DiscoverNeedLabel[];
   products: DiscoverProposalProduct[];
+  estimatedTotalCHF?: number;
+  budgetDistanceCHF?: number;
+  budgetTargetCHF?: number;
+  budgetKind?: DiscoverBudgetKind;
+  budgetNote?: string;
 };
 
 export type DiscoverResult = {
@@ -223,6 +254,7 @@ export type DiscoverResult = {
   query: string;
   needs: DiscoverNeedScore[];
   confidence: number;
+  budget?: DiscoverBudgetSignal;
   proposals: DiscoverProposal[];
   message: string;
 };

@@ -3,6 +3,7 @@ node_modules/
 dist/
 .venv/
 ml/discover-meals/.venv/
+ml/intent-classifier/.venv/
 __pycache__/
 *.pyc
 

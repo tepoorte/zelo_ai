@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { buildDiscoverMealIdeas } from "../src/ai/discover/engine.js";
+import { extractDiscoverBudgetSignal } from "../src/ai/discover/budget-extractor.js";
+import { estimateProductPriceCHF } from "../src/ai/discover/price-estimator.js";
 import {
   discoverPlannerJsonSchema,
   enrichDiscoverPlannerChoicesFromQuery,
@@ -26,33 +28,33 @@ const CATEGORIES = {
 };
 
 const catalog: Product[] = [
-  { id: "perche", name: "Filets de perche congelés", categories: [CATEGORIES.meatFish], tags: ["Sans gluten"] },
-  { id: "brochet", name: "Filet de brochet", categories: [CATEGORIES.meatFish] },
-  { id: "lard", name: "A. Lard de Begnins", categories: [CATEGORIES.meatFish] },
-  { id: "boeuf", name: "Viande hachée (pur boeuf)", categories: [CATEGORIES.meatFish] },
-  { id: "oeuf", name: "Oeuf Bio à la pièce", categories: [CATEGORIES.dairy], tags: ["Bio"] },
-  { id: "gruyere", name: "Gruyère d'alpage", categories: [CATEGORIES.dairy], tags: ["Marché de Gland"] },
-  { id: "lait", name: "A. Lait Bio pasteurisé (Sapalet)", categories: [CATEGORIES.dairy], tags: ["Bio"] },
-  { id: "yaourt", name: "Yaourt nature (Grand pot)", categories: [CATEGORIES.dairy] },
-  { id: "pain", name: "Pain aux noix", categories: [CATEGORIES.bakery] },
-  { id: "baguette", name: "Baguette du château", categories: [CATEGORIES.bakery] },
-  { id: "muesli", name: "Muesli aux fruits Bio", categories: [CATEGORIES.grain], tags: ["Bio"] },
-  { id: "riz", name: "Riz Basmati", categories: [CATEGORIES.starch] },
-  { id: "pdt", name: "Pomme de terre Agria Bio", categories: [CATEGORIES.starch, CATEGORIES.fruitVeg], tags: ["Bio"] },
-  { id: "salade", name: "A. Batavia verte Bio", categories: [CATEGORIES.fruitVeg], tags: ["Bio"] },
-  { id: "pommes", name: "Pommes Bio ou VV", categories: [CATEGORIES.fruitVeg], tags: ["Bio"] },
-  { id: "bananes", name: "Bananes Bio et Fairtrade", categories: [CATEGORIES.fruitVeg], tags: ["Bio"] },
-  { id: "ananas", name: "Ananas", categories: [CATEGORIES.fruitVeg] },
-  { id: "poires", name: "Poires conférence Bio", categories: [CATEGORIES.fruitVeg], tags: ["Bio"] },
-  { id: "chips-banane", name: "Chips de bananes", categories: [CATEGORIES.grain] },
-  { id: "sauce", name: "Sauce Salvis", categories: [CATEGORIES.sauce] },
-  { id: "sauce-pates", name: "Sauce Vallonnière (pour pâtes)", categories: [CATEGORIES.sauce] },
-  { id: "huile", name: "Huile d'Olive Bio", categories: [CATEGORIES.sauce], tags: ["Bio"] },
-  { id: "pizza", name: "Pizza Marguerite", categories: [CATEGORIES.menu] },
-  { id: "naan", name: "Naan au fromage", categories: [CATEGORIES.menu, CATEGORIES.bakery] },
-  { id: "pate-vaudois", name: "Pâtés vaudois par 2", categories: [CATEGORIES.meatFish, CATEGORIES.bakery] },
-  { id: "canard", name: "Brochette de canard à l'orange (France)", categories: [CATEGORIES.meatFish] },
-  { id: "jus", name: "Jus de pomme Bio", categories: [CATEGORIES.drink], tags: ["Bio"] },
+  { id: "perche", name: "Filets de perche congelés", categories: [CATEGORIES.meatFish], tags: ["Sans gluten"], price: { price: 22 } },
+  { id: "brochet", name: "Filet de brochet", categories: [CATEGORIES.meatFish], price: { price: 24 } },
+  { id: "lard", name: "A. Lard de Begnins", categories: [CATEGORIES.meatFish], price: { price: 12 } },
+  { id: "boeuf", name: "Viande hachée (pur boeuf)", categories: [CATEGORIES.meatFish], price: { price: 20 } },
+  { id: "oeuf", name: "Oeuf Bio à la pièce", categories: [CATEGORIES.dairy], tags: ["Bio"], price: { price: 1.2 } },
+  { id: "gruyere", name: "Gruyère d'alpage", categories: [CATEGORIES.dairy], tags: ["Marché de Gland"], price: { price: 16 } },
+  { id: "lait", name: "A. Lait Bio pasteurisé (Sapalet)", categories: [CATEGORIES.dairy], tags: ["Bio"], price: { price: 3.2 } },
+  { id: "yaourt", name: "Yaourt nature (Grand pot)", categories: [CATEGORIES.dairy], price: { price: 5.5 } },
+  { id: "pain", name: "Pain aux noix", categories: [CATEGORIES.bakery], price: { price: 6 } },
+  { id: "baguette", name: "Baguette du château", categories: [CATEGORIES.bakery], price: { price: 4.5 } },
+  { id: "muesli", name: "Muesli aux fruits Bio", categories: [CATEGORIES.grain], tags: ["Bio"], price: { price: 8 } },
+  { id: "riz", name: "Riz Basmati", categories: [CATEGORIES.starch], price: { price: 8 } },
+  { id: "pdt", name: "Pomme de terre Agria Bio", categories: [CATEGORIES.starch, CATEGORIES.fruitVeg], tags: ["Bio"], price: { price: 7 } },
+  { id: "salade", name: "A. Batavia verte Bio", categories: [CATEGORIES.fruitVeg], tags: ["Bio"], price: { price: 5 } },
+  { id: "pommes", name: "Pommes Bio ou VV", categories: [CATEGORIES.fruitVeg], tags: ["Bio"], price: { price: 6 } },
+  { id: "bananes", name: "Bananes Bio et Fairtrade", categories: [CATEGORIES.fruitVeg], tags: ["Bio"], price: { price: 4.8 } },
+  { id: "ananas", name: "Ananas", categories: [CATEGORIES.fruitVeg], price: { price: 7 } },
+  { id: "poires", name: "Poires conférence Bio", categories: [CATEGORIES.fruitVeg], tags: ["Bio"], price: { price: 6.5 } },
+  { id: "chips-banane", name: "Chips de bananes", categories: [CATEGORIES.grain], price: { price: 4.5 } },
+  { id: "sauce", name: "Sauce Salvis", categories: [CATEGORIES.sauce], price: { price: 7 } },
+  { id: "sauce-pates", name: "Sauce Vallonnière (pour pâtes)", categories: [CATEGORIES.sauce], price: { price: 8 } },
+  { id: "huile", name: "Huile d'Olive Bio", categories: [CATEGORIES.sauce], tags: ["Bio"], price: { price: 10 } },
+  { id: "pizza", name: "Pizza Marguerite", categories: [CATEGORIES.menu], price: { price: 14 } },
+  { id: "naan", name: "Naan au fromage", categories: [CATEGORIES.menu, CATEGORIES.bakery], price: { price: 9 } },
+  { id: "pate-vaudois", name: "Pâtés vaudois par 2", categories: [CATEGORIES.meatFish, CATEGORIES.bakery], price: { price: 11 } },
+  { id: "canard", name: "Brochette de canard à l'orange (France)", categories: [CATEGORIES.meatFish], price: { price: 21 } },
+  { id: "jus", name: "Jus de pomme Bio", categories: [CATEGORIES.drink], tags: ["Bio"], price: { price: 4 } },
   { id: "biere", name: "Bière artisanale", categories: [CATEGORIES.drink] },
   { id: "sorbet", name: "Sorbet Fraise", categories: [CATEGORIES.menu], tags: ["Congelé"] },
   { id: "chocolat", name: "Chocolat noir", categories: [CATEGORIES.menu] },
@@ -113,6 +115,40 @@ function assertSomeConcreteProduct(result: Awaited<ReturnType<typeof buildDiscov
 const training = await loadDiscoverTrainingArtifacts();
 
 {
+  const target = extractDiscoverBudgetSignal("quelque chose mais j ai un budget de 100 fr", training.model?.budgetPolicy);
+  assert.equal(target.kind, "target");
+  assert.equal(target.targetAmountCHF, 100);
+
+  const typoTarget = extractDiscoverBudgetSignal("quelque chose avec 100 franchs", training.model?.budgetPolicy);
+  assert.equal(typoTarget.kind, "target");
+  assert.equal(typoTarget.targetAmountCHF, 100);
+
+  const chfTarget = extractDiscoverBudgetSignal("je peux mettre 50 CHF pour un repas simple", training.model?.budgetPolicy);
+  assert.equal(chfTarget.kind, "target");
+  assert.equal(chfTarget.targetAmountCHF, 50);
+
+  const dashTarget = extractDiscoverBudgetSignal("un apéro local pour 60.-", training.model?.budgetPolicy);
+  assert.equal(dashTarget.kind, "target");
+  assert.equal(dashTarget.targetAmountCHF, 60);
+
+  const economic = extractDiscoverBudgetSignal("des idées pas trop chères", training.model?.budgetPolicy);
+  assert.equal(economic.kind, "economic");
+
+  const premium = extractDiscoverBudgetSignal("un repas très cher", training.model?.budgetPolicy);
+  assert.equal(premium.kind, "premium");
+
+  const people = extractDiscoverBudgetSignal("repas pour 4 personnes", training.model?.budgetPolicy);
+  assert.equal(people.kind, "none");
+
+  const deliveryTime = extractDiscoverBudgetSignal("livraison vendredi à 18h", training.model?.budgetPolicy);
+  assert.equal(deliveryTime.kind, "none");
+
+  const price = estimateProductPriceCHF(catalog.find((product) => product.id === "lard")!);
+  assert.equal(price.amountCHF, 12);
+  assert.equal(price.reliable, true);
+}
+
+{
   const vocabulary = {
     needs: ["quick", "healthy", "sleep"] as any,
     roles: ["meat", "fish", "drink"] as any,
@@ -164,6 +200,45 @@ assert.equal(
   true,
   "discover product ranker must expose anchor features"
 );
+
+{
+  const result = await buildDiscoverMealIdeas("test", "une idée avec du lard pour 40 francs", {
+    products: catalog,
+    history: {},
+    training,
+  });
+
+  assertOnlyCatalogProducts(result);
+  assertSomeConcreteProduct(result, ["lard"]);
+  assert.equal(result.budget?.kind, "target");
+  assert.equal(result.proposals[0]?.estimatedTotalCHF != null, true, "Budget proposal should expose an estimated total");
+  assert.equal(result.message.includes("Total estimé"), true, "Budget response should show the estimated total");
+}
+
+{
+  const result = await buildDiscoverMealIdeas("test", "un repas avec 100 francs disponible", {
+    products: catalog,
+    history: {},
+    training,
+  });
+
+  assertOnlyCatalogProducts(result);
+  assert.equal(result.budget?.kind, "target");
+  assert.equal(result.proposals[0]?.estimatedTotalCHF != null, true, "Numeric budget query should produce budget-aware proposal");
+  assert.equal(result.message.includes("Total estimé"), true);
+}
+
+{
+  const result = await buildDiscoverMealIdeas("test", "un repas très cher", {
+    products: catalog,
+    history: {},
+    training,
+  });
+
+  assertOnlyCatalogProducts(result);
+  assert.equal(result.budget?.kind, "premium");
+  assert.equal(result.needs.some((need) => need.label === "budget"), false, "Premium query must not be treated as economic budget");
+}
 
 {
   const result = await buildDiscoverMealIdeas("test", "je veux manger plus sain", {

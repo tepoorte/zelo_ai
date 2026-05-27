@@ -583,6 +583,10 @@
         return null;
       }
 
+      if (prediction.accepted === false && prediction.actionKey === "noop") {
+        return null;
+      }
+
       return {
         actionKey: prediction.actionKey,
         confidence: Number(prediction.confidence || 0),
@@ -726,20 +730,14 @@
               </details>
 
               <details class="guideStep guideNested">
-                <summary>Préparer une recette</summary>
+                <summary>Demander des idées de repas</summary>
                 <div class="guideStepBody">
-                  <p>Pour tester build_meal, écris « de quoi faire… » suivi d’une recette. Les recettes déjà validées incluent hot dog, carbonara, hamburger, spaghetti bolognese, maccheroni carbonara, filet de perche et pomme de terre, salade césar et salade de riz.</p>
+                  <p>Tu peux demander une idée saine, végétarienne, rapide, locale, pas trop chère ou adaptée à un moment de la journée. L’assistant propose des produits du catalogue sans modifier ton panier.</p>
                   <div class="guideExamples">
-                    <span>de quoi faire une carbonara</span>
-                    <span>de quoi faire une salade de riz</span>
+                    <span>de quoi faire un repas sain</span>
+                    <span>une idée végétarienne</span>
+                    <span>qu’est-ce que tu me proposes ?</span>
                   </div>
-                </div>
-              </details>
-
-              <details class="guideStep guideNested">
-                <summary>Créer une recette inconnue</summary>
-                <div class="guideStepBody">
-                  <p>Si une recette n’existe pas encore, crée-la depuis la vue complète avec des produits réels du catalogue. Plus les recettes sont validées, plus les prochains drafts deviennent utiles.</p>
                 </div>
               </details>
 
@@ -833,10 +831,6 @@
       }
 
       const frontendIntentHint = buildFrontendIntentHint(text);
-      if (!frontendIntentHint?.actionKey) {
-        addMessage("Je n’ai pas encore pu préparer la demande. Réessaie tout de suite.", "ai");
-        return;
-      }
 
       addMessage(text, "user");
       input.value = "";
@@ -847,11 +841,10 @@
       addTypingMessage();
 
       try {
-        const payload = {
-          userRef: USER_REF,
-          text,
-          frontendIntentHint
-        };
+        const payload = { userRef: USER_REF, text };
+        if (frontendIntentHint?.actionKey) {
+          payload.frontendIntentHint = frontendIntentHint;
+        }
 
         const response = await fetch("/ai/chat", {
           method: "POST",
