@@ -246,8 +246,13 @@ echo "== Validate compose =="
 docker compose --env-file .env -f "$REMOTE_COMPOSE_FILE" config >/tmp/zelo_ai_compose_config.txt
 
 echo "== Docker pull/up =="
-docker compose --env-file .env -f "$REMOTE_COMPOSE_FILE" pull
-docker compose --env-file .env -f "$REMOTE_COMPOSE_FILE" up -d
+docker compose --env-file .env -f "$REMOTE_COMPOSE_FILE" pull zelo_ai
+if docker ps --format '{{.Names}}' | grep -qx 'zelo-ai-ollama'; then
+  echo "Existing Ollama container kept running; not pulling ollama/ollama:latest."
+else
+  docker compose --env-file .env -f "$REMOTE_COMPOSE_FILE" up -d ollama
+fi
+docker compose --env-file .env -f "$REMOTE_COMPOSE_FILE" up -d --no-deps zelo_ai
 
 echo "== Wait for Ollama =="
 for _ in $(seq 1 60); do
