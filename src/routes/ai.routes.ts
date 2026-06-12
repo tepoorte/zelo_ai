@@ -20,6 +20,7 @@ import {
   getIntentTrainingRuntime,
   recordIntentFeedback,
 } from "../ai/services/intent-feedback.service.js";
+import { getNextHistorySuggestions } from "../ai/services/history-suggestions.service.js";
 import { normalizeText } from "../domain/normalizer.js";
 import { login } from "../swissdata/auth.js";
 import { ensureCurrentBasketFutureDelivery } from "../swissdata/cart.js";
@@ -295,6 +296,16 @@ function registerBasketAndChatRoutes(router: Router): void {
     try {
       const basket = await ensureCurrentBasketFutureDelivery(queryString(req, "userRef", "local-dev"));
       res.json({ ok: true, basket });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/history-suggestions", async (req, res, next) => {
+    try {
+      const userRef = queryString(req, "userRef", "local-dev");
+      const suggestions = await getNextHistorySuggestions(userRef);
+      res.json({ ok: true, suggestions });
     } catch (error) {
       next(error);
     }

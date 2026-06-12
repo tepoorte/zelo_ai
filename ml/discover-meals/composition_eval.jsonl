@@ -1,0 +1,7 @@
+{"query":"je reçois deux amis ce soir","good":["Gruyère d'alpage","Pain aux noix","Jus de pomme Bio"],"bad":["Filets de perche congelés","Riz Basmati","Oeuf Bio à la pièce"],"coverage":["hosting","sharing"]}
+{"query":"un repas pas trop protéiné","good":["A. Batavia verte Bio","Pommes Bio ou VV","Pomme de terre Agria Bio"],"bad":["Viande hachée (pur boeuf)","Filets de perche congelés","Gruyère d'alpage"],"coverage":["light","limit_protein"]}
+{"query":"une boisson pour accompagner","good":["Jus de pomme Bio","Kéfir Menthe Citron","Kéfir Fraise Basilic"],"bad":["Pommes Bio ou VV","Riz Basmati","Huile d'Olive Bio"],"coverage":["drink_strict_domain"]}
+{"query":"quelque chose pour le petit déjeuner","good":["Muesli aux fruits Bio","A. Lait Bio pasteurisé (Sapalet)","Yaourt nature"],"bad":["Filets de perche congelés","Viande hachée (pur boeuf)","Huile d'Olive Bio"],"coverage":["breakfast"]}
+{"query":"je veux une idée avec des produits du coin","good":["Gruyère d'alpage","Pain aux noix","A. Lard de Begnins"],"bad":["Lessive écologique","Savon artisanal","Riz Basmati"],"coverage":["local"]}
+{"query":"un pique-nique pour 2 personnes","good":["Pain aux noix","Gruyère d'alpage","Pommes Bio ou VV","Jus de pomme Bio"],"bad":["Filets de perche congelés","Pomme de terre Agria Bio","Huile d'Olive Bio"],"coverage":["picnic","sharing"]}
+{"query":"un apéro sans alcool","good":["Gruyère d'alpage","Pain aux noix","Jus de pomme Bio"],"bad":["Bière artisanale","Granola sans gluten","Lessive écologique"],"coverage":["aperitif","avoid_alcohol"]}

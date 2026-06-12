@@ -1,7 +1,7 @@
 import { searchProducts } from "../swissdata/products.js";
 import { timeAsync, perfMeta } from "../utils/perf.js";
 import { BuildMealEngine } from "./build-meal/engine.js";
-import { clearPending } from "./pending.js";
+import { clearPending, getPending } from "./pending.js";
 import { systemPrompt } from "./prompts.js";
 import { extractAddItemsFromText } from "./services/add-items-extractor.service.js";
 import {
@@ -45,6 +45,11 @@ const BUILD_MEAL_FLOW_ENABLED = false;
 function isExplicitShowCartRequest(normalizedText: string): boolean {
   return /(carrello|basket|panier|cart)/i.test(normalizedText) &&
     /(montre|mostra|show|voir)/i.test(normalizedText);
+}
+
+function isExplicitAddItemsRequest(normalizedText: string): boolean {
+  return /\b(ajoute|ajouter|rajoute|mets|met|commande|commander|besoin|prends|prendre|livrer|livraison)\b/i.test(normalizedText) ||
+    /\b(il me faut|il faudrait|je veux bien|je te prends|j aurais besoin|j ai besoin)\b/i.test(normalizedText);
 }
 
 async function handleForcedAddItems(userRef: string, userText: string): Promise<AgentResponse> {
@@ -258,6 +263,11 @@ export async function runAgentOllama(
 
   const normalizedText = userText.toLowerCase();
   const forceAddItems = intentHint?.actionKey === "add_items";
+  const pending = getPending(userRef);
+
+  if (pending?.type === "awaiting_options" && isExplicitAddItemsRequest(normalizedText)) {
+    clearPending(userRef);
+  }
 
   const pendingOptionReply = await timeAsync(
     "agent.pending_options",

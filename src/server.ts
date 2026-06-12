@@ -10,6 +10,8 @@ import { errorHandler } from "./middleware/error.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { aiRoutes } from "./routes/ai.routes.js";
 import { whatsappMetaRoutes } from "./integrations/meta/whatsapp.routes.js";
+import { whatsappWebRoutes } from "./integrations/meta/whatsapp-web.routes.js";
+import { startWhatsAppWebSession } from "./integrations/meta/whatsapp-web.service.js";
 import { twilioWhatsAppRoutes } from "./integrations/twilio/whatsapp.routes.js";
 
 const app = express();
@@ -29,10 +31,16 @@ app.get("/", (_req, res) => {
 app.use("/health", healthRouter);
 app.use("/ai", aiRoutes());
 app.use("/integrations/meta/whatsapp", whatsappMetaRoutes());
+app.use("/integrations/meta/whatsapp-web", whatsappWebRoutes());
 app.use("/integrations/twilio/whatsapp", twilioWhatsAppRoutes());
 
 app.use(errorHandler);
 
 app.listen(env.port, "0.0.0.0", () => {
   console.log(`Zélo API démarrée sur http://0.0.0.0:${env.port}`);
+  if (env.whatsappProvider === "web_session") {
+    void startWhatsAppWebSession().catch((error) => {
+      console.error("[whatsapp-web] startup failed", error);
+    });
+  }
 });

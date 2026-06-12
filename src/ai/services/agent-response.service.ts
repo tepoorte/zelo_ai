@@ -3,6 +3,7 @@ import type {
   BuildMealUnknownRecipeContext,
 } from "../build-meal/types.js";
 import type { DiscoverResult } from "../discover/types.js";
+import type { HistorySuggestion } from "./history-suggestions.service.js";
 import { formatCartFr } from "./cart-format.service.js";
 import { handleShowCartAction } from "./cart.service.js";
 
@@ -18,6 +19,16 @@ const NO_CLEAR_PRODUCT_MESSAGE =
 
 export function formatNoClearProductResponse(): AgentResponse {
   return { message: NO_CLEAR_PRODUCT_MESSAGE };
+}
+
+export function formatHistorySuggestionsBlock(suggestions: HistorySuggestion[] | undefined): string {
+  if (!Array.isArray(suggestions) || !suggestions.length) return "";
+
+  return (
+    `\n\nTu prends souvent aussi :\n` +
+    suggestions.map((suggestion) => `• ${suggestion.name}`).join("\n") +
+    `\nSi tu veux, écris « ajoute ... », ou « ok » pour passer la commande.`
+  );
 }
 
 export function formatAddItemsResponse(addResult: any): AgentResponse {
@@ -45,7 +56,8 @@ export function formatAddItemsResponse(addResult: any): AgentResponse {
       `✅ J’ai traité ta demande :\n` +
       summaryLines.join("\n") +
       `\n\n` +
-      (basket ? formatCartFr(basket) : "Le panier a été mis à jour, mais je n’ai pas pu relire son contenu."),
+      (basket ? formatCartFr(basket) : "Le panier a été mis à jour, mais je n’ai pas pu relire son contenu.") +
+      formatHistorySuggestionsBlock(addResult?.historySuggestions),
   };
 }
 

@@ -1,0 +1,7 @@
+{"text":"un repas pas trop protéiné","frame":{"concepts":["light","balanced"],"limitRoles":["protein","meat","fish","egg","cheese"],"positiveRoles":["vegetable","fruit","starch","grain"]}}
+{"text":"je voudrais deux idées qui aident pour une absence de vitamine","frame":{"concepts":["healthy","nutrition_support"],"positiveRoles":["fruit","vegetable"],"uncertainties":["specific_vitamin_missing"],"responseMode":"safe_general_with_clarification","requestCount":2}}
+{"text":"tu me conseilles quoi si je reçois deux amis ce soir","frame":{"concepts":["hosting","sharing","dinner"],"positiveRoles":["aperitif","cheese","bread","drink"],"peopleCount":3}}
+{"text":"une boisson sympa pour ce soir","frame":{"concepts":["drink"],"strictRoles":["drink"],"domains":["drink"]}}
+{"text":"quelque chose pour le ménage","frame":{"concepts":["cleaning"],"strictRoles":["cleaning"],"domains":["cleaning"]}}
+{"text":"un pique-nique pour 2 personnes","frame":{"concepts":["picnic","sharing"],"positiveRoles":["bread","cheese","fruit","drink","snack"],"peopleCount":2}}
+{"text":"un apéro sans alcool","frame":{"concepts":["aperitif","sharing"],"positiveRoles":["aperitif","cheese","bread","snack","drink"],"avoidRoles":["alcohol"]}}

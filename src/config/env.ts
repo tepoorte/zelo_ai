@@ -23,6 +23,14 @@ export const env = {
   metaAppSecret: process.env.META_APP_SECRET ?? "",
   metaGraphToken: process.env.META_GRAPH_TOKEN ?? "",
 
+  // WhatsApp transport
+  whatsappProvider: process.env.WHATSAPP_PROVIDER ?? "meta_cloud",
+  whatsappAdminToken: process.env.WHATSAPP_ADMIN_TOKEN ?? "",
+  whatsappSessionDir: process.env.WHATSAPP_SESSION_DIR ?? ".cache/whatsapp-web-session",
+  whatsappTestPhone: process.env.WHATSAPP_TEST_PHONE ?? "",
+  zeloTestUsername: process.env.ZELO_TEST_USERNAME ?? "",
+  zeloTestPassword: process.env.ZELO_TEST_PASSWORD ?? "",
+
   // Swissdata
   swissdataBaseUrl: process.env.SWISSDATA_BASE_URL ?? "",
   swissdataApiKey: process.env.SWISSDATA_API_KEY ?? "",

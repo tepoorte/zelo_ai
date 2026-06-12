@@ -98,6 +98,11 @@ function applyCompositeRoles(product: Product, roles: Set<DiscoverProductRole>):
   if (/\b(pomme de terre|patate|pdt)\b/.test(text)) {
     roles.delete("fruit");
   }
+  if (/\b(plantes?\s+aromatiques?|aromatique)\b/.test(text)) {
+    roles.add("condiment");
+    roles.delete("fruit");
+    roles.delete("vegetable");
+  }
 
   if (hasMenu || (hasMeatFish && hasBakery) || /\b(sandwich|panini|naan|bagnat|pate vaudois|pates vaudois|pate artisanal|chinois)\b/.test(text)) {
     roles.add("prepared_meal").add("menu");
@@ -115,16 +120,18 @@ function applyNameRoles(product: Product, roles: Set<DiscoverProductRole>): void
   if (has(/\b(muesli|cereale|cereales|granola|flocon)\b/)) roles.add("grain").add("breakfast");
   if (has(/\b(riz|pates|pasta|maccheroni|spaghetti|fusilli|penne|polenta|semoule)\b/)) roles.add("starch").add("grain").add("pantry");
   if (has(/\b(pomme de terre|patate|pdt)\b/)) roles.add("starch").add("vegetable");
-  if (has(/\b(pomme|pommes|poire|poires|fraise|fraises|ananas|orange|oranges|citron|citrons|banane|bananes|mangue|mangues|raisin|raisins|cranberr|fruit|fruits)\b/)) roles.add("fruit");
+  if (has(/\b(pomme|pommes|poire|poires|fraise|fraises|figue|figues|ananas|orange|oranges|citron|citrons|banane|bananes|mangue|mangues|raisin|raisins|cranberr|fruit|fruits)\b/)) roles.add("fruit");
   if (has(/\b(salade|legume|legumes|carotte|tomate|courgette|asperge|chou|rhubarbe|bette)\b/)) roles.add("vegetable");
-  if (has(/\b(poulet|boeuf|porc|veau|dinde|lard|jambon|saucisse|salami|viande)\b/)) roles.add("meat").add("protein");
+  if (has(/\b(poulet|boeuf|porc|veau|dinde|lard|jambon|saucisse|salami|viande|pates? vaudois|pate artisanal)\b/)) {
+    roles.add("meat").add("protein");
+  }
   if (has(/\b(poisson|perche|perches|brochet|fera)\b/)) roles.add("fish").add("protein");
   if (has(/\b(tofu|lentille|pois chiche|haricot)\b/)) roles.add("protein");
   if (has(/\b(sauce|ketchup|moutarde|mayonnaise|salvis|lulu)\b/)) roles.add("sauce").add("condiment");
   if (has(/\b(huile|vinaigre)\b/)) roles.add("oil").add("condiment");
   if (has(/\b(sel|poivre|epice|epices)\b/)) roles.add("condiment").add("pantry");
   if (has(/\b(pizza|menu|plat|pannette)\b/)) roles.add("prepared_meal").add("menu");
-  if (has(/\b(chocolat|sorbet|glace|tarte|gateau|biscuit|cookie|dessert|sucre|miel)\b/)) roles.add("dessert").add("sweet");
+  if (has(/\b(chocolat|sorbet|glace|tarte|tartes|tartelette|tartelettes|gateau|biscuit|cookie|dessert|sucre|miel)\b/)) roles.add("dessert").add("sweet");
   if (has(/\b(biere|vin|cidre|alcool)\b/)) roles.add("alcohol").add("drink");
   if (has(/\b(jus|sirop|biere|vin|cidre|cafe|the|boisson)\b/)) roles.add("drink");
   if (has(/\b(chips|aperitif|apero|cacahuete|noix|olive)\b/)) roles.add("aperitif").add("snack");
@@ -195,6 +202,8 @@ export function profileProduct(
     for (const [label, value] of Object.entries(modelProfile.labelPriors ?? {})) {
       labelPriors.set(label as DiscoverNeedLabel, Number(value) || 0);
     }
+    applyNameRoles(product, roles);
+    applyCompositeRoles(product, roles);
   } else if (genericBundle) {
     roles.add("basket");
     labels.add("weekly_basket");

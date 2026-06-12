@@ -1736,6 +1736,13 @@
       line-height:1.45;
     }
 
+    .guideHistorySuggestions p{
+      margin:0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+
     .guideStep{
       border:1px solid rgba(92, 177, 53, 0.16);
       border-radius:14px;
@@ -3385,7 +3392,31 @@
       messages.scrollTop = messages.scrollHeight;
     }
 
-    function addWelcomeGuideMessage(){
+    async function fetchWelcomeHistorySuggestions(){
+      try{
+        const response = await fetch(`/ai/history-suggestions?userRef=${encodeURIComponent(USER_REF)}&context=welcome`);
+        const data = await response.json();
+        return Array.isArray(data?.suggestions) ? data.suggestions : [];
+      }catch{
+        return [];
+      }
+    }
+
+    function renderWelcomeHistorySuggestions(suggestions){
+      if (!Array.isArray(suggestions) || !suggestions.length) return "";
+
+      return `
+        <div class="guideHistorySuggestions">
+          <p>Tu prends souvent aussi :</p>
+          <div class="guideExamples">
+            ${suggestions.map((item) => `<span>${escapeHtml(item.name)}</span>`).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    async function addWelcomeGuideMessage(){
+      const historySuggestions = await fetchWelcomeHistorySuggestions();
       const row = document.createElement("div");
       row.className = "row aiRow";
 
@@ -3397,6 +3428,7 @@
             <strong>Salut ! Que veux-tu commander aujourd’hui ?</strong>
             <span>Écris naturellement ce dont tu as besoin. Si tu veux tester l’app, ouvre le petit guide ci-dessous.</span>
           </div>
+          ${renderWelcomeHistorySuggestions(historySuggestions)}
 
           <details class="guideStep guideRoot">
             <summary>Guide de test des fonctionnalités</summary>
@@ -3981,7 +4013,7 @@
         showModeChooser();
 
         if(messages.children.length === 0){
-          addWelcomeGuideMessage();
+          await addWelcomeGuideMessage();
         }
 
         await refreshBasket();
@@ -4257,11 +4289,13 @@
     } else {
       const redirectedToSimple = applySavedModeOnRestore();
       if (!redirectedToSimple) {
-        if(messages.children.length === 0){
-          addWelcomeGuideMessage();
-        }
-        refreshBasket();
-        setTimeout(() => input?.focus(), 40);
+        (async () => {
+          if(messages.children.length === 0){
+            await addWelcomeGuideMessage();
+          }
+          refreshBasket();
+          setTimeout(() => input?.focus(), 40);
+        })();
       }
     }
   </script>

@@ -1,5 +1,5 @@
 import { env } from "../config/env.js";
-import { swissdataClient } from "./client.js";
+import { swissdataClient, withSwissdataReadRetry } from "./client.js";
 import { timeAsync, timeSync } from "../utils/perf.js";
 import { normalizeText, tokenizeForMatch } from "../domain/normalizer.js";
 import { textSimilarity } from "../domain/text-similarity.js";
@@ -37,6 +37,7 @@ export type Product = {
   description?: string;
   shortDescription?: string;
   price?: any;
+  countryPrices?: any;
   tags?: string[];
   optionsIds?: string[];
   availableOptions?: ProductOption[];
@@ -145,6 +146,36 @@ export async function fetchFullProduct(
 ): Promise<Product | null> {
   const items = await getCatalog(userRef);
   return items.find((p) => p.id === productId) ?? null;
+}
+
+export async function fetchProductById(
+  userRef: string,
+  productId: string
+): Promise<Product | null> {
+  const shopId = env.swissdataShopId;
+  const country = env.swissdataCountry;
+
+  if (!shopId) throw new Error("Missing env SWISSDATA_SHOP_ID");
+  if (!country) throw new Error("Missing env SWISSDATA_COUNTRY");
+  if (!productId) return null;
+
+  const api = swissdataClient(userRef);
+  const encodedProductId = encodeURIComponent(productId);
+
+  const res = await withSwissdataReadRetry(
+    `swissdata.product_by_id.${productId}`,
+    async () =>
+      await timeAsync(
+        "swissdata.product_by_id_api",
+        async () =>
+          await api.get(`/shop/${shopId}/product/${encodedProductId}`, {
+            params: { country },
+          }),
+        { productId }
+      )
+  );
+
+  return res.data && typeof res.data === "object" ? res.data : null;
 }
 
 export async function getAllProducts(

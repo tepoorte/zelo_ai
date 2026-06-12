@@ -117,6 +117,47 @@ export type DiscoverMlProductProfile = {
   labelPriors?: Partial<Record<DiscoverNeedLabel, number>>;
 };
 
+export type DiscoverSemanticPolarity = "prefer" | "avoid" | "limit" | "strict" | "complement";
+
+export type DiscoverSemanticScore = {
+  name: string;
+  score: number;
+};
+
+export type DiscoverSemanticRoleIntent = {
+  role: DiscoverProductRole;
+  polarity: DiscoverSemanticPolarity;
+  score: number;
+  source?: string;
+};
+
+export type DiscoverSemanticConstraint = {
+  kind: "avoid_role" | "limit_role" | "strict_domain" | "avoid_product" | "budget" | "other";
+  target: string;
+  score: number;
+  source?: string;
+};
+
+export type DiscoverSemanticUncertainty = {
+  kind: "missing_specific_target" | "low_confidence" | "ambiguous_domain" | "health_sensitive";
+  target?: string;
+  score: number;
+};
+
+export type DiscoverSemanticFrame = {
+  schemaVersion: number;
+  originalQuery: string;
+  cleanedQuery: string;
+  requestCount?: number;
+  domains: DiscoverSemanticScore[];
+  concepts: DiscoverSemanticScore[];
+  roleIntents: DiscoverSemanticRoleIntent[];
+  constraints: DiscoverSemanticConstraint[];
+  uncertainties: DiscoverSemanticUncertainty[];
+  responseMode: "direct" | "safe_general" | "safe_general_with_clarification" | "clarify";
+  confidence: number;
+};
+
 export type DiscoverMlProposalBlueprint = {
   id: string;
   title: string;
@@ -202,6 +243,13 @@ export type DiscoverMlModel = {
   anchorPolicies?: Partial<Record<DiscoverProductRole, DiscoverAnchorPolicy>>;
   focusPolicy?: DiscoverFocusPolicy;
   budgetPolicy?: DiscoverBudgetPolicy;
+  semanticFrameModel?: Record<string, unknown>;
+  rolePolarityModel?: Record<string, unknown>;
+  productSemanticProfiles?: Record<string, unknown>;
+  productGraph?: Record<string, unknown>;
+  productRankerV2?: Record<string, unknown>;
+  compositionReranker?: Record<string, unknown>;
+  semanticMetrics?: Record<string, unknown>;
   evaluationReport?: Record<string, unknown>;
   metrics: Record<string, unknown>;
 };
@@ -247,6 +295,9 @@ export type DiscoverProposal = {
   budgetTargetCHF?: number;
   budgetKind?: DiscoverBudgetKind;
   budgetNote?: string;
+  semanticScore?: number;
+  semanticCoverage?: string[];
+  semanticViolations?: string[];
 };
 
 export type DiscoverResult = {
@@ -255,6 +306,7 @@ export type DiscoverResult = {
   needs: DiscoverNeedScore[];
   confidence: number;
   budget?: DiscoverBudgetSignal;
+  semanticFrame?: DiscoverSemanticFrame;
   proposals: DiscoverProposal[];
   message: string;
 };

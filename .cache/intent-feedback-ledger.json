@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-05-26T15:18:00.116Z",
+  "updatedAt": "2026-06-12T15:30:41.018Z",
   "events": [
     {
       "id": "b57624e0-2d89-4be3-aa2a-fd4dba06387e",
@@ -140,6 +140,46 @@
       "predictedAction": "clear_cart",
       "correctAction": "add_items",
       "createdAt": "2026-05-26T15:17:24.468Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "5e0f9545-5dc8-4836-8b23-d7bfbdb15052",
+      "kind": "correction",
+      "text": "j'ai trouvé un person dehors la maison",
+      "normalizedText": "j'ai trouve un person dehors la maison",
+      "predictedAction": "discover_meals",
+      "correctAction": "noop",
+      "createdAt": "2026-06-03T11:53:46.284Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "e09fa7a2-1866-43db-b7c3-6810cf43e1cf",
+      "kind": "correction",
+      "text": "j'ai trouvé un person dehors la maison",
+      "normalizedText": "j'ai trouve un person dehors la maison",
+      "predictedAction": "discover_meals",
+      "correctAction": "noop",
+      "createdAt": "2026-06-03T11:53:52.028Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "93e2518c-910d-4a8c-835d-c1ebe06b171f",
+      "kind": "correction",
+      "text": "garde hot dog",
+      "normalizedText": "garde hot dog",
+      "predictedAction": "noop",
+      "correctAction": "clear_cart",
+      "createdAt": "2026-06-08T13:48:17.807Z",
+      "userRef": "local-dev"
+    },
+    {
+      "id": "4fa802e0-e70e-4946-a1cf-a77442603127",
+      "kind": "correction",
+      "text": "ok",
+      "normalizedText": "ok",
+      "predictedAction": "noop",
+      "correctAction": "exec_cart",
+      "createdAt": "2026-06-12T15:29:55.723Z",
       "userRef": "local-dev"
     }
   ]

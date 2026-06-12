@@ -1,12 +1,16 @@
 import { createHash } from "node:crypto";
 import { normalizeText, tokenizeForMatch } from "../../domain/normalizer.js";
 import { textSimilarity, tokenSimilarity } from "../../domain/text-similarity.js";
-import { getPurchaseHistory, type PurchaseHistory } from "../../swissdata/history.js";
+import type { PurchaseHistory } from "../../swissdata/history.js";
 import { getAllProducts, type Product } from "../../swissdata/products.js";
 import { buildBudgetAwareProposal } from "./budget-composer.js";
 import { extractDiscoverBudgetSignal } from "./budget-extractor.js";
 import { profileCatalog } from "./catalog-profiler.js";
+import { rankSemanticProposals } from "./composition-reranker.js";
 import { classifyDiscoverNeeds, discoverConfidence } from "./need-classifier.js";
+import { buildSemanticGraphProposals } from "./product-graph.js";
+import { buildSemanticDiscoveryFrame } from "./semantic-frame.js";
+import { rankSemanticProducts } from "./semantic-retrieval.js";
 import { loadDiscoverTrainingArtifacts } from "./training-artifacts.js";
 import type {
   DiscoverAnchorPolicy,
@@ -92,12 +96,17 @@ const BROAD_CONSTRAINT_ROLES = new Set<DiscoverProductRole>([
   "cleaning",
   "hygiene",
 ]);
+const NON_FOOD_NEED_LABELS = new Set<DiscoverNeedLabel>(["cleaning", "gift", "hygiene"]);
 const QUERY_FOCUS_STOPWORDS = new Set([
   "avec",
   "autour",
   "balle",
   "balles",
   "budget",
+  "ce",
+  "ces",
+  "cet",
+  "cette",
   "cher",
   "chere",
   "cheres",
@@ -109,6 +118,7 @@ const QUERY_FOCUS_STOPWORDS = new Set([
   "dimanche",
   "disponible",
   "donne",
+  "demain",
   "faire",
   "fr",
   "franc",
@@ -122,9 +132,12 @@ const QUERY_FOCUS_STOPWORDS = new Set([
   "heures",
   "idee",
   "idees",
+  "jour",
+  "jours",
   "jeudi",
   "livraison",
   "lundi",
+  "ma",
   "maison",
   "mardi",
   "mange",
@@ -133,8 +146,12 @@ const QUERY_FOCUS_STOPWORDS = new Set([
   "max",
   "maximum",
   "mercredi",
+  "mes",
   "mettre",
   "moi",
+  "mon",
+  "notre",
+  "nos",
   "personne",
   "personnes",
   "premium",
@@ -149,12 +166,46 @@ const QUERY_FOCUS_STOPWORDS = new Set([
   "rapide",
   "repa",
   "repas",
+  "selection",
+  "semaine",
   "samedi",
+  "ta",
+  "tes",
+  "ton",
   "truc",
   "vendredi",
   "veux",
+  "votre",
+  "vos",
 ]);
 const MAX_DIRECT_FOCUS_MATCHES_PER_TERM = 12;
+const ANCHOR_NEED_LABEL_PRIORITY: DiscoverNeedLabel[] = [
+  "cleaning",
+  "hygiene",
+  "vegetarian",
+  "drink",
+  "breakfast",
+  "aperitif",
+  "dinner",
+  "dessert",
+  "kids",
+  "healthy",
+  "balanced",
+  "local",
+  "budget",
+  "weekly_basket",
+  "quick",
+];
+const EXPLICIT_ROLE_CANDIDATES: DiscoverProductRole[] = [
+  "fruit",
+  "vegetable",
+  "drink",
+  "starch",
+  "meat",
+  "fish",
+  "egg",
+  "cheese",
+];
 
 const FALLBACK_FOCUS_POLICY: DiscoverFocusPolicy = {
   schemaVersion: 1,
@@ -196,6 +247,26 @@ const FALLBACK_ANCHOR_POLICIES: Partial<Record<DiscoverProductRole, DiscoverAnch
       "starch",
       "sweet",
       "vegetable",
+      "cleaning",
+      "hygiene",
+    ],
+  },
+  vegetable: {
+    mode: "strict_domain",
+    blockedRoles: [
+      "aperitif",
+      "bakery",
+      "bread",
+      "dessert",
+      "drink",
+      "grain",
+      "meat",
+      "menu",
+      "oil",
+      "prepared_meal",
+      "fish",
+      "snack",
+      "sweet",
       "cleaning",
       "hygiene",
     ],
@@ -495,6 +566,12 @@ function addConstraintMatches(
     if (!NON_BLOCKABLE_CONSTRAINT_ROLES.has(role)) constraints.roles.add(role);
   }
 
+  for (const role of EXPLICIT_ROLE_CANDIDATES) {
+    if (queryMentionsRolePhrase(normalized, role) && !NON_BLOCKABLE_CONSTRAINT_ROLES.has(role)) {
+      constraints.roles.add(role);
+    }
+  }
+
   for (const [qualifier, roles] of Object.entries(policy.negativeQualifierRoles ?? {})) {
     if (aliasMatchScore(normalized, qualifier, policy) >= 0.78) {
       for (const role of roles ?? []) constraints.roles.add(role);
@@ -696,7 +773,89 @@ function labelAffinity(labels: DiscoverNeedLabel[], needs: DiscoverNeedScore[]):
 }
 
 function acceptsNonFood(needs: DiscoverNeedScore[]): boolean {
-  return needs.some((need) => ["cleaning", "gift", "hygiene"].includes(need.label) && need.score >= 0.35);
+  return needs.some((need) => NON_FOOD_NEED_LABELS.has(need.label) && need.score >= 0.35);
+}
+
+function activeNonFoodNeedLabels(needs: DiscoverNeedScore[]): Set<DiscoverNeedLabel> {
+  return new Set(
+    needs
+      .filter((need) => NON_FOOD_NEED_LABELS.has(need.label) && need.score >= 0.35)
+      .map((need) => need.label)
+  );
+}
+
+function productMatchesNonFoodNeed(
+  profile: DiscoverProductProfile,
+  labels: Set<DiscoverNeedLabel>
+): boolean {
+  if (labels.has("cleaning") && (profile.roles.has("cleaning") || profile.roles.has("hygiene"))) return true;
+  if (labels.has("hygiene") && profile.roles.has("hygiene")) return true;
+  if (labels.has("gift") && profile.roles.has("gift")) return true;
+  return false;
+}
+
+function labelConflictRoles(labels: DiscoverNeedLabel[]): Set<DiscoverProductRole> {
+  const labelSet = new Set(labels);
+  const conflicts = new Set<DiscoverProductRole>();
+
+  const add = (roles: DiscoverProductRole[]): void => {
+    for (const role of roles) conflicts.add(role);
+  };
+
+  if (labelSet.has("vegetarian")) add(["meat", "fish"]);
+  if (labelSet.has("breakfast") && !labelSet.has("aperitif") && !labelSet.has("dinner")) {
+    add(["meat", "fish", "prepared_meal", "menu", "sauce", "oil", "cleaning", "hygiene"]);
+  }
+  if (labelSet.has("kids") && !labelSet.has("dinner")) {
+    add(["alcohol", "meat", "fish", "prepared_meal", "menu", "sauce", "cleaning", "hygiene"]);
+  }
+  if (labelSet.has("drink") && !labelSet.has("aperitif") && !labelSet.has("dinner") && !labelSet.has("balanced")) {
+    add([
+      "meat",
+      "fish",
+      "egg",
+      "starch",
+      "vegetable",
+      "bread",
+      "grain",
+      "cleaning",
+      "hygiene",
+      "prepared_meal",
+      "menu",
+    ]);
+  }
+  if (labelSet.has("cleaning") || labelSet.has("hygiene")) {
+    add(["meat", "fish", "fruit", "vegetable", "starch", "dairy", "bread", "grain", "drink", "dessert", "sweet"]);
+  }
+
+  return conflicts;
+}
+
+function productCompatibleWithLabels(
+  profile: DiscoverProductProfile,
+  labels: DiscoverNeedLabel[]
+): boolean {
+  const labelSet = new Set(labels);
+
+  if (labelSet.has("cleaning") && !(profile.roles.has("cleaning") || profile.roles.has("hygiene"))) return false;
+  if (labelSet.has("hygiene") && !profile.roles.has("hygiene")) return false;
+  if (
+    labelSet.has("gift") &&
+    !["gift", "sweet", "dessert", "drink"].some((role) => profile.roles.has(role as DiscoverProductRole))
+  ) {
+    return false;
+  }
+  if (
+    labelSet.has("drink") &&
+    !labelSet.has("aperitif") &&
+    !labelSet.has("dinner") &&
+    !labelSet.has("balanced") &&
+    !profile.roles.has("drink")
+  ) {
+    return false;
+  }
+
+  return ![...labelConflictRoles(labels)].some((role) => profile.roles.has(role));
 }
 
 function bestTermMatch(term: string, tokens: string[]): number {
@@ -746,7 +905,12 @@ function queryMentionsRolePhrase(query: string, role: DiscoverProductRole): bool
   const normalized = normalizeText(query);
   if (role === "starch") return /\bpomme\s+de\s+terre\b|\bpatate\b|\bpates?\b|\briz\b/.test(normalized);
   if (role === "fruit") return /\bfruits?\b|\bpommes?\b|\bpoires?\b|\bananas?\b|\bananas?\b|\bbananes?\b|\bfraises?\b|\bmangues?\b/.test(normalized);
+  if (role === "vegetable") return /\blegumes?\b|\bsalades?\b|\bcarottes?\b|\btomates?\b|\bcourgettes?\b|\basperges?\b|\bchoux?\b|\bpoireaux?\b|\bbettes?\b/.test(normalized);
   if (role === "drink") return /\b(jus|sirop|biere|vin|cidre|cafe|the|boir|boire|boissons?)\b/.test(normalized);
+  if (role === "meat") return /\b(viande|boeuf|poulet|porc|dinde|lard|jambon|saucisse|salami)\b/.test(normalized);
+  if (role === "fish") return /\b(poisson|poissons|perche|perches|brochet|fera)\b/.test(normalized);
+  if (role === "egg") return /\boeufs?\b/.test(normalized);
+  if (role === "cheese") return /\b(fromage|fromages|gruyere|mozzarella|raclette|crottin)\b/.test(normalized);
   return false;
 }
 
@@ -879,6 +1043,12 @@ function analyzeQueryFocus(
   }
 
   for (const role of roleHints) roles.add(role);
+  const constraintMentionsRole = (role: DiscoverProductRole): boolean =>
+    [...constraints.terms].some((term) => queryMentionsRolePhrase(term, role));
+  for (const role of EXPLICIT_ROLE_CANDIDATES) {
+    if (constraintMentionsRole(role)) continue;
+    if (queryMentionsRolePhrase(query, role)) roles.add(role);
+  }
 
   if (roles.has("fruit") && roles.has("starch") && queryMentionsRolePhrase(query, "starch")) {
     roles.delete("fruit");
@@ -899,6 +1069,7 @@ function analyzeQueryFocus(
   };
 
   for (const role of roles) addPolicyRoles(role, policyForRole(role, model), focus);
+  for (const role of roles) focus.blockedRoles.delete(role);
 
   return focus;
 }
@@ -949,7 +1120,8 @@ function productAllowedByFocus(profile: DiscoverProductProfile, focus: QueryFocu
   if (focus.strictRoles.size) {
     const matchesStrictDomain =
       focus.productIds.has(String(profile.product.id)) ||
-      productHasAnyRole(profile, focus.strictRoles);
+      productHasAnyRole(profile, focus.strictRoles) ||
+      productHasAnyRole(profile, focus.roles);
     return matchesStrictDomain;
   }
   if (productMatchesAnchor(profile, focus)) return true;
@@ -982,6 +1154,7 @@ function productRankFeatures(
   const bundleAllowed = explicitBundleAllowed(query, needs, model);
   const positiveRoleScore = Math.max(0, needRoleScore(needs, profile.roles, model));
   const negativeRoleScore = Math.min(0, needRoleScore(needs, profile.roles, model));
+  const labelCompatible = productCompatibleWithLabels(profile, labels);
   const hasFocus = focus.roles.size > 0 || focus.productIds.size > 0;
   const anchorMatch = hasFocus && productMatchesAnchor(profile, focus);
   const anchorAllowed = !hasFocus || productAllowedByFocus(profile, focus);
@@ -989,7 +1162,11 @@ function productRankFeatures(
   return {
     role_match: roleMatchCount(labels, profile.roles, model),
     weighted_role_match: positiveRoleScore + negativeRoleScore,
+    positive_role_score: positiveRoleScore,
+    negative_role_score: negativeRoleScore,
     label_match: needs.reduce((sum, need) => sum + (profile.labels.has(need.label) ? need.score : 0), 0),
+    label_compatible: labelCompatible ? 1 : 0,
+    label_conflict: labelCompatible ? 0 : 1,
     embedding_similarity: localEmbeddingSimilarity(query, profile),
     query_name_similarity: textSimilarity(query, profile.product.name),
     query_token_overlap: overlap / Math.max(1, queryTokenSet.size),
@@ -1023,8 +1200,16 @@ function productScore(
   if (profile.isGenericBundle && !bundleAllowed) return -100;
   if (!profile.isFood && !acceptsNonFood(needs)) return -80;
   if (!productAllowedByFocus(profile, focus)) return -90;
+  const labels = activeNeedLabelsForFocus(needs, focus, model);
+  if (!productCompatibleWithLabels(profile, labels)) return -85;
 
   let score = 0;
+  const nonFoodNeedLabels = activeNonFoodNeedLabels(needs);
+  if (nonFoodNeedLabels.size) {
+    if (productMatchesNonFoodNeed(profile, nonFoodNeedLabels)) score += 12;
+    else if (profile.isFood) score -= 8;
+    else score -= 2;
+  }
   score += needRoleScore(needs, profile.roles, model) * 4;
   score += needs.reduce((sum, need) => sum + (profile.labels.has(need.label) ? need.score * 2 : 0), 0);
   score += needs.reduce((sum, need) => sum + (profile.labelPriors.get(need.label) ?? 0) * need.score * 3, 0);
@@ -1113,6 +1298,7 @@ function productCompatibleWithBlueprint(
 ): boolean {
   if (blueprint.productIds.includes(String(profile.product.id))) return true;
   if (blueprint.rejectedProductIds.includes(String(profile.product.id))) return false;
+  if (!productCompatibleWithLabels(profile, blueprint.labels)) return false;
 
   const roleScore = labelsRoleScore(blueprint.labels, profile.roles, model);
   if (roleScore <= 0.12) return false;
@@ -1242,7 +1428,8 @@ function buildDynamicFocusedProposal(
     if (products.length >= maxProducts) break;
   }
 
-  const minProducts = focus.strictRoles.size || focus.productIds.size ? 1 : Math.min(2, maxProducts);
+  const acceptsSingleProduct = acceptsNonFood(needs);
+  const minProducts = acceptsSingleProduct || focus.strictRoles.size || focus.productIds.size ? 1 : Math.min(2, maxProducts);
   if (products.length < minProducts) return null;
   const profileById = new Map(scoredProducts.map((entry) => [String(entry.profile.product.id), entry]));
   if (!proposalHasUsefulStructure(products, profileById, needs, focus)) return null;
@@ -1332,7 +1519,8 @@ function buildSafetyCatalogProposal(
     if (products.length >= maxProducts) break;
   }
 
-  const minProducts = focus.strictRoles.size || focus.productIds.size ? 1 : Math.min(2, maxProducts);
+  const acceptsSingleProduct = acceptsNonFood(needs);
+  const minProducts = acceptsSingleProduct || focus.strictRoles.size || focus.productIds.size ? 1 : Math.min(2, maxProducts);
   if (products.length < minProducts) return null;
   const profileById = new Map(scoredProducts.map((entry) => [String(entry.profile.product.id), entry]));
   if (!proposalHasUsefulStructure(products, profileById, needs, focus)) return null;
@@ -1365,10 +1553,31 @@ function fallbackBlueprints(model?: DiscoverMlModel): DiscoverMlProposalBlueprin
       ];
 }
 
+function blueprintAllowedBySemanticContext(
+  blueprint: DiscoverMlProposalBlueprint,
+  concepts: Set<string>
+): boolean {
+  const labels = new Set(blueprint.labels);
+
+  if (concepts.has("picnic")) return false;
+  if (concepts.has("aperitif")) {
+    return labels.has("aperitif") || labels.has("drink") || labels.has("local");
+  }
+  if (concepts.has("nutrition_support")) {
+    return labels.has("healthy") || labels.has("balanced") || labels.has("vegetarian");
+  }
+
+  return true;
+}
+
 function chooseResponseStyle(needs: DiscoverNeedScore[], model?: DiscoverMlModel): DiscoverMlResponseStyle {
   const styles = model?.responseStyles ?? [];
+  const activeLabels = new Set(needs.map((need) => need.label));
   for (const need of needs) {
-    const found = styles.find((style) => style.labels.includes(need.label));
+    const candidates = styles.filter((style) => style.labels.includes(need.label));
+    const found = need.label === "weekly_basket" && !activeLabels.has("budget")
+      ? candidates.find((style) => !style.labels.includes("budget"))
+      : candidates[0];
     if (found) return found;
   }
   return styles[0] ?? FALLBACK_RESPONSE_STYLE;
@@ -1386,6 +1595,92 @@ function productLimit(needs: DiscoverNeedScore[]): number {
   return 3;
 }
 
+function proposalRoleSet(proposal: DiscoverProposal): Set<DiscoverProductRole> {
+  return new Set(
+    proposal.products
+      .flatMap((product) => product.roles)
+      .filter((role) => !NON_DISCRIMINATIVE_FOCUS_ROLES.has(role))
+  );
+}
+
+function intersectionSize<T>(left: Set<T>, right: Set<T>): number {
+  let count = 0;
+  for (const item of left) {
+    if (right.has(item)) count += 1;
+  }
+  return count;
+}
+
+function diversityScore(
+  proposal: DiscoverProposal,
+  selected: DiscoverProposal[],
+  isDiversitySensitive: boolean
+): number {
+  if (!selected.length || !isDiversitySensitive) return proposal.score;
+
+  const labels = new Set(proposal.needs.filter((label) => label !== "discovery_open"));
+  const roles = proposalRoleSet(proposal);
+  const productIds = new Set(proposal.products.map((product) => product.productId));
+  let adjusted = proposal.score;
+
+  for (const existing of selected) {
+    const existingLabels = new Set(existing.needs.filter((label) => label !== "discovery_open"));
+    const existingRoles = proposalRoleSet(existing);
+    const existingProductIds = new Set(existing.products.map((product) => product.productId));
+    const labelOverlap = intersectionSize(labels, existingLabels);
+    const roleOverlap = intersectionSize(roles, existingRoles);
+    const productOverlap = intersectionSize(productIds, existingProductIds);
+
+    adjusted -= productOverlap * 80;
+    adjusted -= labelOverlap * 16;
+    adjusted -= roleOverlap * 4;
+  }
+
+  return adjusted;
+}
+
+function rankDiverseProposals(
+  proposals: DiscoverProposal[],
+  limit: number,
+  isDiversitySensitive: boolean
+): DiscoverProposal[] {
+  const selected: DiscoverProposal[] = [];
+  const remaining = [...proposals].sort((left, right) => right.score - left.score);
+
+  while (remaining.length && selected.length < limit) {
+    let bestIndex = 0;
+    let bestScore = Number.NEGATIVE_INFINITY;
+
+    for (let index = 0; index < remaining.length; index += 1) {
+      const score = diversityScore(remaining[index], selected, isDiversitySensitive);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    }
+
+    selected.push(remaining.splice(bestIndex, 1)[0]);
+  }
+
+  return selected;
+}
+
+function anchorNeedLabel(needs: DiscoverNeedScore[]): DiscoverNeedLabel | undefined {
+  const active = new Map(
+    needs
+      .filter((need) => need.label !== "discovery_open" && need.score >= 0.55)
+      .map((need) => [need.label, need.score])
+  );
+  for (const label of ANCHOR_NEED_LABEL_PRIORITY) {
+    if (active.has(label)) return label;
+  }
+  return needs.find((need) => need.label !== "discovery_open" && need.score >= 0.55)?.label;
+}
+
+function hasSpecificMealCue(query: string): boolean {
+  return /\b(ce soir|soir|soiree|souper|diner|dinner|midi|repas|plat|menu)\b/.test(normalizeText(query));
+}
+
 function formatDiscoverMessage(result: Omit<DiscoverResult, "message">, style: DiscoverMlResponseStyle): string {
   if (!result.proposals.length) {
     return style.lowConfidence || FALLBACK_RESPONSE_STYLE.lowConfidence;
@@ -1399,8 +1694,15 @@ function formatDiscoverMessage(result: Omit<DiscoverResult, "message">, style: D
     "",
   ];
 
-  result.proposals.forEach((proposal, index) => {
-    lines.push(`${index + 1}. ${proposal.title}`);
+  if (result.semanticFrame?.responseMode === "safe_general_with_clarification") {
+    lines.push(
+      "Je te propose une base générale, sans promesse médicale. Si tu veux cibler un besoin précis, dis-moi lequel.",
+      ""
+    );
+  }
+
+  result.proposals.forEach((proposal) => {
+    lines.push(proposal.title);
     for (const product of proposal.products) {
       const price = product.estimatedPriceCHF != null
         ? ` (~${product.estimatedPriceCHF.toFixed(2)} CHF)`
@@ -1426,7 +1728,7 @@ export async function buildDiscoverMealIdeas(
 ): Promise<DiscoverResult> {
   const training = options.training ?? await loadDiscoverTrainingArtifacts();
   const products = options.products ?? await getAllProducts(userRef);
-  const history = options.history ?? await getPurchaseHistory(userRef).catch(() => ({}));
+  const history: PurchaseHistory = {};
   const model = training.model;
   const budget = extractDiscoverBudgetSignal(query, model?.budgetPolicy);
   const needs = adjustNeedsForBudgetSignal(
@@ -1435,7 +1737,16 @@ export async function buildDiscoverMealIdeas(
   );
   const rawConfidence = discoverConfidence(needs);
   const confidence = budget.kind === "target" ? Math.max(rawConfidence, 0.72) : rawConfidence;
-  const style = chooseResponseStyle(needs, model);
+  let style = chooseResponseStyle(needs, model);
+  const profiles = profileCatalog(products, training);
+  const semanticFrame = buildSemanticDiscoveryFrame({
+    query,
+    needs,
+    budget,
+    profiles,
+    hints: options.hints,
+    model,
+  });
 
   if (!model || confidence < MIN_CONFIDENCE) {
     const resultWithoutMessage = {
@@ -1444,6 +1755,7 @@ export async function buildDiscoverMealIdeas(
       needs,
       confidence,
       budget,
+      semanticFrame,
       proposals: [],
     };
 
@@ -1453,11 +1765,11 @@ export async function buildDiscoverMealIdeas(
     };
   }
 
-  const profiles = profileCatalog(products, training);
   const focus = analyzeQueryFocus(query, profiles, options.hints, model);
   if (process.env.DEBUG_DISCOVER_MEALS === "1") {
     console.log("[DISCOVER_FOCUS]", {
       query,
+      semanticFrame,
       terms: focus.terms,
       roles: [...focus.roles],
       strictRoles: [...focus.strictRoles],
@@ -1468,12 +1780,13 @@ export async function buildDiscoverMealIdeas(
       productIds: [...focus.productIds],
     });
   }
-  const scoredProducts = profiles
+  const baseScoredProducts = profiles
     .map((profile) => ({
       profile,
       score: productScore(profile, query, needs, history, model, focus),
     }))
     .sort((left, right) => right.score - left.score);
+  const scoredProducts = rankSemanticProducts(baseScoredProducts, semanticFrame);
 
   const openNeed = needs.find((need) => need.label === "discovery_open");
   const topNeedScore = Math.max(...needs.map((need) => need.score), 0);
@@ -1483,14 +1796,39 @@ export async function buildDiscoverMealIdeas(
   const isOpenQuery = Boolean(
     openNeed &&
     openNeed.score >= 0.65 &&
-    (!hasVeryStrongSpecificNeed || openNeed.score >= topNeedScore - 0.08)
+    (!hasVeryStrongSpecificNeed || openNeed.score >= topNeedScore - (hasSpecificMealCue(query) ? 0.08 : 0.18))
   );
-  const anchorLabel = needs.find(
-    (need) => need.label !== "discovery_open" && need.score >= 0.55
-  )?.label;
+  if (isOpenQuery && openNeed) {
+    style = chooseResponseStyle(
+      [
+        { label: "discovery_open", score: openNeed.score },
+        ...needs.filter((need) => need.label !== "discovery_open"),
+      ],
+      model
+    );
+  }
+  const anchorLabel = anchorNeedLabel(needs);
   const globallyUsedIds = new Set<string>();
   const proposals: DiscoverProposal[] = [];
-  const maxProposals = proposalLimit(needs);
+  const semanticConceptNames = new Set(
+    semanticFrame.concepts
+      .filter((concept) => concept.score >= 0.45)
+      .map((concept) => concept.name)
+  );
+  const specificSemanticRequest = ["picnic", "aperitif", "nutrition_support"].some((concept) =>
+    semanticConceptNames.has(concept)
+  );
+  const specificSemanticProposalLimit = semanticConceptNames.has("picnic")
+    ? 1
+    : semanticConceptNames.has("aperitif")
+      ? 2
+      : 3;
+  const maxProposals = semanticFrame.requestCount
+    ? Math.max(1, Math.min(5, semanticFrame.requestCount))
+    : specificSemanticRequest
+      ? Math.min(specificSemanticProposalLimit, proposalLimit(needs))
+    : proposalLimit(needs);
+  const maxCandidateProposals = Math.max(maxProposals, maxProposals * 3);
   const maxProducts = productLimit(needs);
 
   const budgetProposal = buildBudgetAwareProposal({
@@ -1511,8 +1849,24 @@ export async function buildDiscoverMealIdeas(
     for (const product of budgetProposal.products) globallyUsedIds.add(product.productId);
   }
 
+  const semanticProposals = buildSemanticGraphProposals({
+    frame: semanticFrame,
+    scoredProducts,
+    needs,
+    maxProducts,
+    maxProposals: Math.min(maxCandidateProposals, semanticFrame.requestCount ?? maxProposals),
+    usedProductIds: globallyUsedIds,
+  });
+  for (const proposal of semanticProposals) {
+    if (proposals.some((existing) => existing.id === proposal.id)) continue;
+    proposals.push(proposal);
+    for (const product of proposal.products) globallyUsedIds.add(product.productId);
+    if (proposals.length >= maxCandidateProposals) break;
+  }
+
   const blueprintCandidates = fallbackBlueprints(model)
     .filter((blueprint) => blueprintLabelActive(blueprint, needs, isOpenQuery, anchorLabel))
+    .filter((blueprint) => blueprintAllowedBySemanticContext(blueprint, semanticConceptNames))
     .sort((left, right) => {
       const leftScore = labelAffinity(left.labels, needs);
       const rightScore = labelAffinity(right.labels, needs);
@@ -1532,7 +1886,7 @@ export async function buildDiscoverMealIdeas(
     if (!proposal) continue;
     proposals.push(proposal);
     for (const product of proposal.products) globallyUsedIds.add(product.productId);
-    if (proposals.length >= maxProposals) break;
+    if (proposals.length >= maxCandidateProposals) break;
   }
 
   const proposalsAlreadyMatchFocus = proposals.some((proposal) =>
@@ -1586,9 +1940,9 @@ export async function buildDiscoverMealIdeas(
     if (proposal) proposals.push(proposal);
   }
 
-  const ranked = proposals
-    .sort((left, right) => right.score - left.score)
-    .slice(0, maxProposals);
+  const diversitySensitive = isOpenQuery || needs.some((need) => ["weekly_basket", "balanced", "healthy"].includes(need.label));
+  const semanticallyRanked = rankSemanticProposals(proposals, semanticFrame);
+  const ranked = rankDiverseProposals(semanticallyRanked, maxProposals, diversitySensitive);
 
   const resultWithoutMessage = {
     ok: true,
@@ -1596,6 +1950,7 @@ export async function buildDiscoverMealIdeas(
     needs,
     confidence,
     budget,
+    semanticFrame,
     proposals: ranked,
   };
 

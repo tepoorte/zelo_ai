@@ -15,27 +15,37 @@
     "test:build-meal-family": "node --loader ts-node/esm ./tests/build-meal-family.test.ts",
     "test:build-meal-matching": "node --loader ts-node/esm ./tests/build-meal-matching.test.ts",
     "test:discover-meals": "node --loader ts-node/esm ./tests/discover-meals.test.ts",
+    "test:discover-semantic": "node --loader ts-node/esm ./tests/discover-semantic.test.ts",
     "test:intents": "node --loader ts-node/esm ./tests/intent-classifier.test.ts",
+    "test:history-suggestions": "node --loader ts-node/esm ./tests/history-suggestions.test.ts",
+    "test:whatsapp": "node --loader ts-node/esm ./tests/whatsapp-transport.test.ts",
     "audit:intents": "node ./tests/intent-ui-audit.mjs",
     "audit:discover-budget": "node ./tests/discover-budget-ui-audit.mjs",
+    "audit:discover-semantic": "node --loader ts-node/esm ./tests/discover-semantic-audit.ts",
     "test:smoke": "node --loader ts-node/esm ./tests/smoke/run.ts",
     "setup:discover-meals": "node ./ml/discover-meals/setup.mjs",
+    "sync:discover-catalog": "node ./ml/discover-meals/sync-catalog.mjs --dry-run",
+    "sync:discover-catalog:apply": "node ./ml/discover-meals/sync-catalog.mjs --apply",
+    "refresh:discover-meals": "node ./ml/discover-meals/refresh.mjs",
     "train:discover-meals": "node ./ml/discover-meals/build-artifacts.mjs",
     "setup:intents": "node ./ml/intent-classifier/setup.mjs",
     "train:intents": "node ./ml/intent-classifier/build-artifacts.mjs"
   },
   "dependencies": {
     "axios": "^1.7.7",
+    "baileys": "^7.0.0-rc13",
     "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "morgan": "^1.10.0",
-    "openai": "^4.104.0"
+    "openai": "^4.104.0",
+    "qrcode-terminal": "^0.12.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/morgan": "^1.9.9",
     "@types/node": "^20.14.10",
+    "@types/qrcode-terminal": "^0.12.2",
     "nodemon": "^3.1.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"

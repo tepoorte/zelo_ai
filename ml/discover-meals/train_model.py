@@ -145,6 +145,26 @@ ANCHOR_POLICIES = {
             "hygiene",
         ],
     },
+    "vegetable": {
+        "mode": "strict_domain",
+        "blockedRoles": [
+            "aperitif",
+            "bakery",
+            "bread",
+            "dessert",
+            "drink",
+            "grain",
+            "meat",
+            "menu",
+            "oil",
+            "prepared_meal",
+            "fish",
+            "snack",
+            "sweet",
+            "cleaning",
+            "hygiene",
+        ],
+    },
     "drink": {
         "mode": "strict_domain",
         "blockedRoles": ["meat", "fish", "egg", "starch", "vegetable", "cleaning", "hygiene", "prepared_meal", "menu"],
@@ -197,16 +217,16 @@ ROLE_PATTERNS = [
     (r"\b(muesli|cereale|cereales|granola|flocon)\b", ["grain", "breakfast"]),
     (r"\b(riz|pates|pasta|maccheroni|spaghetti|fusilli|penne|polenta|semoule)\b", ["starch", "grain", "pantry"]),
     (r"\b(pomme de terre|patate|pdt)\b", ["starch", "vegetable"]),
-    (r"\b(pomme|pommes|poire|poires|fraise|fraises|ananas|orange|oranges|citron|citrons|banane|bananes|mangue|mangues|raisin|raisins|cranberr|fruit|fruits)\b", ["fruit"]),
+    (r"\b(pomme|pommes|poire|poires|fraise|fraises|figue|figues|ananas|orange|oranges|citron|citrons|banane|bananes|mangue|mangues|raisin|raisins|cranberr|fruit|fruits)\b", ["fruit"]),
     (r"\b(salade|legume|legumes|carotte|tomate|courgette|asperge|chou|rhubarbe|bette)\b", ["vegetable"]),
-    (r"\b(poulet|boeuf|porc|veau|dinde|lard|jambon|saucisse|salami|viande)\b", ["meat", "protein"]),
+    (r"\b(poulet|boeuf|porc|veau|dinde|lard|jambon|saucisse|salami|viande|pates? vaudois|pate artisanal)\b", ["meat", "protein"]),
     (r"\b(poisson|perche|perches|brochet|fera)\b", ["fish", "protein"]),
     (r"\b(tofu|lentille|pois chiche|haricot)\b", ["protein"]),
     (r"\b(sauce|ketchup|moutarde|mayonnaise|salvis|lulu)\b", ["sauce", "condiment"]),
     (r"\b(huile|vinaigre)\b", ["oil", "condiment"]),
     (r"\b(sel|poivre|epice|epices)\b", ["condiment", "pantry"]),
     (r"\b(pizza|menu|plat|pannette)\b", ["prepared_meal", "menu"]),
-    (r"\b(chocolat|sorbet|glace|tarte|gateau|biscuit|cookie|dessert|sucre|miel)\b", ["dessert", "sweet"]),
+    (r"\b(chocolat|sorbet|glace|tarte|tartes|tartelette|tartelettes|gateau|biscuit|cookie|dessert|sucre|miel)\b", ["dessert", "sweet"]),
     (r"\b(biere|vin|cidre|alcool)\b", ["alcohol", "drink"]),
     (r"\b(jus|sirop|biere|vin|cidre|cafe|the|boir|boire|boisson|boissons)\b", ["drink"]),
     (r"\b(chips|aperitif|apero|cacahuete|noix|olive)\b", ["aperitif", "snack"]),
@@ -224,7 +244,11 @@ STOPWORDS = {
 FEATURE_NAMES = [
     "role_match",
     "weighted_role_match",
+    "positive_role_score",
+    "negative_role_score",
     "label_match",
+    "label_compatible",
+    "label_conflict",
     "embedding_similarity",
     "query_name_similarity",
     "query_token_overlap",
@@ -279,18 +303,29 @@ CONTEXT_NON_ANCHOR_TERMS = {
     "bon",
     "bonne",
     "budget",
+    "ce",
+    "ces",
+    "cet",
+    "cette",
     "cher",
     "chere",
     "cheres",
     "chers",
     "chf",
     "chose",
+    "coin",
     "concret",
     "concrete",
     "concretes",
+    "conseille",
+    "conseilles",
+    "conseil",
+    "conseils",
     "deux",
+    "demain",
     "disponible",
     "durable",
+    "ecole",
     "facile",
     "fatigue",
     "fatiguee",
@@ -321,6 +356,7 @@ CONTEXT_NON_ANCHOR_TERMS = {
     "lourdes",
     "lourds",
     "mais",
+    "ma",
     "mange",
     "manger",
     "manges",
@@ -329,13 +365,21 @@ CONTEXT_NON_ANCHOR_TERMS = {
     "max",
     "maximum",
     "mercredi",
+    "mes",
     "mettre",
     "midi",
+    "mieux",
     "moins",
+    "mon",
+    "notre",
+    "nos",
     "premium",
     "option",
     "personne",
     "personnes",
+    "apres",
+    "apre",
+    "lecole",
     "partager",
     "plat",
     "plats",
@@ -349,15 +393,30 @@ CONTEXT_NON_ANCHOR_TERMS = {
     "recois",
     "repa",
     "repas",
+    "region",
+    "regional",
+    "regionaux",
+    "selection",
     "samedi",
     "dimanche",
+    "semaine",
     "simple",
     "soir",
     "soiree",
+    "ta",
+    "tes",
     "temps",
+    "ton",
     "truc",
     "utile",
+    "vegetarien",
+    "vegetarienne",
+    "vegetariens",
+    "vegetariennes",
+    "veggie",
     "vendredi",
+    "votre",
+    "vos",
 }
 
 NEGATION_TEMPLATES = [
@@ -548,15 +607,62 @@ def anchor_allowed(profile: dict[str, Any], anchor_roles: set[str]) -> bool:
         policy = ANCHOR_POLICIES.get(role, {})
         blocked_roles.update(policy.get("blockedRoles", []))
         complement_roles.update(policy.get("complementRoles", []))
+    blocked_roles.difference_update(anchor_roles)
 
     if strict_roles:
-        return bool(profile_roles & strict_roles) and not bool(profile_roles & blocked_roles)
+        return bool(profile_roles & (strict_roles | anchor_roles)) and not bool(profile_roles & blocked_roles)
 
     if profile_roles & anchor_roles:
         return not bool(profile_roles & blocked_roles)
     if complement_roles and profile_roles & complement_roles:
         return not bool(profile_roles & blocked_roles)
     return False
+
+
+def label_conflict_roles(labels: list[str]) -> set[str]:
+    label_set = set(labels)
+    conflicts: set[str] = set()
+
+    if "vegetarian" in label_set:
+        conflicts.update(["meat", "fish"])
+    if "breakfast" in label_set and not (label_set & {"aperitif", "dinner"}):
+        conflicts.update(["meat", "fish", "prepared_meal", "menu", "sauce", "oil", "cleaning", "hygiene"])
+    if "kids" in label_set and "dinner" not in label_set:
+        conflicts.update(["alcohol", "meat", "fish", "prepared_meal", "menu", "sauce", "cleaning", "hygiene"])
+    if "drink" in label_set and not (label_set & {"aperitif", "dinner", "balanced"}):
+        conflicts.update([
+            "meat",
+            "fish",
+            "egg",
+            "starch",
+            "vegetable",
+            "bread",
+            "grain",
+            "cleaning",
+            "hygiene",
+            "prepared_meal",
+            "menu",
+        ])
+    if "cleaning" in label_set or "hygiene" in label_set:
+        conflicts.update(["meat", "fish", "fruit", "vegetable", "starch", "dairy", "bread", "grain", "drink", "dessert", "sweet"])
+
+    return conflicts
+
+
+def label_compatible(labels: list[str], profile: dict[str, Any]) -> bool:
+    label_set = set(labels)
+    profile_roles = set(profile.get("roles", []))
+
+    if "cleaning" in label_set and not (profile_roles & {"cleaning", "hygiene"}):
+        return False
+    if "hygiene" in label_set and "hygiene" not in profile_roles:
+        return False
+    if "gift" in label_set and not (profile_roles & {"gift", "sweet", "dessert", "drink"}):
+        return False
+    if "drink" in label_set and not (label_set & {"aperitif", "dinner", "balanced"}) and "drink" not in profile_roles:
+        return False
+
+    return not bool(profile_roles & label_conflict_roles(labels))
 
 
 def sigmoid(x: float) -> float:
@@ -682,6 +788,10 @@ def profile_product(product: dict[str, Any], role_examples: list[dict[str, Any]]
             profile["roles"].discard("vegetable")
         if re.search(r"\b(pomme de terre|patate|pdt)\b", text):
             profile["roles"].discard("fruit")
+        if re.search(r"\b(plantes?\s+aromatiques?|aromatique)\b", text):
+            profile["roles"].add("condiment")
+            profile["roles"].discard("fruit")
+            profile["roles"].discard("vegetable")
         categories = set(profile["categoryIds"])
         if (
             "5f00d2cda5761c0007833362" in categories
@@ -1169,7 +1279,10 @@ def feature_vector(
     for label in labels:
         for role in profile["roles"]:
             weighted_role_match += label_role_weights.get(label, {}).get(role, 0.0)
+    positive_role_score = max(0.0, weighted_role_match)
+    negative_role_score = min(0.0, weighted_role_match)
     label_match = len(set(profile["labels"]) & set(labels))
+    compatible = label_compatible(labels, profile)
     query_token_set = set(tokens(query))
     product_token_set = set(profile["tokens"])
     allowed = bundle_allowed(query, labels)
@@ -1179,7 +1292,11 @@ def feature_vector(
     return {
         "role_match": float(role_match),
         "weighted_role_match": float(weighted_role_match),
+        "positive_role_score": float(positive_role_score),
+        "negative_role_score": float(negative_role_score),
         "label_match": float(label_match),
+        "label_compatible": 1.0 if compatible else 0.0,
+        "label_conflict": 0.0 if compatible else 1.0,
         "query_name_similarity": text_similarity(query, profile["name"]),
         "query_token_overlap": len(query_token_set & product_token_set) / max(1, len(query_token_set)),
         "is_food": 1.0 if profile["isFood"] else 0.0,
@@ -1214,6 +1331,8 @@ def target_for(
     if profile["id"] in rejected_ids:
         return 0
     if profile["isGenericBundle"] and not bundle_allowed(query, labels):
+        return 0
+    if not label_compatible(labels, profile):
         return 0
     anchor_roles = query_anchor_roles(query)
     if anchor_roles and not anchor_allowed(profile, anchor_roles):
@@ -1459,6 +1578,14 @@ def build_label_role_weights(
     by_id = {profile["id"]: profile for profile in profiles}
     weights: dict[str, Counter[str]] = defaultdict(Counter)
 
+    for label, roles in NEED_ROLE_PRIORITY.items():
+        if label not in LABELS:
+            continue
+        for role in roles:
+            weights[label][role] += 1.4
+        for role in label_conflict_roles([label]):
+            weights[label][role] -= 2.8
+
     for example in ranking_examples:
         labels = [label for label in example.get("labels", []) if label in LABELS]
         for label in labels:
@@ -1576,6 +1703,112 @@ def build_budget_policy(
     }
 
 
+def build_semantic_artifacts(
+    semantic_frames: list[dict[str, Any]],
+    product_relevance: list[dict[str, Any]],
+    composition_eval: list[dict[str, Any]],
+    semantic_hard_negatives: list[dict[str, Any]],
+    planner_vocabulary: dict[str, list[str]],
+) -> dict[str, Any]:
+    concepts = set()
+    response_modes = set()
+    role_polarities: dict[str, set[str]] = defaultdict(set)
+    graph_roles = set()
+
+    for row in semantic_frames:
+        frame = row.get("frame", {}) if isinstance(row.get("frame"), dict) else {}
+        concepts.update(str(item) for item in frame.get("concepts", []) or [] if str(item))
+        response_mode = str(frame.get("responseMode") or "")
+        if response_mode:
+            response_modes.add(response_mode)
+        for key, polarity in [
+            ("positiveRoles", "prefer"),
+            ("strictRoles", "strict"),
+            ("limitRoles", "limit"),
+            ("avoidRoles", "avoid"),
+        ]:
+            for role in frame.get(key, []) or []:
+                role = str(role).strip()
+                if role:
+                    role_polarities[role].add(polarity)
+                    graph_roles.add(role)
+
+    for row in product_relevance:
+        for role in row.get("positiveRoles", []) or []:
+            role = str(role).strip()
+            if role:
+                role_polarities[role].add("prefer")
+                graph_roles.add(role)
+        for role in row.get("negativeRoles", []) or []:
+            role = str(role).strip()
+            if role:
+                role_polarities[role].add("avoid")
+
+    for row in semantic_hard_negatives:
+        for role in row.get("positiveRoles", []) or []:
+            role = str(role).strip()
+            if role:
+                role_polarities[role].add("prefer")
+                graph_roles.add(role)
+        for key, polarity in [("avoidRoles", "avoid"), ("limitRoles", "limit")]:
+            for role in row.get(key, []) or []:
+                role = str(role).strip()
+                if role:
+                    role_polarities[role].add(polarity)
+
+    for row in composition_eval:
+        for coverage in row.get("coverage", []) or []:
+            value = str(coverage).strip()
+            if value:
+                concepts.add(value)
+
+    semantic_metrics = {
+        "semanticFrameExamples": len(semantic_frames),
+        "productRelevanceExamples": len(product_relevance),
+        "compositionEvalExamples": len(composition_eval),
+        "semanticHardNegatives": len(semantic_hard_negatives),
+        "knownConcepts": len(concepts),
+        "rolePolarityRows": sum(len(values) for values in role_polarities.values()),
+    }
+
+    return {
+        "semanticFrameModel": {
+            "schemaVersion": 1,
+            "mode": "local_hybrid",
+            "source": "semantic_frames.jsonl",
+            "concepts": sorted(concepts),
+            "responseModes": sorted(response_modes),
+            "plannerSignalsUsedAsHints": True,
+        },
+        "rolePolarityModel": {
+            "schemaVersion": 1,
+            "mode": "local_hybrid",
+            "rolePolarities": {role: sorted(values) for role, values in sorted(role_polarities.items())},
+        },
+        "productSemanticProfiles": {
+            "schemaVersion": 1,
+            "mode": "runtime_catalog_profiles",
+            "textFields": ["name", "category", "tags", "metadata", "roles", "labels"],
+        },
+        "productGraph": {
+            "schemaVersion": 1,
+            "mode": "role_graph_composer",
+            "seedRoles": sorted(graph_roles | set(planner_vocabulary.get("roles", []))),
+        },
+        "productRankerV2": {
+            "schemaVersion": 1,
+            "mode": "hybrid_runtime_rerank",
+            "features": ["semantic_frame", "role_polarity", "strict_domain", "concept_roles", "hashed_similarity"],
+        },
+        "compositionReranker": {
+            "schemaVersion": 1,
+            "mode": "coverage_violation_diversity",
+            "source": "composition_eval.jsonl",
+        },
+        "semanticMetrics": semantic_metrics,
+    }
+
+
 def read_response_styles(styles: list[dict[str, Any]]) -> list[dict[str, Any]]:
     output = []
     for style in styles:
@@ -1618,6 +1851,10 @@ def main() -> None:
     ranking_examples = read_jsonl(TRAINING_DIR / "ranking_examples.jsonl") + read_jsonl(TRAINING_DIR / "proposal_ranking.jsonl")
     proposal_examples = read_jsonl(TRAINING_DIR / "proposal_examples.jsonl")
     response_style_rows = read_jsonl(TRAINING_DIR / "response_styles.jsonl")
+    semantic_frames = read_jsonl(TRAINING_DIR / "semantic_frames.jsonl")
+    product_relevance = read_jsonl(TRAINING_DIR / "product_relevance.jsonl")
+    composition_eval = read_jsonl(TRAINING_DIR / "composition_eval.jsonl")
+    semantic_hard_negatives = read_jsonl(TRAINING_DIR / "semantic_hard_negatives.jsonl")
     global LABELS
     LABELS = collect_label_universe(
         manual_queries,
@@ -1640,6 +1877,11 @@ def main() -> None:
     print(f"[discover-train] query examples: {len(query_examples)}")
     print(f"[discover-train] product role examples: {len(role_examples)}")
     print(f"[discover-train] proposal examples: {len(proposal_examples)}")
+    print(
+        "[discover-train] semantic examples: "
+        f"frames={len(semantic_frames)} relevance={len(product_relevance)} "
+        f"composition={len(composition_eval)} hardNegatives={len(semantic_hard_negatives)}"
+    )
 
     profiles = [profile_product(product, role_examples) for product in products if product.get("id") and product.get("name")]
     apply_proposal_priors(profiles, proposal_examples)
@@ -1652,6 +1894,13 @@ def main() -> None:
     }
     focus_policy = build_focus_policy(profiles, planner_vocabulary["roles"])
     budget_policy = build_budget_policy(budget_examples + generated_budget_examples(), budget_hard_negatives)
+    semantic_artifacts = build_semantic_artifacts(
+        semantic_frames,
+        product_relevance,
+        composition_eval,
+        semantic_hard_negatives,
+        planner_vocabulary,
+    )
 
     product_embeddings, query_embeddings, embedding_mode = build_embeddings(
         products,
@@ -1732,12 +1981,14 @@ def main() -> None:
             "anchorPolicies": ANCHOR_POLICIES,
             "focusPolicy": focus_policy,
             "budgetPolicy": budget_policy,
+            **semantic_artifacts,
             "evaluationReport": {
                 "constraintExamples": len(constraint_examples),
                 "typoEvalExamples": len(typo_eval_examples),
                 "goldenEvalExamples": len(golden_eval_examples),
                 "budgetExamples": len(budget_examples),
                 "budgetHardNegatives": len(budget_hard_negatives),
+                "semanticExamples": semantic_artifacts["semanticMetrics"],
                 "syntheticQueryExamples": len(query_examples) - len(manual_queries),
                 "focusPolicy": {
                     "roleAliases": sum(len(values) for values in focus_policy["roleAliasIndex"].values()),
@@ -1756,6 +2007,7 @@ def main() -> None:
                 "intentTrainer": intent_trainer,
                 "ranker": ranker_metrics,
                 "budgetMetrics": budget_policy["metrics"],
+                "semanticMetrics": semantic_artifacts["semanticMetrics"],
                 "sklearnAvailable": bool(LogisticRegression and OneVsRestClassifier and np is not None),
             },
         },

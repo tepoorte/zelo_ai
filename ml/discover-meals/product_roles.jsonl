@@ -18,3 +18,5 @@
 {"name":"chips de bananes","roles":["snack","sweet"],"labels":["dessert"]}
 {"name":"kéfir","roles":["drink"],"labels":["drink"]}
 {"name":"pomme de terre","roles":["starch","vegetable"],"labels":["balanced"]}
+{"name":"pizza végétarienne","roles":["prepared_meal","menu","vegetable"],"labels":["vegetarian","balanced"]}
+{"name":"lasagnetta végétarienne","roles":["prepared_meal","menu","vegetable"],"labels":["vegetarian","balanced"]}

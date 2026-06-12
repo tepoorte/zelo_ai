@@ -6,5 +6,5 @@
 {"text":"un apero loccal","labels":["aperitif","local"]}
 {"text":"un truc rapid avec poisson","labels":["quick","dinner","healthy"],"expectedRoles":["fish"]}
 {"text":"des produit pour la maisson","labels":["cleaning"],"expectedRoles":["cleaning"]}
-{"text":"une boisson san alcool","labels":["drink"],"excludedRoles":["drink"]}
+{"text":"une boisson san alcool","labels":["drink"],"excludedRoles":["alcohol"]}
 {"text":"petit dejeuner san lait","labels":["breakfast","healthy"],"excludedRoles":["dairy"]}

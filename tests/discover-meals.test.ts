@@ -213,6 +213,7 @@ assert.equal(
   assert.equal(result.budget?.kind, "target");
   assert.equal(result.proposals[0]?.estimatedTotalCHF != null, true, "Budget proposal should expose an estimated total");
   assert.equal(result.message.includes("Total estimé"), true, "Budget response should show the estimated total");
+  assert.equal(/^\d+\.\s/m.test(result.message), false, "Discover response should not enumerate proposal titles");
 }
 
 {
@@ -689,6 +690,92 @@ assert.equal(
     assertOnlyCatalogProducts(result);
     assert.equal(result.message.length > 20, true, `Random discover answer is empty for ${query}`);
   }
+}
+
+{
+  const result = await buildDiscoverMealIdeas("test", "tu me conseilles quoi si je reçois deux amis", {
+    products: catalog,
+    history: {},
+    training,
+  });
+
+  assertOnlyCatalogProducts(result);
+  assertSomeConcreteProduct(result, ["gruyere", "pain", "lard", "jus"]);
+  assertNoProducts(result, ["perche", "brochet", "riz", "oeuf"], "Friends/apero query should not drift to fish or starch");
+}
+
+{
+  const result = await buildDiscoverMealIdeas("test", "une idée avec des produits du coin", {
+    products: catalog,
+    history: {},
+    training,
+  });
+
+  assertOnlyCatalogProducts(result);
+  assertSomeConcreteProduct(result, ["gruyere", "pain", "lard", "jus", "salade", "pommes"]);
+  assertNoProducts(result, ["savon", "lessive"], "Local food query should not drift to hygiene or cleaning");
+}
+
+{
+  const result = await buildDiscoverMealIdeas("test", "j’aimerais une idée pour les enfants après l’école", {
+    products: catalog,
+    history: {},
+    training,
+  });
+
+  assertOnlyCatalogProducts(result);
+  assertSomeConcreteProduct(result, ["muesli", "lait", "pommes", "yaourt", "pain"]);
+  assertNoProducts(result, ["lard", "boeuf", "perche", "brochet"], "Kids after-school query should avoid meat/fish");
+}
+
+{
+  const result = await buildDiscoverMealIdeas("test", "un petit déjeuner équilibré", {
+    products: catalog,
+    history: {},
+    training,
+  });
+
+  assertOnlyCatalogProducts(result);
+  assertSomeConcreteProduct(result, ["muesli", "lait", "yaourt", "pain", "pommes"]);
+  assertNoProducts(result, ["lard", "boeuf", "perche", "brochet", "pate-vaudois"], "Balanced breakfast should avoid heavy meal products");
+}
+
+{
+  const result = await buildDiscoverMealIdeas("test", "je veux manger mieux cette semaine", {
+    products: catalog,
+    history: {},
+    training,
+  });
+
+  assertOnlyCatalogProducts(result);
+  assertSomeConcreteProduct(result, ["salade", "pommes", "oeuf", "pdt", "riz", "muesli"]);
+  assertNoProducts(result, ["canard", "pate-vaudois", "boeuf"], "Healthy weekly query should avoid heavy meat/prepared products");
+}
+
+{
+  const result = await buildDiscoverMealIdeas("test", "une sélection de fruits et légumes", {
+    products: catalog,
+    history: {},
+    training,
+  });
+  const productIds = proposalProductIds(result);
+
+  assertOnlyCatalogProducts(result);
+  assert.equal(productIds.some((productId) => ["pommes", "bananes", "ananas", "poires"].includes(productId)), true);
+  assert.equal(productIds.some((productId) => ["salade", "pdt"].includes(productId)), true);
+  assertNoProducts(result, ["lard", "boeuf", "perche", "brochet"], "Fruit and vegetable query should avoid meat/fish");
+}
+
+{
+  const result = await buildDiscoverMealIdeas("test", "une idée végétarienne avec 40 francs", {
+    products: catalog,
+    history: {},
+    training,
+  });
+
+  assertOnlyCatalogProducts(result);
+  assert.equal(result.budget?.kind, "target");
+  assertNoProducts(result, ["lard", "boeuf", "perche", "brochet", "canard", "pate-vaudois"], "Vegetarian budget query should avoid meat/fish");
 }
 
 console.log("[PASS] discover-meals tests");

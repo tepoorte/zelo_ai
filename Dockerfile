@@ -5,7 +5,7 @@ WORKDIR /app
 RUN apk add --no-cache libc6-compat
 
 COPY package*.json ./
-RUN npm ci --include=dev
+RUN npm ci --include=dev --legacy-peer-deps --ignore-scripts
 
 COPY tsconfig.json ./
 COPY src ./src
@@ -20,7 +20,7 @@ WORKDIR /app
 RUN apk add --no-cache libc6-compat
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --legacy-peer-deps --ignore-scripts
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public

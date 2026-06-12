@@ -4,8 +4,8 @@
 {"text":"une option sans poisson ni viande","labels":["vegetarian","balanced"],"excludedRoles":["fish","meat"]}
 {"text":"quelque chose sans fromage","labels":["healthy","balanced"],"excludedRoles":["cheese"]}
 {"text":"un petit déjeuner sans lait","labels":["breakfast","healthy"],"excludedRoles":["dairy"]}
-{"text":"une boisson sans alcool","labels":["drink"],"excludedRoles":["drink"]}
-{"text":"un apéro sans alcool","labels":["aperitif","drink"],"excludedRoles":["drink"]}
+{"text":"une boisson sans alcool","labels":["drink"],"excludedRoles":["alcohol"]}
+{"text":"un apéro sans alcool","labels":["aperitif","drink"],"excludedRoles":["alcohol"]}
 {"text":"un plat sans sucre","labels":["healthy","dessert"],"excludedRoles":["sweet"]}
 {"text":"un plats sans sucre","labels":["healthy","dessert"],"excludedRoles":["sweet"]}
 {"text":"un plats san s sucre","labels":["healthy","dessert"],"excludedRoles":["sweet"]}

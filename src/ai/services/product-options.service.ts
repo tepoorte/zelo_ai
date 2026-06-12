@@ -41,6 +41,13 @@ export function resolveOptionsFromText(
   availableOptions: Array<{ id: string; name: string; shortDescription?: string; description?: string }>
 ) {
   const text = normalizeLooseText(userText);
+  const numericChoice = Number(text);
+
+  if (Number.isInteger(numericChoice) && numericChoice >= 1) {
+    const option = availableOptions[numericChoice - 1];
+    return option ? [{ id: option.id, name: option.name }] : [];
+  }
+
   const selected: Array<{ id: string; name: string }> = [];
 
   for (const option of availableOptions) {
@@ -76,6 +83,15 @@ export function resolveOptionsFromText(
   });
 }
 
-export function userChoseNoOptions(userText: string): boolean {
-  return normalizeLooseText(userText) === "aucune";
+export function userChoseNoOptions(
+  userText: string,
+  availableOptions: Array<{ id: string; name: string; shortDescription?: string; description?: string }> = []
+): boolean {
+  const text = normalizeLooseText(userText);
+  const numericChoice = Number(text);
+
+  return (
+    text === "aucune" ||
+    (Number.isInteger(numericChoice) && numericChoice === availableOptions.length + 1)
+  );
 }

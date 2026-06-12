@@ -18,4 +18,8 @@ docs/
 *.tar.gz
 tmp_deploy.server/
 pre_stage_merge_backup/
+.cache/backups/
 .cache/tmp/
+.cache/whatsapp-web-session/
+.cache/discover-budget-ui-audit-results.json
+.cache/intent-ui-audit-results.json

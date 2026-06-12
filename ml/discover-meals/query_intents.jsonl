@@ -199,3 +199,30 @@
 {"text":"quelque chose avec de la viande","labels":["dinner","quick"]}
 {"text":"un repas avec du poisson","labels":["dinner","quick","healthy"]}
 {"text":"une idée sport et énergie","labels":["healthy","breakfast"]}
+{"text":"tu me conseilles quoi si je reçois deux amis","labels":["aperitif","local","drink"]}
+{"text":"je reçois deux amis","labels":["aperitif","local","drink"]}
+{"text":"que proposer si je reçois des amis","labels":["aperitif","local","drink"]}
+{"text":"une idée avec des produits du coin","labels":["local","aperitif"]}
+{"text":"des produits du coin à partager","labels":["local","aperitif"]}
+{"text":"une sélection de produits du coin","labels":["local","discovery_open"]}
+{"text":"j’aimerais une idée pour les enfants après l’école","labels":["kids","dessert"]}
+{"text":"une idée pour les enfants après l'école","labels":["kids","dessert"]}
+{"text":"un goûter après l’école","labels":["kids","dessert"]}
+{"text":"un petit déjeuner équilibré","labels":["breakfast","healthy","balanced"]}
+{"text":"un petit-déjeuner équilibré","labels":["breakfast","healthy","balanced"]}
+{"text":"je veux manger mieux cette semaine","labels":["healthy","balanced","weekly_basket"]}
+{"text":"manger mieux cette semaine","labels":["healthy","balanced","weekly_basket"]}
+{"text":"une sélection de fruits et légumes","labels":["healthy","balanced","weekly_basket"]}
+{"text":"des fruits et légumes","labels":["healthy","balanced","weekly_basket"]}
+{"text":"une idée végétarienne avec 40 francs","labels":["budget","vegetarian","balanced"]}
+{"text":"un panier végétarien avec 40 francs","labels":["budget","vegetarian","balanced"]}
+{"text":"qu'est-ce que tu me proposes aujourd'hui","labels":["discovery_open"]}
+{"text":"qu est ce que tu me proposes aujourd hui","labels":["discovery_open"]}
+{"text":"tu me proposes quoi aujourd'hui","labels":["discovery_open"]}
+{"text":"tu me proposes quoi aujourd hui","labels":["discovery_open"]}
+{"text":"propose moi des idées aujourd'hui","labels":["discovery_open"]}
+{"text":"propose moi des idees aujourd hui","labels":["discovery_open"]}
+{"text":"je veux des idées concrètes aujourd'hui","labels":["discovery_open"]}
+{"text":"donne moi plusieurs idées aujourd'hui","labels":["discovery_open"]}
+{"text":"qu'est-ce que je pourrais commander aujourd'hui","labels":["discovery_open","weekly_basket"]}
+{"text":"propose moi quelque chose aujourd'hui","labels":["discovery_open"]}

@@ -4,6 +4,12 @@ import { parseWhatsAppWebhook } from "./whatsapp.parse.js";
 import { verifyMetaSignature } from "./verify.js";
 import { processIncomingWhatsAppTexts } from "./whatsapp.service.js";
 import { getWhatsAppLink, linkWhatsAppUser } from "./store/identity-map.js";
+import { sendWhatsAppText } from "./whatsapp.send.js";
+import {
+  getWhatsAppCloudStatus,
+  isWhatsAppAdminAuthorized,
+} from "./whatsapp-admin.service.js";
+import { normalizeWhatsAppPhone } from "./whatsapp-session.service.js";
 
 function readVerificationQuery(req: any) {
   return {
@@ -44,6 +50,44 @@ export function whatsappMetaRoutes() {
     void processIncomingWhatsAppTexts(messages).catch((error) => {
       console.error("[whatsapp] processing error", error);
     });
+  });
+
+  router.get("/status", (req, res) => {
+    if (!isWhatsAppAdminAuthorized(req)) {
+      return res.status(401).json({ ok: false, error: "Unauthorized" });
+    }
+
+    return res.json({
+      ok: true,
+      status: getWhatsAppCloudStatus(),
+    });
+  });
+
+  router.post("/send-test", async (req, res, next) => {
+    try {
+      if (!isWhatsAppAdminAuthorized(req)) {
+        return res.status(401).json({ ok: false, error: "Unauthorized" });
+      }
+
+      const to = normalizeWhatsAppPhone(String(req.body?.to ?? metaEnv.whatsappTestPhone ?? ""));
+      const text = String(
+        req.body?.text ?? "Test Zelo AI WhatsApp Cloud: connexion bot OK"
+      ).trim();
+
+      if (!to || !text) {
+        return res.status(400).json({ ok: false, error: "Missing to or text" });
+      }
+
+      const response = await sendWhatsAppText({
+        to,
+        body: text,
+        previewUrl: false,
+      });
+
+      return res.json({ ok: true, to, response });
+    } catch (error) {
+      return next(error);
+    }
   });
 
   router.post("/link", (req, res) => {

@@ -27,6 +27,7 @@ type Step = {
   waitForBasketMs?: number;
   autoReplyNoOptions?: boolean;
   maxAutoNoOptionsReplies?: number;
+  expectNoOptionQuestion?: boolean;
 };
 
 type BasketLine = {
@@ -149,13 +150,8 @@ const STEPS: Step[] = [
     name: "Add long multi-product request",
     text: LONG_ORDER_TEXT,
     hint: HINTS.add_items,
-    expectMessageIncludes: ["Gimelan aléatoire", "Aucune"],
-  },
-  {
-    name: "Answer no options",
-    text: "aucune",
-    hint: HINTS.noop,
     expectMessageIncludes: ["Gimelan aléatoire", "Pommes Bio ou VV"],
+    expectNoOptionQuestion: true,
     basketExpectation: {
       contains: [
         { name: "A. Lait Bio pasteurisé (Sapalet)", qty: 2 },
@@ -168,7 +164,7 @@ const STEPS: Step[] = [
   },
   {
     name: "Remove eggs only",
-    text: "supprime les 8 Oeuf Bio à la pièce",
+    text: "retire 8 Oeuf Bio à la pièce",
     hint: HINTS.clear_cart,
     expectMessageIncludes: ["Oeuf Bio à la pièce"],
     basketExpectation: {
@@ -211,7 +207,7 @@ const STEPS: Step[] = [
     text: ORIANA_TEXT,
     hint: HINTS.add_items,
     expectMessageIncludes: ["Pain Balance", "A. Lard de Begnins"],
-    autoReplyNoOptions: true,
+    expectNoOptionQuestion: true,
     basketExpectation: {
       contains: [
         { name: "Pain aux noix", qty: 1 },
@@ -253,7 +249,7 @@ const STEPS: Step[] = [
     text: LONG_MIXED_ORDER_TEXT,
     hint: HINTS.add_items,
     expectMessageIncludes: ["Pain aux noix", "A. Lard de Begnins", "Sauce"],
-    autoReplyNoOptions: true,
+    expectNoOptionQuestion: true,
     basketExpectation: {
       contains: [
         { name: "Pain aux noix", qty: 1 },
@@ -731,6 +727,12 @@ async function runStep(step: Step): Promise<void> {
         `${step.name}: option flow still pending after ${maxReplies} automatic "aucune" replies.\nLast response was:\n${response.message ?? "(empty)"}`
       );
     }
+  }
+
+  if (step.expectNoOptionQuestion && looksLikeOptionQuestion(response.message)) {
+    throw new Error(
+      `${step.name}: response unexpectedly opened a pending options flow.\nResponse was:\n${response.message ?? "(empty)"}`
+    );
   }
 
   assertMessage(step, response.message);

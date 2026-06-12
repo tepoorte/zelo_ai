@@ -895,6 +895,7 @@
         "enleve panier budget 50",
         "Enlève le pain balance du panier",
         "supprime 1 lard du begnins de mon panier",
+        "garde hot dog",
         "tu peux enlever 1 litre de Chinoise de veau seulement",
         "je ne veux plus 250g de Rasoir Panaïka en bois",
         "supprime 4 litres de A. Barilla Farfalle de mon panier",
@@ -1686,6 +1687,7 @@
         "on commande",
         "je veux commander maintenant",
         "termine la commande",
+        "ok",
         "finalies la commande",
         "tu peux passer la commande",
         "je cofnirme l'achat",
@@ -2176,6 +2178,7 @@
         "que fais tu aujourd hui",
         "comment je vais a la gare a pie?",
         "ja ne sai pas",
+        "j'ai trouvé un person dehors la maison",
         "merci c est tout",
         "raconte moi nue blague",
         "je teste seulement l'appliaction",
@@ -2277,7 +2280,8 @@
   ],
   "feedback": {
     "overrides": {
-      "lard": "add_items"
+      "j'ai trouve un person dehors la maison": "noop",
+      "ok": "exec_cart"
     },
     "reinforced": {
       "noop": [
@@ -2290,6 +2294,11 @@
           "text": "ja ne sai pas",
           "normalized": "ja ne sai pas",
           "count": 2
+        },
+        {
+          "text": "j'ai trouvé un person dehors la maison",
+          "normalized": "j'ai trouve un person dehors la maison",
+          "count": 4
         }
       ],
       "add_items": [
@@ -2321,7 +2330,7 @@
         {
           "text": "lard",
           "normalized": "lard",
-          "count": 8
+          "count": 2
         }
       ],
       "clear_cart": [
@@ -2333,6 +2342,11 @@
         {
           "text": "supprime 1 lard du begnins de mon panier",
           "normalized": "supprime 1 lard du begnins de mon panier",
+          "count": 2
+        },
+        {
+          "text": "garde hot dog",
+          "normalized": "garde hot dog",
           "count": 2
         }
       ],
@@ -2357,10 +2371,17 @@
           "normalized": "je veux completer mon panier pour demain matin",
           "count": 2
         }
+      ],
+      "exec_cart": [
+        {
+          "text": "ok",
+          "normalized": "ok",
+          "count": 6
+        }
       ]
     }
   },
-  "updatedAt": "2026-05-26T15:18:11.531Z",
+  "updatedAt": "2026-06-12T15:30:47.329Z",
   "intentModel": {
     "type": "linear_tfidf_v1",
     "labels": [

@@ -1,0 +1,7 @@
+{"query":"un truc rapide avec du poisson","positiveRoles":["fish","starch","vegetable","oil"],"negativeRoles":["meat","dessert","cleaning"],"positiveProducts":["Filets de perche congelés","Riz Basmati","Huile d'Olive Bio"]}
+{"query":"un repas pas trop protéiné","positiveRoles":["vegetable","fruit","starch","grain"],"negativeRoles":["meat","fish","egg","cheese","protein"],"positiveProducts":["A. Batavia verte Bio","Pommes Bio ou VV","Pomme de terre Agria Bio"]}
+{"query":"je reçois deux amis ce soir","positiveRoles":["aperitif","cheese","bread","drink"],"negativeRoles":["cleaning","hygiene"],"positiveProducts":["Gruyère d'alpage","Pain aux noix","Jus de pomme Bio"]}
+{"query":"une boisson sympa pour ce soir","positiveRoles":["drink"],"negativeRoles":["meat","fish","starch","vegetable"],"positiveProducts":["Jus de pomme Bio","Kéfir Menthe Citron"]}
+{"query":"j'aimerais manger plus sain","positiveRoles":["fruit","vegetable","grain","starch"],"negativeRoles":["sweet","prepared_meal","menu"],"positiveProducts":["A. Batavia verte Bio","Pommes Bio ou VV","Muesli aux fruits Bio"]}
+{"query":"un pique-nique pour 2 personnes","positiveRoles":["bread","cheese","fruit","drink","snack"],"negativeRoles":["cleaning","hygiene","oil","sauce"],"positiveProducts":["Pain aux noix","Gruyère d'alpage","Pommes Bio ou VV","Jus de pomme Bio"]}
+{"query":"un apéro sans alcool","positiveRoles":["aperitif","cheese","bread","snack","drink"],"negativeRoles":["alcohol","cleaning","hygiene"],"positiveProducts":["Gruyère d'alpage","Pain aux noix","Jus de pomme Bio"]}

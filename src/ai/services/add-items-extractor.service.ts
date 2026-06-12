@@ -13,12 +13,18 @@ import { bestTokenSimilarity, levenshteinDistance, textSimilarity } from "../../
 import { getAllProducts, type Product } from "../../swissdata/products.js";
 import { ollamaChat, safeJsonParse } from "./ollama-client.js";
 import { plannerPromptAddItems } from "./planner.service.js";
+import {
+  applyVagueQuantityPolicyToPlan,
+  type VagueQuantityCue,
+} from "./vague-quantity-policy.service.js";
 
 export type ExtractedAddItem = {
   query: string;
   qty: number;
   unit?: string;
   productId?: string;
+  /** Internal parser cue, stripped before runtime execution. */
+  vagueQuantityCue?: VagueQuantityCue;
 };
 
 export type ExtractedAddItemsPlan = {
@@ -46,6 +52,7 @@ type ParsedSegment = {
   product?: Product;
   productMatchReason?: CatalogMatch["reason"];
   position?: number;
+  vagueQuantityCue?: VagueQuantityCue;
 };
 
 type TextToken = {
@@ -87,6 +94,8 @@ const QUERY_STOPWORDS = new Set([
   "après",
   "aussi",
   "aurais",
+  "ajoute",
+  "ajouter",
   "avance",
   "besion",
   "besoin",
@@ -95,6 +104,8 @@ const QUERY_STOPWORDS = new Set([
   "ca",
   "ce",
   "cette",
+  "commande",
+  "commander",
   "en",
   "fin",
   "de",
@@ -109,7 +120,9 @@ const QUERY_STOPWORDS = new Set([
   "le",
   "les",
   "livrer",
+  "met",
   "me",
+  "mets",
   "merci",
   "midi",
   "mon",
@@ -118,6 +131,8 @@ const QUERY_STOPWORDS = new Set([
   "pour",
   "prends",
   "puis",
+  "quelque",
+  "quelques",
   "salut",
   "si",
   "semaine",
@@ -402,7 +417,7 @@ function stripLeadingIntentNoise(raw: string): string {
   }
 
   text = text.replace(/^(?:et\s+)?(?:puis\s+)?(?:apres|après|ensuite|aussi)\s+/i, "");
-  text = text.replace(/^(?:de|d['’]|du|des|de la|de l['’]|le|la|les|un|une)\s+/i, "");
+  text = text.replace(/^(?:de|d['’]|du|des|de la|de l['’]|le|la|les|un|une|quelques?)\s+/i, "");
 
   return text.trim();
 }
@@ -444,7 +459,7 @@ function normalizeSeparators(text: string): string {
       }
     )
     .replace(
-      /\s+(?:et|and)\s+(?=(?:du|de la|de l['’]?|des|d['’]?|le|la|les)\b)/gi,
+      /\s+(?:et|and)\s+(?=(?:du|de la|de l['’]?|des|d['’]?|le|la|les|quelques?)\b)/gi,
       ","
     );
 }
@@ -745,6 +760,43 @@ function parseNearbyQuantity(
   return { qty: 1, unit: "piece" };
 }
 
+function vagueCueFromLeftContext(left: string): VagueQuantityCue | undefined {
+  if (/(?:^|[\s,;:\-])des\s+(?:de\s+|d['’]\s*)?$/i.test(left)) return "des";
+  if (/(?:^|[\s,;:\-])quelques?\s+(?:de\s+|d['’]\s*)?$/i.test(left)) return "quelque";
+  return undefined;
+}
+
+function vagueCueFromRawText(raw: string): VagueQuantityCue | undefined {
+  const text = normalizeLoose(raw);
+  if (/(?:^|\s)des\s+[\p{L}\p{N}]/u.test(text)) return "des";
+  if (/(?:^|\s)quelques?\s+[\p{L}\p{N}]/u.test(text)) return "quelque";
+  return undefined;
+}
+
+function detectVagueQuantityCue(
+  userText: string,
+  item: ParsedSegment
+): VagueQuantityCue | undefined {
+  if (item.unit !== "piece" || item.qty !== 1) return undefined;
+
+  const position = item.position ?? -1;
+  if (position >= 0) {
+    const left = userText.slice(Math.max(0, position - 48), position);
+    const cue = vagueCueFromLeftContext(left);
+    if (cue) return cue;
+  }
+
+  return vagueCueFromRawText(item.raw);
+}
+
+function applyVagueQuantityCue(
+  userText: string,
+  item: ParsedSegment
+): ParsedSegment {
+  const cue = detectVagueQuantityCue(userText, item);
+  return cue ? { ...item, vagueQuantityCue: cue } : item;
+}
+
 function rangesOverlap(
   left: { start: number; end: number },
   right: { start: number; end: number }
@@ -1001,7 +1053,7 @@ function parseQuantityAndQuery(raw: string): { query: string; qty: number; unit:
     };
   }
 
-  text = text.replace(/^(?:de|d['’]|du|des|de la|de l['’]|le|la|les|un|une)\s+/i, "").trim();
+  text = text.replace(/^(?:de|d['’]|du|des|de la|de l['’]|le|la|les|un|une|quelques?)\s+/i, "").trim();
 
   return { query: text, qty, unit };
 }
@@ -1279,7 +1331,7 @@ function buildAddItemsPlanFromSegments(
         return parsed;
       })
       .filter((item): item is ParsedSegment => Boolean(item)))
-  );
+  ).map((item) => applyVagueQuantityCue(normalizedUserText, item));
 
   console.log("[ADD_ITEMS_EXTRACTOR] CATALOG_MENTIONS", JSON.stringify(filteredCatalogMentions.map((item) => ({
     raw: item.raw,
@@ -1289,6 +1341,7 @@ function buildAddItemsPlanFromSegments(
     productId: item.product?.id,
     productName: item.product?.name,
     productMatchReason: item.productMatchReason,
+    vagueQuantityCue: item.vagueQuantityCue,
   })), null, 2));
   console.log("[ADD_ITEMS_EXTRACTOR] SEGMENTS", JSON.stringify({ source, segments }));
   console.log("[ADD_ITEMS_EXTRACTOR] PARSED", JSON.stringify(parsedSegments.map((item) => ({
@@ -1300,6 +1353,7 @@ function buildAddItemsPlanFromSegments(
     productId: item.product?.id,
     productName: item.product?.name,
     productMatchReason: item.productMatchReason,
+    vagueQuantityCue: item.vagueQuantityCue,
   })), null, 2));
 
   return {
@@ -1312,6 +1366,7 @@ function buildAddItemsPlanFromSegments(
           qty: item.qty,
           unit: item.unit,
           ...(item.product?.id ? { productId: item.product.id } : {}),
+          ...(item.vagueQuantityCue ? { vagueQuantityCue: item.vagueQuantityCue } : {}),
         })),
       },
     ],
@@ -1370,6 +1425,8 @@ export async function extractAddItemsFromText(
     plan = extractAddItemsFromTextWithCatalog(normalizedUserText, products);
   }
 
-  console.log("[ADD_ITEMS_EXTRACTOR] PLAN", JSON.stringify(plan, null, 2));
-  return plan;
+  const adjustedPlan = await applyVagueQuantityPolicyToPlan(userRef, plan);
+
+  console.log("[ADD_ITEMS_EXTRACTOR] PLAN", JSON.stringify(adjustedPlan, null, 2));
+  return adjustedPlan as ExtractedAddItemsPlan;
 }

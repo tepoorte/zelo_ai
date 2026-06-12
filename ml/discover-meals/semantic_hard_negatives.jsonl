@@ -1,0 +1,5 @@
+{"query":"un repas sans viande","avoidRoles":["meat"],"negativeProducts":["A. Lard de Begnins","Viande hachée (pur boeuf)"]}
+{"query":"une boisson sans alcool","avoidRoles":["alcohol"],"negativeProducts":["Bière artisanale"]}
+{"query":"un petit déjeuner sans lait","avoidRoles":["dairy"],"negativeProducts":["A. Lait Bio pasteurisé (Sapalet)"]}
+{"query":"un dessert pas trop sucré","limitRoles":["sweet"],"negativeProducts":["Chocolat noir","Sorbet Fraise"]}
+{"query":"produits maison sans lessive","avoidProducts":["Lessive écologique"],"positiveRoles":["cleaning","hygiene"]}

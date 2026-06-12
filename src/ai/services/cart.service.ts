@@ -21,6 +21,10 @@ import {
   resolveOptionsFromText,
   userChoseNoOptions,
 } from "./product-options.service.js";
+import {
+  getNextHistorySuggestions,
+  resetHistorySuggestions,
+} from "./history-suggestions.service.js";
 import { resolveProduct } from "./product-resolution.service.js";
 import { timeAsync, timeSync } from "../../utils/perf.js";
 
@@ -42,6 +46,16 @@ type ClearCartAction = {
   items?: Array<{ query: string }>;
 };
 
+function resolvedProductIds(resolvedItems: any[]): string[] {
+  return resolvedItems
+    .map((item) => String(item?.product?.id ?? "").trim())
+    .filter(Boolean);
+}
+
+export function shouldAskForProductOptions(itemCount: number): boolean {
+  return itemCount === 1;
+}
+
 export async function tryResolvePendingOptions(
   userRef: string,
   userText: string
@@ -58,7 +72,7 @@ export async function tryResolvePendingOptions(
   );
   const choseNoOptions = timeSync(
     "pending.user_chose_no_options",
-    () => userChoseNoOptions(userText)
+    () => userChoseNoOptions(userText, pending.availableOptions)
   );
 
   if (!selected.length && !choseNoOptions) {
@@ -106,7 +120,15 @@ export async function tryResolvePendingOptions(
     ) + formatCartFr(updated);
 
   if (!pending.remainingItems?.length) {
-    return { message: baseMessage };
+    const historySuggestions = await getNextHistorySuggestions(userRef, {
+      basket: updated,
+      excludeProductIds: [pending.productId],
+    }).catch(() => []);
+    const suggestionBlock = historySuggestions.length
+      ? `\n\nTu prends souvent aussi :\n${historySuggestions.map((item) => `• ${item.name}`).join("\n")}\nSi tu veux, écris « ajoute ... ».`
+      : "";
+
+    return { message: `${baseMessage}${suggestionBlock}` };
   }
 
   const followUpOutcome = await handleAddToCartAction(userRef, {
@@ -139,6 +161,7 @@ export async function handleAddToCartAction(
   console.log("[ADD_TO_CART ACTION]", JSON.stringify(action, null, 2));
 
   const targetUserRef = action.userRef ?? userRef;
+  const askForOptions = shouldAskForProductOptions(action.items.length);
   const basket = await timeAsync(
     "add.get_current_basket_before_items",
     async () => await getCurrentBasket(targetUserRef)
@@ -172,13 +195,49 @@ export async function handleAddToCartAction(
       continue;
     }
 
+    const basketQty = timeSync(
+      "add.compute_basket_qty",
+      () => computeBasketQty(resolvedProduct, it.qty, it.unit),
+      { query: it.query, requestedQty: it.qty, unit: it.unit ?? "piece" }
+    );
+
     if (Array.isArray(resolvedProduct.optionsIds) && resolvedProduct.optionsIds.length > 0) {
+      if (!askForOptions) {
+        const addResult = await timeAsync(
+          "add.add_product_to_basket",
+          async () =>
+            await addProductToBasket(
+              targetUserRef,
+              basket.id,
+              resolvedProduct.id,
+              basketQty,
+              []
+            ),
+          { productId: resolvedProduct.id, basketQty, optionsCount: 0 }
+        );
+
+        resolvedItems.push({
+          query: it.query,
+          requestedQty: it.qty,
+          requestedUnit: it.unit ?? "piece",
+          basketQty,
+          product: {
+            id: resolvedProduct.id,
+            name: resolvedProduct.name,
+          },
+          ok: true,
+          optionsSkipped: true,
+          result: addResult,
+        });
+        continue;
+      }
+
       if (Array.isArray(resolvedProduct.availableOptions) && resolvedProduct.availableOptions.length > 0) {
         setPending(targetUserRef, {
           type: "awaiting_options",
           productId: resolvedProduct.id,
           productName: resolvedProduct.name,
-          qty: Math.max(1, computeBasketQty(resolvedProduct, it.qty, it.unit)),
+          qty: Math.max(1, basketQty),
           unit: it.unit,
           remainingItems: action.items.slice(index + 1),
           availableOptions: resolvedProduct.availableOptions.map(opt => ({
@@ -202,12 +261,6 @@ export async function handleAddToCartAction(
           `Je n’ajoute rien automatiquement pour éviter une mauvaise commande.`,
       };
     }
-
-    const basketQty = timeSync(
-      "add.compute_basket_qty",
-      () => computeBasketQty(resolvedProduct, it.qty, it.unit),
-      { query: it.query, requestedQty: it.qty, unit: it.unit ?? "piece" }
-    );
 
     const addResult = await timeAsync(
       "add.add_product_to_basket",
@@ -239,6 +292,13 @@ export async function handleAddToCartAction(
     "add.get_current_basket_after_items",
     async () => await ensureCurrentBasketFutureDelivery(targetUserRef)
   );
+  const addedProductIds = resolvedProductIds(resolvedItems);
+  const historySuggestions = addedProductIds.length
+    ? await getNextHistorySuggestions(targetUserRef, {
+        basket: updated,
+        excludeProductIds: addedProductIds,
+      }).catch(() => [])
+    : [];
 
   console.log("[ADD_TO_CART RESULT]", JSON.stringify({
     resolvedItems,
@@ -251,6 +311,7 @@ export async function handleAddToCartAction(
       ok: true,
       resolvedItems,
       basket: updated,
+      historySuggestions,
     },
   };
 }
@@ -392,7 +453,10 @@ export async function handleClearCartAction(
 }
 
 export async function handleExecCartAction(userRef: string, action?: { userRef?: string }) {
-  const order = await placeCurrentBasketOrder(action?.userRef ?? userRef);
+  const targetUserRef = action?.userRef ?? userRef;
+  const order = await placeCurrentBasketOrder(targetUserRef);
+  resetHistorySuggestions(targetUserRef);
+
   return {
     ok: true,
     order,

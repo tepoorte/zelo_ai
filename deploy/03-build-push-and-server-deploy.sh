@@ -224,6 +224,12 @@ sed -i "s/^VERSION=.*/VERSION=$VERSION/" .env
 sed -i "s/^AI_HOST=.*/AI_HOST=$AI_HOST/" .env
 
 echo "== Restore cache archive =="
+if tar -tzf "$ARCHIVE_BASENAME" | grep -Eq '^\.cache/(tmp|whatsapp-web-session)(/|$)'; then
+  echo "ERROR: cache archive contains .cache/tmp or .cache/whatsapp-web-session."
+  echo "Re-run ./deploy/01-local-preflight.sh to create a clean cache archive."
+  exit 1
+fi
+
 if [ "$RESTORE_CACHE" = "1" ]; then
   tar -xzf "$ARCHIVE_BASENAME"
 else

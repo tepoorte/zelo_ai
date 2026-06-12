@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { extractAddItemsFromTextWithCatalog } from "../src/ai/services/add-items-extractor.service.js";
 import { computeBasketQty } from "../src/ai/services/cart-quantity.service.js";
+import { applyVagueQuantityPolicyToPlan } from "../src/ai/services/vague-quantity-policy.service.js";
 import { matchIngredientToProduct } from "../src/domain/matcher.js";
 import { rankProductsByQuery, type Product } from "../src/swissdata/products.js";
 
@@ -8,6 +9,9 @@ const catalog: Product[] = [
   { id: "muesli-choco", name: "Muesli choco-amaranth Bio", size: "750g" },
   { id: "muesli-fruits", name: "Muesli aux fruits Bio", size: "700g" },
   { id: "pommes", name: "Pommes Bio ou VV", size: "1kg", priceType: "per-weight", refWeight: 1000, refWeightUnit: "g" },
+  { id: "poires", name: "Poires conférence Bio", size: "1kg" },
+  { id: "carottes", name: "Carottes Bio", size: "1kg" },
+  { id: "poireaux", name: "Poireaux Bio", size: "1kg" },
   { id: "pdt-charlotte", name: "A. Pomme de terre Charlotte Bio", size: "1kg" },
   { id: "oeufs-nonbio", name: "A. Oeuf à la pièce (Non Bio)", size: "63g" },
   { id: "lard", name: "A. Lard de Begnins", size: "100g", priceType: "per-weight", refWeight: 100, refWeightUnit: "g" },
@@ -253,6 +257,27 @@ Dominique`
 }
 
 {
+  const parsed = items("ajoute pain balance et 6 oeufs");
+
+  assert.deepEqual(parsed.map((item) => item.productId), [
+    "pain-balance",
+    "oeufs-nonbio",
+  ]);
+  assert.deepEqual(parsed.map((item) => item.qty), [1, 6]);
+}
+
+{
+  const parsed = items("ajoute 6 oeufs, 1 pain balance et du beurre");
+
+  assert.deepEqual(parsed.map((item) => item.productId), [
+    "oeufs-nonbio",
+    "pain-balance",
+    "beurre-frais",
+  ]);
+  assert.deepEqual(parsed.map((item) => item.qty), [6, 1, 1]);
+}
+
+{
   const parsed = items("Salut André. Je te prends volontiers 2 Café en grain décaféiné et 2 Jks d'orange Bio et Penne compqète si tu en as. Merci!");
 
   assert.deepEqual(parsed.map((item) => item.productId), [
@@ -371,6 +396,73 @@ Un grand merci`);
     "fricandeaux",
     "ballon-pavot",
   ]);
+}
+
+{
+  const parsed = items("ajoute un lard du begnin et des oeufs");
+
+  assert.deepEqual(parsed.map((item) => item.productId), [
+    "lard",
+    "oeufs-nonbio",
+  ]);
+  assert.deepEqual(parsed.map((item) => item.qty), [1, 1]);
+  assert.equal((parsed[1] as any).vagueQuantityCue, "des");
+}
+
+{
+  const parsed = items("ajoute quelques pommes");
+
+  assert.equal(parsed.length, 1);
+  assert.equal(parsed[0].productId, "pommes");
+  assert.equal(parsed[0].qty, 1);
+  assert.equal((parsed[0] as any).vagueQuantityCue, "quelque");
+}
+
+{
+  const parsed = items("ajoute des poires");
+
+  assert.equal(parsed.length, 1);
+  assert.equal(parsed[0].productId, "poires");
+  assert.equal(parsed[0].qty, 1);
+  assert.equal((parsed[0] as any).vagueQuantityCue, "des");
+}
+
+{
+  const parsed = items("ajoute des carottes et quelques poireaux");
+
+  assert.deepEqual(parsed.map((item) => item.productId), [
+    "carottes",
+    "poireaux",
+  ]);
+  assert.deepEqual(parsed.map((item) => item.qty), [1, 1]);
+  assert.equal((parsed[0] as any).vagueQuantityCue, "des");
+  assert.equal((parsed[1] as any).vagueQuantityCue, "quelque");
+}
+
+{
+  const adjusted = await applyVagueQuantityPolicyToPlan("test", {
+    intent: "ADD_ITEMS",
+    actions: [
+      {
+        type: "add_to_cart",
+        items: [
+          { query: "A. Oeuf à la pièce (Non Bio)", qty: 1, unit: "piece", productId: "oeufs-nonbio", vagueQuantityCue: "des" },
+          { query: "Pommes Bio ou VV", qty: 1, unit: "piece", productId: "pommes", vagueQuantityCue: "quelque" },
+          { query: "Sauce chère", qty: 1, unit: "piece", productId: "expensive", vagueQuantityCue: "des" },
+          { query: "Pain simple", qty: 1, unit: "piece", productId: "cheap", vagueQuantityCue: "des" },
+          { query: "Carottes Bio", qty: 500, unit: "g", productId: "carottes", vagueQuantityCue: "des" },
+          { query: "Pain Balance", qty: 1, unit: "piece", productId: "pain-balance" },
+        ],
+      },
+    ],
+  }, async (_userRef, productId) => {
+    if (productId === "expensive") return { id: productId, name: "Sauce chère", price: { price: 12.5 } };
+    if (productId === "cheap") return { id: productId, name: "Pain simple", price: { price: 8 } };
+    return null;
+  });
+
+  assert.deepEqual(adjusted.actions[0].items.map((item) => item.qty), [8, 1, 1, 3, 500, 1]);
+  assert.equal(adjusted.actions[0].items.some((item) => Boolean((item as any).vagueQuantityCue)), false);
 }
 
 {

@@ -40,6 +40,44 @@ function productNameAlreadyUsed(entries: BudgetComposerEntry[], profile: Discove
   return entries.some((entry) => textSimilarity(entry.profile.product.name, profile.product.name) >= 0.74);
 }
 
+function hasAnyRole(profile: DiscoverProductProfile, roles: DiscoverProductRole[]): boolean {
+  return roles.some((role) => profile.roles.has(role));
+}
+
+function productCompatibleWithLabels(profile: DiscoverProductProfile, labels: DiscoverNeedLabel[]): boolean {
+  const labelSet = new Set(labels);
+
+  if (labelSet.has("vegetarian") && hasAnyRole(profile, ["meat", "fish"])) return false;
+  if (
+    labelSet.has("breakfast") &&
+    !labelSet.has("aperitif") &&
+    !labelSet.has("dinner") &&
+    hasAnyRole(profile, ["meat", "fish", "prepared_meal", "menu", "sauce", "oil", "cleaning", "hygiene"])
+  ) {
+    return false;
+  }
+  if (
+    labelSet.has("kids") &&
+    !labelSet.has("dinner") &&
+    hasAnyRole(profile, ["alcohol", "meat", "fish", "prepared_meal", "menu", "sauce", "cleaning", "hygiene"])
+  ) {
+    return false;
+  }
+  if (
+    labelSet.has("drink") &&
+    !labelSet.has("aperitif") &&
+    !labelSet.has("dinner") &&
+    !labelSet.has("balanced") &&
+    !profile.roles.has("drink")
+  ) {
+    return false;
+  }
+  if (labelSet.has("cleaning") && !hasAnyRole(profile, ["cleaning", "hygiene"])) return false;
+  if (labelSet.has("hygiene") && !profile.roles.has("hygiene")) return false;
+
+  return true;
+}
+
 function roleDiversityScore(entries: BudgetComposerEntry[]): number {
   const roles = new Set<DiscoverProductRole>();
   for (const entry of entries) {
@@ -102,6 +140,7 @@ export function buildBudgetAwareProposal(input: {
   const labels = proposalLabels(input.labels);
   const pricedCandidates = input.entries
     .filter((entry) => entry.allowed && entry.score > -70)
+    .filter((entry) => productCompatibleWithLabels(entry.profile, labels))
     .map((entry) => ({ entry, estimate: estimateProductPriceCHF(entry.profile.product) }))
     .filter((item) => item.estimate.amountCHF != null && item.estimate.amountCHF <= Math.max(target + tolerance * 2, target * 1.4));
   const semanticTop = [...pricedCandidates].sort((left, right) => {
