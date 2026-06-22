@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { extractAddItemsFromTextWithCatalog } from "../src/ai/services/add-items-extractor.service.js";
+import {
+  extractAddItemsFromTextWithCatalog,
+  extractAddItemsFromTextWithCatalogSegments,
+} from "../src/ai/services/add-items-extractor.service.js";
 import { computeBasketQty } from "../src/ai/services/cart-quantity.service.js";
 import { applyVagueQuantityPolicyToPlan } from "../src/ai/services/vague-quantity-policy.service.js";
 import { matchIngredientToProduct } from "../src/domain/matcher.js";
@@ -28,7 +31,14 @@ const catalog: Product[] = [
   { id: "pain-noix", name: "Pain aux noix", size: "1 pièce" },
   { id: "pain-balance", name: "Pain Balance", size: "1 pièce" },
   { id: "beurre-frais", name: "Beurre frais", size: "250g" },
+  { id: "kefir-framboise", name: "Kéfir Framboise Pomme", size: "33cl" },
+  { id: "mais-popcorn", name: "Maïs pop-corn", size: "500g" },
+  { id: "mais-grain-surgeles", name: "Maïs en grain surgelés", size: "500g" },
+  { id: "haricots-fins-surgeles", name: "Haricots fins surgelés", size: "500g" },
+  { id: "edamane-surgeles", name: "Edamane pelés surgelés", size: "500g" },
+  { id: "riz-basmati", name: "Riz Basmati", size: "1kg" },
   { id: "sorbet-fraise", name: "Sorbet Fraise", size: "1 pot" },
+  { id: "yaourt-fraise", name: "Yaourt fraise", size: "1 pot" },
   { id: "yaourt-brebis-grand", name: "Yaourt de brebis nature (Grand pot)", size: "1 l" },
   { id: "yaourt-nature-grand", name: "Yaourt nature (Grand pot)", size: "1 l" },
   { id: "mini-pain-choc", name: "Mini-pain au choc", size: "1 pièce" },
@@ -57,10 +67,20 @@ const catalog: Product[] = [
   { id: "penne-complete", name: "Penne complète", size: "500g" },
   { id: "fricandeaux", name: "Fricandeaux", size: "1 pièce" },
   { id: "ballon-pavot", name: "Ballon au pavot", size: "1 pièce" },
+  { id: "pate-tartiner-base", name: "Pâte à tartiner bio", size: "250g" },
+  { id: "pate-tartiner-famille", name: "Pâte à tartiner bio (format famille)", size: "500g" },
 ];
 
 function items(text: string) {
   return extractAddItemsFromTextWithCatalog(text, catalog).actions[0].items;
+}
+
+function productIds(text: string): Array<string | undefined> {
+  return items(text).map((item) => item.productId);
+}
+
+function assertProductCount(text: string, expected: number) {
+  assert.equal(items(text).length, expected);
 }
 
 {
@@ -278,6 +298,130 @@ Dominique`
 }
 
 {
+  const parsed = items("ajoute pain, kefir et mais");
+
+  assert.equal(parsed.length, 3);
+  assert.equal(parsed.some((item) => item.productId === "kefir-framboise"), true);
+  assert.equal(parsed.some((item) => item.productId === "mais-popcorn"), true);
+}
+
+{
+  assert.deepEqual(productIds("ajoute riz, lard et mais"), [
+    "riz-basmati",
+    "lard",
+    "mais-popcorn",
+  ]);
+}
+
+{
+  assert.deepEqual(productIds("ajoute sel, mozzarella et tofu"), [
+    "sel",
+    "mozza",
+    "tofu",
+  ]);
+}
+
+{
+  const parsed = items("ajoute beurre, pain, lait et yaourt");
+
+  assert.equal(parsed.length, 4);
+  assert.equal(parsed.some((item) => item.productId === "beurre-frais"), true);
+  assert.equal(parsed.some((item) => item.productId === "lait-sapalet"), true);
+  assert.equal(parsed.some((item) => item.productId === "yaourt-fraise"), true);
+}
+
+{
+  assert.deepEqual(productIds("ajoute mais en grains, haricot fin et edamane"), [
+    "mais-grain-surgeles",
+    "haricots-fins-surgeles",
+    "edamane-surgeles",
+  ]);
+}
+
+{
+  const parsed = items("ajoute du pain, du kefir et du mais");
+
+  assert.equal(parsed.length, 3);
+  assert.equal(parsed.some((item) => item.productId === "kefir-framboise"), true);
+  assert.equal(parsed.some((item) => item.productId === "mais-popcorn"), true);
+}
+
+{
+  assert.deepEqual(productIds("ajoute du sel, de la mozzarella et du tofu"), [
+    "sel",
+    "mozza",
+    "tofu",
+  ]);
+}
+
+{
+  assert.deepEqual(productIds("ajoute du riz, du lard, du mais et des pommes"), [
+    "riz-basmati",
+    "lard",
+    "mais-popcorn",
+    "pommes",
+  ]);
+}
+
+{
+  assert.deepEqual(productIds("ajoute du mais, du lait et du yaourt"), [
+    "mais-popcorn",
+    "lait-sapalet",
+    "yaourt-fraise",
+  ]);
+}
+
+{
+  assertProductCount("ajoute du mais, du lait et de yougurt", 3);
+}
+
+{
+  const parsed = items("ajoute 1000 g du lard du begnin");
+
+  assert.deepEqual(parsed.map((item) => item.productId), ["lard"]);
+  assert.deepEqual(parsed.map((item) => item.qty), [1000]);
+  assert.deepEqual(parsed.map((item) => item.unit), ["g"]);
+}
+
+{
+  const parsed = items("ajoute 500g carottes, 1 litre de lait et 250 g de mozzarella");
+
+  assert.deepEqual(parsed.map((item) => item.productId), [
+    "carottes",
+    "lait-sapalet",
+    "mozza",
+  ]);
+  assert.deepEqual(parsed.map((item) => item.qty), [500, 1, 250]);
+  assert.deepEqual(parsed.map((item) => item.unit), ["g", "litre", "g"]);
+}
+
+{
+  const parsed = items("ajoute 2 kg de pommes, 6 oeufs et 1 pain balance");
+
+  assert.deepEqual(parsed.map((item) => item.productId), [
+    "pommes",
+    "oeufs-nonbio",
+    "pain-balance",
+  ]);
+  assert.deepEqual(parsed.map((item) => item.qty), [2, 6, 1]);
+  assert.deepEqual(parsed.map((item) => item.unit), ["kg", "piece", "piece"]);
+}
+
+{
+  const parsed = items("septante et un oeufs");
+
+  assert.deepEqual(parsed.map((item) => item.productId), ["oeufs-nonbio"]);
+  assert.equal(parsed[0].qty, 71);
+}
+
+{
+  const parsed = items("ajoute pain, kefir et merci");
+
+  assert.equal(parsed.length, 2);
+  assert.equal(parsed.some((item) => item.productId === "kefir-framboise"), true);
+}
+
+{
   const parsed = items("Salut André. Je te prends volontiers 2 Café en grain décaféiné et 2 Jks d'orange Bio et Penne compqète si tu en as. Merci!");
 
   assert.deepEqual(parsed.map((item) => item.productId), [
@@ -338,6 +482,16 @@ Un grand merci`);
 
   assert.equal(parsed.length, 1);
   assert.equal(parsed[0].productId, "pates-fraiches");
+}
+
+{
+  const parsed = extractAddItemsFromTextWithCatalogSegments(
+    "quand tu peux mets dans mon panier Pâte à tartiner bio (fxrmat famille) ensuite Cookie péwan",
+    catalog,
+    ["Pâte à tartiner bio", "Cookie péwan"]
+  ).actions[0].items;
+
+  assert.equal(parsed[0].productId, "pate-tartiner-famille");
 }
 
 {

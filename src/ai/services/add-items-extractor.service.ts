@@ -128,9 +128,11 @@ const QUERY_STOPWORDS = new Set([
   "mon",
   "oui",
   "panier",
+  "peux",
   "pour",
   "prends",
   "puis",
+  "quand",
   "quelque",
   "quelques",
   "salut",
@@ -922,6 +924,128 @@ function splitRawSegments(text: string): string[] {
     .filter(Boolean);
 }
 
+function normalizeJoinedProductPart(raw: string): string {
+  return stripTrailingNoise(stripLeadingIntentNoise(raw)).trim();
+}
+
+function firstNormalizedToken(raw: string): string | undefined {
+  return normalizeLoose(raw).split(/\s+/).find(Boolean);
+}
+
+function lastNormalizedToken(raw: string): string | undefined {
+  const tokens = normalizeLoose(raw).split(/\s+/).filter(Boolean);
+  return tokens.at(-1);
+}
+
+function isFrenchNumberJoiner(left: string, right: string): boolean {
+  const leftToken = lastNormalizedToken(left);
+  const rightToken = firstNormalizedToken(right);
+  return Boolean(leftToken && rightToken && isFrenchNumberWord(leftToken) && isFrenchNumberWord(rightToken));
+}
+
+function isExactSingleCatalogAlias(raw: string, products: Product[]): boolean {
+  const normalized = normalizeLoose(normalizeJoinedProductPart(raw));
+  if (!normalized) return false;
+
+  return products.some((product) =>
+    catalogAliases(product).some((alias) => normalized === alias)
+  );
+}
+
+function recognizedProductCount(raw: string, products: Product[]): number {
+  const mentions = extractCatalogMentions(raw, products).length;
+  const parsed = parseSegment(raw, products);
+  return Math.max(mentions, parsed?.product ? 1 : 0);
+}
+
+function isRecognizedProductSegment(raw: string, products: Product[]): boolean {
+  return Boolean(parseSegment(raw, products)?.product);
+}
+
+function splitLikelyJoinedProductSegment(
+  raw: string,
+  products: Product[],
+  depth = 0
+): string[] {
+  const segment = normalizeJoinedProductPart(raw);
+  if (!segment || depth > 4) return segment ? [segment] : [];
+  if (!/\b(?:et|and)\b/i.test(segment)) return [segment];
+  if (isExactSingleCatalogAlias(segment, products)) return [segment];
+
+  const joinerMatcher = /\s+(?:et|and)\s+/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = joinerMatcher.exec(segment)) !== null) {
+    const leftRaw = segment.slice(0, match.index);
+    const rightRaw = segment.slice(match.index + match[0].length);
+    if (isFrenchNumberJoiner(leftRaw, rightRaw)) continue;
+
+    const left = normalizeJoinedProductPart(leftRaw);
+    const right = normalizeJoinedProductPart(rightRaw);
+    if (!left || !right) continue;
+
+    const candidateParts = [
+      ...splitLikelyJoinedProductSegment(left, products, depth + 1),
+      ...splitLikelyJoinedProductSegment(right, products, depth + 1),
+    ];
+    if (candidateParts.length < 2) continue;
+    if (!candidateParts.every((part) => isRecognizedProductSegment(part, products))) continue;
+
+    const currentCount = recognizedProductCount(segment, products);
+    if (candidateParts.length > currentCount) {
+      return candidateParts;
+    }
+  }
+
+  return [segment];
+}
+
+function refineJoinedProductSegments(segments: string[], products: Product[]): string[] {
+  return segments.flatMap((segment) => splitLikelyJoinedProductSegment(segment, products));
+}
+
+function isSegmentBoundaryAfterDescriptor(value: string): boolean {
+  return /^\s*(?:$|[,;:|.!?\n\r]|\b(?:et|and|puis|ensuite|apres|après)\b)/i.test(value);
+}
+
+function recoverTrailingDescriptorSegments(text: string, segments: string[]): string[] {
+  let cursor = 0;
+
+  return segments.map((segment) => {
+    const cleanSegment = String(segment || "").trim();
+    if (!cleanSegment) return cleanSegment;
+
+    let start = text.indexOf(cleanSegment, cursor);
+    if (start < 0) {
+      start = text.indexOf(cleanSegment);
+    }
+    if (start < 0) return cleanSegment;
+
+    const end = start + cleanSegment.length;
+    if (cleanSegment.includes("(")) {
+      cursor = end;
+      return cleanSegment;
+    }
+
+    const tail = text.slice(end);
+    const descriptorMatch = tail.match(/^\s*(\([^)]{2,100}\))/);
+    if (!descriptorMatch) {
+      cursor = end;
+      return cleanSegment;
+    }
+
+    const afterDescriptor = text.slice(end + descriptorMatch[0].length);
+    if (!isSegmentBoundaryAfterDescriptor(afterDescriptor)) {
+      cursor = end;
+      return cleanSegment;
+    }
+
+    const expanded = `${cleanSegment}${descriptorMatch[0]}`.trim();
+    cursor = start + expanded.length;
+    return expanded;
+  });
+}
+
 function locateRawSegments(text: string, segments: string[]): RawSegment[] {
   let cursor = 0;
 
@@ -1287,7 +1411,11 @@ function buildAddItemsPlanFromSegments(
   source: SegmentSource
 ): ExtractedAddItemsPlan {
   const normalizedUserText = normalizeInvisibleCharacters(userText);
-  const locatedSegments = locateRawSegments(normalizedUserText, segments);
+  const alignedSegments = source === "language_segmenter"
+    ? recoverTrailingDescriptorSegments(normalizedUserText, segments)
+    : segments;
+  const refinedSegments = refineJoinedProductSegments(alignedSegments, products);
+  const locatedSegments = locateRawSegments(normalizedUserText, refinedSegments);
   const catalogMentions = extractCatalogMentionsFromSegments(locatedSegments, products);
   const parsedFromSegments = locatedSegments
     .map((segment) => {
@@ -1343,7 +1471,7 @@ function buildAddItemsPlanFromSegments(
     productMatchReason: item.productMatchReason,
     vagueQuantityCue: item.vagueQuantityCue,
   })), null, 2));
-  console.log("[ADD_ITEMS_EXTRACTOR] SEGMENTS", JSON.stringify({ source, segments }));
+  console.log("[ADD_ITEMS_EXTRACTOR] SEGMENTS", JSON.stringify({ source, segments: refinedSegments }));
   console.log("[ADD_ITEMS_EXTRACTOR] PARSED", JSON.stringify(parsedSegments.map((item) => ({
     raw: item.raw,
     cleaned: item.cleaned,

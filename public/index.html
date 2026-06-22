@@ -2109,11 +2109,11 @@
                   <span id="composerLead">Écris simplement ce que tu veux commander.</span>
                 </div>
                 <div class="composerHint" id="composerHint">
-                  Exemple : ajoute 1 pain, 6 œufs et 2 yogourts nature.
+                  Exemples : propose-moi quelque chose avec 30 francs, ou ajoute 1 pain, 6 œufs et 2 yogourts nature.
                 </div>
               </div>
 
-              <input id="input" placeholder="Exemple : ajoute 1 pain, 6 œufs et 2 yogourts nature" />
+              <input id="input" placeholder="Exemple : propose-moi quelque chose avec 30 francs" />
 
               <div class="suggestionRail" id="suggestionRail"></div>
 
@@ -2237,8 +2237,8 @@
     const QUICK_ACTIONS = {
       general: [
         "bonjour",
-        "comment ca va ?",
-        "quel temps fait-il aujourd'hui ?"
+        "propose-moi quelque chose avec 30 francs",
+        "ajoute 1 pain, 6 œufs et 2 yogourts nature"
       ],
       cart: [
         "montre-moi mon panier",
@@ -2246,14 +2246,14 @@
         "passe la commande"
       ],
       add: [
-        "ajoute 1 lard de begnins à mon panier",
-        "ajoute 1 pain anglais à mon panier",
-        "ajoute 1 panier budget 50 à mon panier"
+        "ajoute 1 pain, 6 œufs et 2 yogourts nature",
+        "ajoute 500g de carottes, 1 litre de lait et 250g de mozzarella",
+        "ajoute des œufs, quelques pommes et des poireaux"
       ],
       meal: [
-        "de quoi faire une fondue",
-        "de quoi faire une carbonara",
-        "qu'est-ce que tu me proposes aujourd'hui ?"
+        "propose-moi quelque chose avec 30 francs",
+        "propose-moi quelque chose pour demain matin",
+        "propose-moi quelque chose avec du poisson"
       ]
     };
 
@@ -3448,6 +3448,9 @@
                     <span>ajoute 1 pain</span>
                     <span>mets 6 œufs</span>
                     <span>ajoute 1 pain, 6 œufs et 2 yogourts</span>
+                    <span>ajoute du riz, du lard, du maïs et des pommes</span>
+                    <span>ajoute 500g de carottes, 1 litre de lait et 250g de mozzarella</span>
+                    <span>ajoute des œufs, quelques pommes et des poireaux</span>
                   </div>
                 </div>
               </details>
@@ -3464,9 +3467,17 @@
                 <div class="guideStepBody">
                   <p>Tu peux demander une idée saine, végétarienne, rapide, locale, pas trop chère ou adaptée à un moment de la journée. L’assistant propose des produits du catalogue sans modifier ton panier.</p>
                   <div class="guideExamples">
-                    <span>de quoi faire un repas sain</span>
-                    <span>une idée végétarienne</span>
-                    <span>qu’est-ce que tu me proposes ?</span>
+                    <span>propose-moi quelque chose de végétarien</span>
+                    <span>propose-moi quelque chose avec 30 francs</span>
+                    <span>propose-moi quelque chose de végétarien avec 40 francs</span>
+                    <span>propose-moi quelque chose pour demain matin</span>
+                    <span>propose-moi quelque chose avec du poisson</span>
+                    <span>propose-moi une boisson pour accompagner le repas</span>
+                    <span>propose-moi quelque chose pour les enfants après l’école</span>
+                    <span>propose-moi une sélection de fruits et légumes</span>
+                    <span>propose-moi quelque chose de local pour l’apéro</span>
+                    <span>propose-moi quelque chose de rapide pour ce soir</span>
+                    <span>propose-moi quelque chose de sain pour cette semaine</span>
                   </div>
                 </div>
               </details>
@@ -3479,6 +3490,8 @@
                     <span>montre mon panier</span>
                     <span>vide mon panier</span>
                     <span>supprime le pain</span>
+                    <span>retire les œufs</span>
+                    <span>enlève le kéfir du panier</span>
                   </div>
                 </div>
               </details>
@@ -3486,7 +3499,13 @@
               <details class="guideStep guideNested">
                 <summary>Découvrir des idées ou passer commande</summary>
                 <div class="guideStepBody">
-                  <p>Demande des idées avec « qu’est-ce que tu me proposes aujourd’hui ? ». Pour finaliser, écris « passe la commande ». Pour l’instant, la commande part sur la prochaine date disponible.</p>
+                  <p>Demande des idées avec « qu’est-ce que tu me proposes aujourd’hui ? ». Pour finaliser, écris « ok » ou « passe la commande ». Pour l’instant, la commande part sur la prochaine date disponible.</p>
+                  <div class="guideExamples">
+                    <span>qu’est-ce que tu me proposes aujourd’hui ?</span>
+                    <span>tu me conseilles quoi si je reçois deux amis ?</span>
+                    <span>ok</span>
+                    <span>passe la commande</span>
+                  </div>
                 </div>
               </details>
             </div>
@@ -3644,7 +3663,7 @@
           signalMeta: "Pose une question, ouvre ton panier ou décris un repas.",
           narrative: "Aucune action détectée pour l’instant.",
           lead: "Écris simplement ce que tu veux commander.",
-          hint: "Exemple : ajoute 1 pain, 6 œufs et 2 yogourts nature.",
+          hint: "Exemples : propose-moi quelque chose avec 30 francs, ou ajoute 1 pain, 6 œufs et 2 yogourts nature.",
           sendEyebrow: "Action",
           sendLabel: "Envoyer",
           sendSub: "Ajouter, modifier ou consulter ton panier.",
@@ -3658,14 +3677,14 @@
           signalValue: isDiscovery ? "Découverte repas" : "Composition repas",
           signalMeta: isDiscovery
             ? "Le texte ressemble à une demande d’inspiration du jour."
-            : "Le texte ressemble à une demande “de quoi faire…”.",
+            : "Le texte ressemble à une demande de repas concret.",
           narrative: isDiscovery
             ? "L’assistant prépare des suggestions utiles."
             : "Zélo peut transformer une envie en ingrédients réels du catalogue.",
           lead: "Tu sembles vouloir construire un repas.",
           hint: isDiscovery
-            ? "Exemples: qu'est-ce que tu me proposes aujourd'hui ?"
-            : "Exemples: de quoi faire une fondue, une carbonara, ou un dîner simple.",
+            ? "Exemples: propose-moi quelque chose avec 30 francs, ou propose-moi quelque chose de végétarien avec 40 francs."
+            : "Exemples: propose-moi quelque chose avec 30 francs, ou propose-moi quelque chose pour demain matin.",
           sendEyebrow: isDiscovery ? "Idées" : "Repas",
           sendLabel: isDiscovery ? "Explorer" : "Composer",
           sendSub: isDiscovery

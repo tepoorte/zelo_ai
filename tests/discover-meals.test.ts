@@ -83,6 +83,10 @@ function assertOnlyCatalogProducts(result: Awaited<ReturnType<typeof buildDiscov
   }
 }
 
+function assertNoWhyBlock(result: Awaited<ReturnType<typeof buildDiscoverMealIdeas>>) {
+  assert.equal(result.message.includes("Pourquoi :"), false, result.message);
+}
+
 function assertNoGenericBundles(result: Awaited<ReturnType<typeof buildDiscoverMealIdeas>>) {
   const genericIds = new Set(["panier-budget", "offre", "surprise", "courses"]);
   for (const productId of proposalProductIds(result)) {
@@ -647,6 +651,7 @@ assert.equal(
   for (const query of goldenQueries) {
     const result = await buildDiscoverMealIdeas("test", query, { products: catalog, history: {}, training });
     assertOnlyCatalogProducts(result);
+    assertNoWhyBlock(result);
     assert.equal(result.message.length > 20, true, `Empty discover answer for ${query}`);
   }
 }

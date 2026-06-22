@@ -1712,7 +1712,6 @@ function formatDiscoverMessage(result: Omit<DiscoverResult, "message">, style: D
     if (proposal.estimatedTotalCHF != null) {
       lines.push(`Total estimé : env. ${proposal.estimatedTotalCHF.toFixed(2)} CHF`);
     }
-    lines.push(`Pourquoi : ${proposal.why}.`);
     if (proposal.budgetNote) lines.push(`Budget : ${proposal.budgetNote}.`);
     lines.push("");
   });
