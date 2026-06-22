@@ -2232,7 +2232,7 @@
   <script src="/predictor/intent-classifier.js"></script>
   <script src="/predictor/intent-feedback.js"></script>
   <script>
-    const USER_REF = "local-dev";
+    const FEEDBACK_USER_REF = "web-ui";
 
     const QUICK_ACTIONS = {
       general: [
@@ -2526,7 +2526,6 @@
 
       try{
         const data = await postJson("/ai/build-meal-search", {
-          userRef: USER_REF,
           query,
           limit: 10
         });
@@ -2562,7 +2561,7 @@
 
       try{
         await postJson("/ai/build-meal-recipes", {
-          userRef: USER_REF,
+          userRef: FEEDBACK_USER_REF,
           key: unknown.suggestedMealKey,
           label: unknown.suggestedLabel,
           sourceText: buildMealFeedbackState.requestText || unknown.text,
@@ -2624,7 +2623,6 @@
 
       try{
         const data = await postJson("/ai/build-meal-search", {
-          userRef: USER_REF,
           query,
           limit: 8
         });
@@ -2680,7 +2678,7 @@
           action: "prefer_product",
           productId: String(product.id),
           productName: product.name,
-          userRef: USER_REF,
+          userRef: FEEDBACK_USER_REF,
           note: "Correction recette depuis l’interface avancée"
         });
 
@@ -2716,7 +2714,7 @@
           action: "ban_product",
           productId: currentProductId,
           productName: currentProductName,
-          userRef: USER_REF,
+          userRef: FEEDBACK_USER_REF,
           note: "Produit incorrect signalé depuis l’interface avancée"
         });
 
@@ -2748,7 +2746,7 @@
         await postJson("/ai/build-meal-match-feedback", {
           mealKey: context.mealKey,
           text: buildMealFeedbackState.requestText,
-          userRef: USER_REF,
+          userRef: FEEDBACK_USER_REF,
           action: "confirm",
           servings: context.servings || 2
         });
@@ -2775,7 +2773,7 @@
         const data = await postJson("/ai/build-meal-match-feedback", {
           mealKey: context.mealKey,
           text: buildMealFeedbackState.requestText,
-          userRef: USER_REF,
+          userRef: FEEDBACK_USER_REF,
           action: "reject",
           servings: context.servings || 2,
           reason: "Recette incorrecte signalée depuis l’interface avancée"
@@ -3322,7 +3320,7 @@
       }
 
       const result = await window.ZeloIntentFeedback.submitFeedback({
-        userRef: USER_REF,
+        userRef: FEEDBACK_USER_REF,
         text,
         predictedAction: prediction.actionKey,
         correctAction: prediction.actionKey,
@@ -3355,7 +3353,7 @@
       }
 
       const result = await window.ZeloIntentFeedback.submitFeedback({
-        userRef: USER_REF,
+        userRef: FEEDBACK_USER_REF,
         text,
         predictedAction: prediction?.actionKey || "noop",
         correctAction: correctKey,
@@ -3394,7 +3392,7 @@
 
     async function fetchWelcomeHistorySuggestions(){
       try{
-        const response = await fetch(`/ai/history-suggestions?userRef=${encodeURIComponent(USER_REF)}&context=welcome`);
+        const response = await fetch("/ai/history-suggestions?context=welcome");
         const data = await response.json();
         return Array.isArray(data?.suggestions) ? data.suggestions : [];
       }catch{
@@ -3615,7 +3613,6 @@
     function saveSession(email){
       localStorage.setItem("zelo_ai_auth", JSON.stringify({
         email,
-        userRef: USER_REF,
         loggedIn: true
       }));
     }
@@ -3960,7 +3957,7 @@
     async function refreshBasket(){
       try{
         basketLive.textContent = "Synchronisation…";
-        const res = await fetch(`/ai/basket?userRef=${encodeURIComponent(USER_REF)}`);
+        const res = await fetch("/ai/basket");
         const data = await res.json();
 
         if(!res.ok || !data?.ok){
@@ -3995,7 +3992,6 @@
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            userRef: USER_REF,
             username,
             password
           })
@@ -4025,7 +4021,10 @@
       }
     }
 
-    function logout(){
+    async function logout(){
+      try {
+        await fetch("/ai/logout", { method: "POST" });
+      } catch {}
       clearSession();
       setLoggedOutUI();
       setAuthStatus("");
@@ -4047,7 +4046,7 @@
       addTypingMessage();
 
       try{
-        const payload = { userRef: USER_REF, text: safeText };
+        const payload = { text: safeText };
         if (frontendIntentHint?.actionKey) {
           payload.frontendIntentHint = frontendIntentHint;
         }

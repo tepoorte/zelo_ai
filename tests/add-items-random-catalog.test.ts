@@ -65,6 +65,7 @@ const MIN_PRODUCTS = positiveInt(process.env.ZELO_RANDOM_ADD_ITEMS_MIN_PRODUCTS,
 const MAX_PRODUCTS = positiveInt(process.env.ZELO_RANDOM_ADD_ITEMS_MAX_PRODUCTS, 6);
 const SEED = process.env.ZELO_RANDOM_ADD_ITEMS_SEED ?? "zelo-add-items-random-ci";
 const MUTATE_NAMES = process.env.ZELO_RANDOM_ADD_ITEMS_MUTATE_NAMES !== "0";
+let sessionCookie = "";
 
 const HINTS: Record<string, FrontendIntentHint> = {
   add_items: {
@@ -201,11 +202,19 @@ function formatItems(items: RenderedRequestedProduct[], separator: string): stri
 }
 
 async function post<T>(path: string, body: unknown): Promise<{ status: number; data: T }> {
+  const headers = new Headers({ "content-type": "application/json" });
+  if (sessionCookie) {
+    headers.set("Cookie", sessionCookie);
+  }
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
+  const setCookie = res.headers.get("set-cookie");
+  if (setCookie) {
+    sessionCookie = setCookie.split(";")[0];
+  }
   const text = await res.text();
   let data: T;
   try {
@@ -217,7 +226,11 @@ async function post<T>(path: string, body: unknown): Promise<{ status: number; d
 }
 
 async function get<T>(path: string): Promise<{ status: number; data: T }> {
-  const res = await fetch(`${BASE_URL}${path}`);
+  const headers = new Headers();
+  if (sessionCookie) {
+    headers.set("Cookie", sessionCookie);
+  }
+  const res = await fetch(`${BASE_URL}${path}`, { headers });
   const text = await res.text();
   let data: T;
   try {
@@ -230,7 +243,6 @@ async function get<T>(path: string): Promise<{ status: number; data: T }> {
 
 async function chat(text: string, hint: FrontendIntentHint): Promise<{ status: number; data: ChatResponse }> {
   return await post<ChatResponse>("/ai/chat", {
-    userRef: USER_REF,
     text,
     frontendIntentHint: hint,
   });
@@ -242,7 +254,7 @@ async function clearBasket(): Promise<void> {
 }
 
 async function getBasket(): Promise<BasketResponse["basket"]> {
-  const response = await get<BasketResponse>(`/ai/basket?userRef=${encodeURIComponent(USER_REF)}`);
+  const response = await get<BasketResponse>("/ai/basket");
   assert.equal(response.status, 200, `basket read failed: ${JSON.stringify(response.data)}`);
   return response.data.basket;
 }
@@ -378,7 +390,6 @@ async function main() {
   await login(USER_REF, USERNAME, PASSWORD);
 
   const apiLogin = await post<ChatResponse>("/ai/login", {
-    userRef: USER_REF,
     username: USERNAME,
     password: PASSWORD,
   });

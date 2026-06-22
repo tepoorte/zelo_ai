@@ -28,6 +28,7 @@ npm run test:agent-formatting
 npm run test:discover-meals
 npm run test:discover-semantic
 npm run test:history-suggestions
+npm run test:session-isolation
 npm run test:whatsapp
 npm run test:build-meal-family
 npm run test:build-meal-matching

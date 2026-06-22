@@ -1,6 +1,8 @@
 import { env } from "../../config/env.js";
 import { getStoredToken, login } from "../../swissdata/auth.js";
 import { setSession } from "../../swissdata/session.js";
+import { getWhatsAppCustomerSession } from "../../swissdata/whatsapp-customer-session.js";
+import { ensureWhatsAppPasswordlessSession } from "./whatsapp-auth.service.js";
 
 export type WhatsAppLoginCommand =
   | { kind: "missing" }
@@ -11,10 +13,13 @@ export type WhatsAppSessionDeps = {
   getStoredToken: typeof getStoredToken;
   login: typeof login;
   setSession: typeof setSession;
+  getWhatsAppCustomerSession: typeof getWhatsAppCustomerSession;
+  ensurePasswordlessSession: typeof ensureWhatsAppPasswordlessSession;
   nodeEnv: string;
   testPhone: string;
   testUsername: string;
   testPassword: string;
+  authMode: string;
 };
 
 export type WhatsAppSessionResult =
@@ -25,10 +30,13 @@ const DEFAULT_DEPS: WhatsAppSessionDeps = {
   getStoredToken,
   login,
   setSession,
+  getWhatsAppCustomerSession,
+  ensurePasswordlessSession: ensureWhatsAppPasswordlessSession,
   nodeEnv: env.nodeEnv,
   testPhone: env.whatsappTestPhone,
   testUsername: env.zeloTestUsername,
   testPassword: env.zeloTestPassword,
+  authMode: env.whatsappAuthMode,
 };
 
 export function normalizeWhatsAppPhone(input: string): string {
@@ -51,9 +59,14 @@ export function parseWhatsAppLoginCommand(text: string): WhatsAppLoginCommand {
   };
 }
 
-export function isAllowedWhatsAppPhone(phone: string, allowedPhone = env.whatsappTestPhone): boolean {
-  const normalizedAllowed = normalizeWhatsAppPhone(allowedPhone);
-  return !normalizedAllowed || normalizeWhatsAppPhone(phone) === normalizedAllowed;
+export function isAllowedWhatsAppPhone(phone: string, allowedPhones = env.whatsappAllowedPhones): boolean {
+  const allowed = String(allowedPhones || "")
+    .split(",")
+    .map((item) => normalizeWhatsAppPhone(item))
+    .filter(Boolean);
+
+  if (!allowed.length) return true;
+  return allowed.includes(normalizeWhatsAppPhone(phone));
 }
 
 function canAutoLoginTestUser(phone: string, deps: WhatsAppSessionDeps): boolean {
@@ -84,7 +97,24 @@ export async function ensureWhatsAppSwissdataSession(
   input: { userRef: string; phone: string; text: string },
   deps: WhatsAppSessionDeps = DEFAULT_DEPS
 ): Promise<WhatsAppSessionResult> {
+  const authMode = String(deps.authMode || "otp").toLowerCase();
   const loginCommand = parseWhatsAppLoginCommand(input.text);
+
+  if (authMode !== "legacy_dev") {
+    if (loginCommand.kind === "login" || loginCommand.kind === "invalid_format") {
+      return await deps.ensurePasswordlessSession({
+        userRef: input.userRef,
+        phone: input.phone,
+        text: "",
+      });
+    }
+
+    if (deps.getWhatsAppCustomerSession(input.userRef)) {
+      return { ok: true };
+    }
+
+    return await deps.ensurePasswordlessSession(input);
+  }
 
   if (loginCommand.kind === "login") {
     await loginWhatsAppUser(input.userRef, loginCommand.username, loginCommand.password, deps);

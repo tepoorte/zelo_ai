@@ -73,7 +73,7 @@ export async function buildWhatsAppConversationReply(
 
   const session = await deps.ensureSession({ userRef, phone, text: message.text });
   if (!session.ok) {
-    return { userRef, message: session.message };
+    return { userRef, message: "message" in session ? session.message : "" };
   }
 
   const frontendIntentHint = await deps.buildIntentHint(message.text);

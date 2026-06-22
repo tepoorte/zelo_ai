@@ -21,11 +21,20 @@ import {
   recordIntentFeedback,
 } from "../ai/services/intent-feedback.service.js";
 import { getNextHistorySuggestions } from "../ai/services/history-suggestions.service.js";
+import { env } from "../config/env.js";
 import { normalizeText } from "../domain/normalizer.js";
-import { login } from "../swissdata/auth.js";
+import { clearStoredToken, login } from "../swissdata/auth.js";
 import { ensureCurrentBasketFutureDelivery } from "../swissdata/cart.js";
 import { searchProducts } from "../swissdata/products.js";
-import { getSession, setSession } from "../swissdata/session.js";
+import {
+  SESSION_COOKIE_NAME,
+  clearSession,
+  clearSessionById,
+  createWebSessionIdentity,
+  getSessionById,
+  maskPrincipal,
+  setSession,
+} from "../swissdata/session.js";
 import { withPerfTrace } from "../utils/perf.js";
 
 function bodyString(req: any, key: string, fallback = ""): string {
@@ -44,37 +53,175 @@ function optionalQueryString(req: any, key: string): string | undefined {
   return req.query?.[key] != null ? String(req.query[key]) : undefined;
 }
 
+function readCookie(req: any, name: string): string | undefined {
+  const header = String(req.headers?.cookie ?? "");
+  if (!header) return undefined;
+
+  const prefix = `${name}=`;
+  const part = header
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(prefix));
+
+  return part ? decodeURIComponent(part.slice(prefix.length)) : undefined;
+}
+
+function requestSessionId(req: any): string | undefined {
+  const headerSession = String(req.headers?.["x-zelo-session-id"] ?? "").trim();
+  return headerSession || readCookie(req, SESSION_COOKIE_NAME);
+}
+
+function authenticatedUser(req: any): { userRef: string; session: any; sessionId: string } | undefined {
+  const sessionId = requestSessionId(req);
+  const resolved = getSessionById(sessionId);
+  if (!sessionId || !resolved) return undefined;
+  return { ...resolved, sessionId };
+}
+
+function requireAuthenticatedUser(req: any, res: any): { userRef: string; session: any; sessionId: string } | undefined {
+  const auth = authenticatedUser(req);
+  if (!auth) {
+    res.status(401).json({ ok: false, error: "Authentication required" });
+    return undefined;
+  }
+  return auth;
+}
+
+function isLocalRequest(req: any): boolean {
+  const host = String(req.headers?.host ?? "")
+    .split(":")[0]
+    .replace(/^\[|\]$/g, "")
+    .toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+function shouldUseSecureCookie(req: any): boolean {
+  if (isLocalRequest(req)) return false;
+  const forwardedProto = String(req.headers?.["x-forwarded-proto"] ?? "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+  return Boolean(req.secure || forwardedProto === "https" || env.nodeEnv === "production");
+}
+
+function sessionCookieOptions(req: any) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: shouldUseSecureCookie(req),
+    path: "/",
+  };
+}
+
+function setSessionCookie(req: any, res: any, sessionId: string): void {
+  res.cookie(SESSION_COOKIE_NAME, sessionId, {
+    ...sessionCookieOptions(req),
+  });
+}
+
+function clearSessionCookie(req: any, res: any): void {
+  res.clearCookie(SESSION_COOKIE_NAME, {
+    ...sessionCookieOptions(req),
+  });
+}
+
+function maskEmail(email: string | undefined): string | null {
+  if (!email) return null;
+  const [name = "", domain = ""] = email.split("@");
+  const maskedName = name.length <= 2 ? `${name.slice(0, 1)}…` : `${name.slice(0, 2)}…${name.slice(-1)}`;
+  return domain ? `${maskedName}@${domain}` : maskedName;
+}
+
+function logSecurityEvent(event: string, meta: Record<string, unknown>): void {
+  console.log(`[SECURITY] ${event}`, JSON.stringify(meta));
+}
+
+function upstreamStatus(error: any): number | undefined {
+  const status = Number(error?.response?.status ?? error?.status);
+  return Number.isFinite(status) ? status : undefined;
+}
+
 function registerAuthRoutes(router: Router): void {
   router.post("/login", async (req, res, next) => {
+    const username = bodyString(req, "username");
     try {
-      const userRef = bodyString(req, "userRef", "local-dev");
-      const username = bodyString(req, "username");
       const password = bodyString(req, "password");
       if (!username || !password) {
         return res.status(400).json({ ok: false, error: "Missing username/password" });
       }
 
+      const existingSessionId = requestSessionId(req);
+      const existingSession = getSessionById(existingSessionId);
+      if (existingSession) {
+        clearStoredToken(existingSession.userRef);
+        clearSession(existingSession.userRef);
+      } else {
+        clearSessionById(existingSessionId);
+      }
+
+      const { sessionId, userRef } = createWebSessionIdentity();
       const token = await login(userRef, username, password);
       setSession(userRef, {
         token: token.token,
         refresh: token.refresh,
         expires: token.expires,
+        username,
+        sessionId,
       });
 
-      res.json({ ok: true, token: token.token, expires: token.expires });
+      setSessionCookie(req, res, sessionId);
+      logSecurityEvent("web_login", {
+        principal: maskPrincipal(userRef),
+        email: maskEmail(username),
+        secureCookie: shouldUseSecureCookie(req),
+      });
+      res.json({
+        ok: true,
+        expires: token.expires,
+        user: {
+          email: username,
+        },
+      });
     } catch (error) {
+      const status = upstreamStatus(error);
+      logSecurityEvent("web_login_failed", {
+        email: maskEmail(username),
+        upstreamStatus: status ?? null,
+      });
+      if (status === 400 || status === 401 || status === 403) {
+        return res.status(401).json({ ok: false, error: "Invalid username/password" });
+      }
+      if (status && status >= 500) {
+        return res.status(502).json({ ok: false, error: "Authentication service unavailable" });
+      }
       next(error);
     }
   });
 
+  router.post("/logout", (req, res) => {
+    const sessionId = requestSessionId(req);
+    const resolved = getSessionById(sessionId);
+    if (resolved) {
+      clearStoredToken(resolved.userRef);
+      clearSession(resolved.userRef);
+      logSecurityEvent("web_logout", {
+        principal: maskPrincipal(resolved.userRef),
+      });
+    } else {
+      clearSessionById(sessionId);
+    }
+    clearSessionCookie(req, res);
+    res.json({ ok: true });
+  });
+
   router.get("/whoami", (req, res) => {
-    const userRef = queryString(req, "userRef", "local-dev");
-    const session = getSession(userRef);
+    const auth = authenticatedUser(req);
     res.json({
       ok: true,
-      userRef,
-      hasToken: Boolean(session?.token),
-      expires: session?.expires ?? null,
+      authenticated: Boolean(auth),
+      principal: auth ? maskPrincipal(auth.userRef) : null,
+      email: auth?.session?.username ?? null,
+      expires: auth?.session?.expires ?? null,
     });
   });
 }
@@ -92,7 +239,7 @@ function registerIntentTrainingRoutes(router: Router): void {
   router.post("/intent-feedback", async (req, res, next) => {
     try {
       const result = await recordIntentFeedback({
-        userRef: bodyString(req, "userRef", "local-dev"),
+        userRef: bodyString(req, "userRef", "web-ui"),
         text: bodyString(req, "text"),
         predictedAction: bodyString(req, "predictedAction") as any,
         correctAction: optionalBodyString(req, "correctAction") as any,
@@ -250,7 +397,9 @@ function registerBuildMealTrainingRoutes(router: Router): void {
 function registerBuildMealUtilityRoutes(router: Router): void {
   router.post("/build-meal-search", async (req, res, next) => {
     try {
-      const userRef = bodyString(req, "userRef", "local-dev");
+      const auth = requireAuthenticatedUser(req, res);
+      if (!auth) return;
+
       const query = bodyString(req, "query").trim();
       const limit =
         req.body?.limit != null && Number.isFinite(Number(req.body.limit))
@@ -261,7 +410,7 @@ function registerBuildMealUtilityRoutes(router: Router): void {
         return res.status(400).json({ ok: false, error: "Missing query" });
       }
 
-      const products = await searchProducts(userRef, query, limit);
+      const products = await searchProducts(auth.userRef, query, limit);
       res.json({
         ok: true,
         products: products.map((product) => ({
@@ -294,7 +443,10 @@ function registerBuildMealUtilityRoutes(router: Router): void {
 function registerBasketAndChatRoutes(router: Router): void {
   router.get("/basket", async (req, res, next) => {
     try {
-      const basket = await ensureCurrentBasketFutureDelivery(queryString(req, "userRef", "local-dev"));
+      const auth = requireAuthenticatedUser(req, res);
+      if (!auth) return;
+
+      const basket = await ensureCurrentBasketFutureDelivery(auth.userRef);
       res.json({ ok: true, basket });
     } catch (error) {
       next(error);
@@ -303,8 +455,10 @@ function registerBasketAndChatRoutes(router: Router): void {
 
   router.get("/history-suggestions", async (req, res, next) => {
     try {
-      const userRef = queryString(req, "userRef", "local-dev");
-      const suggestions = await getNextHistorySuggestions(userRef);
+      const auth = requireAuthenticatedUser(req, res);
+      if (!auth) return;
+
+      const suggestions = await getNextHistorySuggestions(auth.userRef);
       res.json({ ok: true, suggestions });
     } catch (error) {
       next(error);
@@ -313,22 +467,29 @@ function registerBasketAndChatRoutes(router: Router): void {
 
   router.post("/chat", async (req, res, next) => {
     try {
-      const userRef = bodyString(req, "userRef", "anonymous");
+      const auth = requireAuthenticatedUser(req, res);
+      if (!auth) return;
+
       const text = bodyString(req, "text");
       const frontendIntentHint = parseFrontendIntentHint(req.body?.frontendIntentHint);
       if (!text) return res.status(400).json({ ok: false, error: "Missing text" });
 
       const output = await withPerfTrace(
         "ai.chat",
-        async () => await runAgent(userRef, text, frontendIntentHint),
+        async () => await runAgent(auth.userRef, text, frontendIntentHint),
         {
-          userRef,
+          principal: maskPrincipal(auth.userRef),
           textPreview: text.slice(0, 80),
           frontendIntentHintAction: frontendIntentHint?.actionKey,
           frontendIntentHintConfidence: frontendIntentHint?.confidence,
         }
       );
-      res.json({ ok: true, userRef, input: text, ...output });
+      logSecurityEvent("web_chat", {
+        principal: maskPrincipal(auth.userRef),
+        actionHint: frontendIntentHint?.actionKey ?? null,
+        textLength: text.length,
+      });
+      res.json({ ok: true, input: text, ...output });
     } catch (error) {
       next(error);
     }

@@ -10,6 +10,7 @@ import {
   isWhatsAppAdminAuthorized,
 } from "./whatsapp-admin.service.js";
 import { normalizeWhatsAppPhone } from "./whatsapp-session.service.js";
+import { env } from "../../config/env.js";
 
 function readVerificationQuery(req: any) {
   return {
@@ -91,6 +92,13 @@ export function whatsappMetaRoutes() {
   });
 
   router.post("/link", (req, res) => {
+    if (env.nodeEnv === "production") {
+      return res.sendStatus(404);
+    }
+    if (!isWhatsAppAdminAuthorized(req)) {
+      return res.status(401).json({ ok: false, error: "Unauthorized" });
+    }
+
     const waId = String(req.body?.waId ?? "").trim();
     const userRef = String(req.body?.userRef ?? "").trim();
 
@@ -103,6 +111,13 @@ export function whatsappMetaRoutes() {
   });
 
   router.get("/link/:waId", (req, res) => {
+    if (env.nodeEnv === "production") {
+      return res.sendStatus(404);
+    }
+    if (!isWhatsAppAdminAuthorized(req)) {
+      return res.status(401).json({ ok: false, error: "Unauthorized" });
+    }
+
     const waId = String(req.params.waId ?? "").trim();
     const record = getWhatsAppLink(waId);
     return res.json({ ok: true, waId, record: record ?? null });

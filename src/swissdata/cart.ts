@@ -12,6 +12,16 @@ import {
   isLivraisonDeliveryType,
   selectLivraisonDeliveryType,
 } from "./delivery-type.js";
+import { isWhatsAppUserRef } from "./whatsapp-customer-session.js";
+import {
+  whatsappAddProductToBasket,
+  whatsappClearCurrentBasket,
+  whatsappEnsureCurrentBasketFutureDelivery,
+  whatsappGetCurrentBasket,
+  whatsappPlaceCurrentBasketOrder,
+  whatsappRemoveProductFromBasket,
+  whatsappSetProductQuantityInBasket,
+} from "./whatsapp-cart.js";
 
 export type SwissdataPaymentMethod =
   | "credit-card"
@@ -363,11 +373,19 @@ async function prepareBasketForCheckout(
 }
 
 export async function ensureCurrentBasketFutureDelivery(userRef: string) {
+  if (isWhatsAppUserRef(userRef)) {
+    return await whatsappEnsureCurrentBasketFutureDelivery(userRef);
+  }
+
   const basket = await getCurrentBasket(userRef);
   return await prepareBasketDeliverySlot(userRef, basket);
 }
 
 export async function getCurrentBasket(userRef: string) {
+  if (isWhatsAppUserRef(userRef)) {
+    return await whatsappGetCurrentBasket(userRef);
+  }
+
   const api = swissdataClient(userRef);
 
   const shopId = env.swissdataShopId;
@@ -406,6 +424,10 @@ export async function addProductToBasket(
   qty: number,
   optionsIds: string[] = []
 ) {
+  if (isWhatsAppUserRef(userRef)) {
+    return await whatsappAddProductToBasket(userRef, basketId, productId, qty, optionsIds);
+  }
+
   const api = swissdataClient(userRef);
   const shopId = env.swissdataShopId;
 
@@ -431,6 +453,10 @@ export async function setProductQuantityInBasket(
   qty: number,
   optionsIds: string[] = []
 ) {
+  if (isWhatsAppUserRef(userRef)) {
+    return await whatsappSetProductQuantityInBasket(userRef, basketId, productId, qty, optionsIds);
+  }
+
   const api = swissdataClient(userRef);
   const shopId = env.swissdataShopId;
   const country = env.swissdataCountry;
@@ -458,6 +484,10 @@ export async function removeProductFromBasket(
   productId: string,
   optionsIds: string[] = []
 ) {
+  if (isWhatsAppUserRef(userRef)) {
+    return await whatsappRemoveProductFromBasket(userRef, basketId, productId, optionsIds);
+  }
+
   const api = swissdataClient(userRef);
 
   const shopId = env.swissdataShopId;
@@ -476,6 +506,10 @@ export async function removeProductFromBasket(
 }
 
 export async function clearCurrentBasket(userRef: string) {
+  if (isWhatsAppUserRef(userRef)) {
+    return await whatsappClearCurrentBasket(userRef);
+  }
+
   const basket = await getCurrentBasket(userRef);
 
   const products = Array.isArray(basket.products) ? basket.products : [];
@@ -496,6 +530,10 @@ export async function placeCurrentBasketOrder(
   userRef: string,
   paymentMethod: SwissdataPaymentMethod = "invoice"
 ) {
+  if (isWhatsAppUserRef(userRef)) {
+    return await whatsappPlaceCurrentBasketOrder(userRef, paymentMethod);
+  }
+
   const api = swissdataClient(userRef);
 
   const shopId = env.swissdataShopId;

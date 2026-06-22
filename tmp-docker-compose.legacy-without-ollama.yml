@@ -1,3 +1,5 @@
+# Legacy compose kept only as historical reference. Local dev uses docker-compose-dev.yml;
+# production deploy uses deploy/docker-compose.with-ollama.yml.
 services:
   zelo_ai:
     container_name: zelo_ai

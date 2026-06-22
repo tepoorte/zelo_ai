@@ -18,6 +18,7 @@
     "test:discover-semantic": "node --loader ts-node/esm ./tests/discover-semantic.test.ts",
     "test:intents": "node --loader ts-node/esm ./tests/intent-classifier.test.ts",
     "test:history-suggestions": "node --loader ts-node/esm ./tests/history-suggestions.test.ts",
+    "test:session-isolation": "node --loader ts-node/esm ./tests/session-isolation.test.ts",
     "test:whatsapp": "node --loader ts-node/esm ./tests/whatsapp-transport.test.ts",
     "audit:intents": "node ./tests/intent-ui-audit.mjs",
     "audit:discover-budget": "node ./tests/discover-budget-ui-audit.mjs",
@@ -32,12 +33,14 @@
     "train:intents": "node ./ml/intent-classifier/build-artifacts.mjs"
   },
   "dependencies": {
+    "@types/nodemailer": "^8.0.1",
     "axios": "^1.7.7",
     "baileys": "^7.0.0-rc13",
     "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "morgan": "^1.10.0",
+    "nodemailer": "^9.0.1",
     "openai": "^4.104.0",
     "qrcode-terminal": "^0.12.0"
   },

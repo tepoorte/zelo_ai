@@ -50,14 +50,13 @@ type ChatResponse = {
 };
 
 const DEFAULT_BASE_URL = process.env.ZELO_TEST_BASE_URL ?? "http://127.0.0.1:3041";
-const DEFAULT_USER_REF = process.env.ZELO_TEST_USER_REF ?? `smoke-${Date.now()}`;
 const ONLY_MODE = String(process.env.ZELO_TEST_ONLY ?? "").trim().toLowerCase();
 const INCLUDE_BUILD_MEAL = process.env.ZELO_TEST_INCLUDE_BUILD_MEAL === "1";
 
 const USERNAME = process.env.ZELO_TEST_USERNAME ?? "";
 const PASSWORD = process.env.ZELO_TEST_PASSWORD ?? "";
 const BASE_URL = stripTrailingSlash(DEFAULT_BASE_URL);
-const USER_REF = DEFAULT_USER_REF;
+let sessionCookie = "";
 
 const HINTS: Record<string, FrontendIntentHint> = {
   add_items: {
@@ -535,7 +534,18 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const response = await fetch(`${BASE_URL}${path}`, init);
+      const headers = new Headers(init?.headers);
+      if (sessionCookie) {
+        headers.set("Cookie", sessionCookie);
+      }
+      const response = await fetch(`${BASE_URL}${path}`, {
+        ...init,
+        headers,
+      });
+      const setCookie = response.headers.get("set-cookie");
+      if (setCookie) {
+        sessionCookie = setCookie.split(";")[0];
+      }
       const text = await response.text();
 
       let data: unknown;
@@ -564,18 +574,17 @@ async function login(): Promise<void> {
   assert(USERNAME, "Missing ZELO_TEST_USERNAME");
   assert(PASSWORD, "Missing ZELO_TEST_PASSWORD");
 
-  const data = await fetchJson<{ ok: boolean; token?: string; expires?: string }>("/ai/login", {
+  const data = await fetchJson<{ ok: boolean; expires?: string }>("/ai/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      userRef: USER_REF,
       username: USERNAME,
       password: PASSWORD,
     }),
   });
 
   assert(data.ok, "Login failed");
-  logStep("INFO", `Login OK for userRef=${USER_REF}`);
+  logStep("INFO", "Login OK with server-side cookie session");
 }
 
 async function sendChat(step: Step): Promise<ChatResponse> {
@@ -583,7 +592,6 @@ async function sendChat(step: Step): Promise<ChatResponse> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      userRef: USER_REF,
       text: step.text,
       ...(step.hint ? { frontendIntentHint: step.hint } : {}),
     }),
@@ -591,7 +599,7 @@ async function sendChat(step: Step): Promise<ChatResponse> {
 }
 
 async function fetchBasket(): Promise<BasketResponse> {
-  return await fetchJson<BasketResponse>(`/ai/basket?userRef=${encodeURIComponent(USER_REF)}`);
+  return await fetchJson<BasketResponse>("/ai/basket");
 }
 
 function lineName(line: BasketLine): string {
@@ -697,7 +705,6 @@ async function sendFreeChat(text: string, hint?: FrontendIntentHint): Promise<Ch
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      userRef: USER_REF,
       text,
       ...(hint ? { frontendIntentHint: hint } : {}),
     }),
@@ -745,7 +752,7 @@ async function runStep(step: Step): Promise<void> {
 async function main(): Promise<void> {
   const stepsToRun = filteredSteps();
   console.log(`Base URL : ${BASE_URL}`);
-  console.log(`User ref : ${USER_REF}`);
+  console.log("Auth     : server-side cookie session");
   console.log(`Steps    : ${stepsToRun.length}`);
   if (ONLY_MODE) {
     console.log(`Filter   : ${ONLY_MODE}`);

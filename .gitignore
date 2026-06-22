@@ -12,7 +12,14 @@ __pycache__/
 **/.DS_Store
 
 # Local archives and temporary deployment backups
-docs/
+docs/*
+!docs/plan_travail_livrables/
+docs/plan_travail_livrables/*
+!docs/plan_travail_livrables/phase4/
+docs/plan_travail_livrables/phase4/*
+!docs/plan_travail_livrables/phase4/session_isolation_p0.md
+!docs/plan_travail_livrables/phase4/session_isolation_p0.tex
+!docs/plan_travail_livrables/phase4/session_isolation_p0.pdf
 *.zip
 *.tgz
 *.tar.gz

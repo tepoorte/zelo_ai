@@ -460,7 +460,6 @@
   <script src="/predictor/intent-classifier.js"></script>
   <script src="/predictor/intent-feedback.js"></script>
   <script>
-    const USER_REF = "local-dev";
     const AUTH_KEY = "zelo_ai_auth";
     const UI_MODE_KEY = "zelo_ai_ui_mode";
 
@@ -704,7 +703,7 @@
 
     async function fetchWelcomeHistorySuggestions(){
       try{
-        const response = await fetch(`/ai/history-suggestions?userRef=${encodeURIComponent(USER_REF)}&context=welcome`);
+        const response = await fetch("/ai/history-suggestions?context=welcome");
         const data = await response.json();
         return Array.isArray(data?.suggestions) ? data.suggestions : [];
       }catch{
@@ -857,7 +856,10 @@
       window.location.href = "/";
     }
 
-    function logout(){
+    async function logout(){
+      try {
+        await fetch("/ai/logout", { method: "POST" });
+      } catch {}
       clearSession();
       window.location.href = "/";
     }
@@ -883,7 +885,7 @@
       addTypingMessage();
 
       try {
-        const payload = { userRef: USER_REF, text };
+        const payload = { text };
         if (frontendIntentHint?.actionKey) {
           payload.frontendIntentHint = frontendIntentHint;
         }

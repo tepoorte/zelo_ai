@@ -1,0 +1,535 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[french]{babel}
+\usepackage[a4paper,margin=2.15cm]{geometry}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\definecolor{zeloGreen}{HTML}{3B8F2F}
+\definecolor{zeloSoft}{HTML}{F2F8EF}
+\definecolor{zeloInk}{HTML}{1F2A1F}
+\definecolor{riskRed}{HTML}{A83232}
+\definecolor{riskOrange}{HTML}{B86B00}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=zeloGreen,
+  urlcolor=zeloGreen
+}
+
+\setlength{\parskip}{0.55em}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.22}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\riskpzero}{\textcolor{riskRed}{\textbf{P0}}}
+\newcommand{\riskpone}{\textcolor{riskOrange}{\textbf{P1}}}
+\newcommand{\statusok}{\textcolor{zeloGreen}{\textbf{validé}}}
+
+\title{\textbf{Zelo AI -- Correctif P0 d'isolation des sessions client}\\
+\large Note technique de sécurité, validation multi-compte et impact conformité}
+\author{Projet Zelo AI}
+\date{18 juin 2026}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\fcolorbox{zeloGreen}{zeloSoft}{
+  \begin{minipage}{0.92\linewidth}
+  \textbf{Synthèse.} Une revue des logs et du code a mis en évidence un
+  défaut critique d'isolation entre utilisateurs web : plusieurs sessions
+  pouvaient partager le même identifiant technique \code{local-dev}. Le risque
+  était qu'un panier ou une commande utilise le token Swissdata du mauvais
+  compte. Le correctif remplace cette confiance dans le frontend par une
+  session serveur opaque, transmise par cookie \code{HttpOnly}, et impose que
+  les routes panier/chat/commande dérivent toujours l'identité depuis la
+  session authentifiée côté serveur. Le correctif est ensuite étendu au canal
+  WhatsApp via une authentification passwordless par code e-mail et une session
+  serveur distincte par numéro.
+  \end{minipage}
+}
+\end{center}
+
+\tableofcontents
+\newpage
+
+\section{Objectif du document}
+
+Ce document complète le livrable Phase 4 sécurité et conformité. Il décrit en
+détail un correctif \riskpzero{} appliqué à Zelo AI après détection d'un risque
+de confusion de sessions client.
+
+L'objectif est double :
+\begin{itemize}
+  \item expliquer précisément pourquoi l'incident pouvait arriver;
+  \item documenter la mitigation retenue selon les bonnes pratiques de
+  cybersécurité : séparation des sessions, moindre confiance dans le client,
+  réduction des données sensibles en logs et tests multi-utilisateurs.
+\end{itemize}
+
+Le document ne prétend pas être une certification externe. Il constitue une
+preuve interne d'analyse, de correction et de validation, utile pour la Phase 4
+du projet et pour les exigences nLPD/GDPR liées à la confidentialité et à
+l'intégrité des données client.
+
+\section{Constat initial}
+
+\subsection{Symptôme observé}
+
+Lors d'un test sur l'environnement déployé, une commande passée depuis un compte
+client distinct a généré une confirmation envoyée à une autre adresse e-mail.
+Des observations antérieures indiquaient aussi que des paniers pouvaient parfois
+sembler partagés ou contaminés entre utilisateurs.
+
+Ce type de symptôme est critique, car il touche directement :
+\begin{itemize}
+  \item la confidentialité du panier;
+  \item l'intégrité de la commande;
+  \item l'identité du compte facturé ou notifié;
+  \item la confiance utilisateur dans l'assistant.
+\end{itemize}
+
+\subsection{Racine technique}
+
+L'interface web utilisait historiquement une valeur fixe \code{local-dev} comme
+identifiant utilisateur technique. Cette valeur était envoyée par le navigateur
+dans les appels suivants :
+\begin{itemize}
+  \item login;
+  \item chat;
+  \item affichage panier;
+  \item mutations panier;
+  \item passage de commande.
+\end{itemize}
+
+Côté backend, les tokens Swissdata étaient stockés en mémoire par clé
+\code{userRef}. Quand plusieurs utilisateurs web partageaient le même
+\code{userRef}, le dernier login pouvait remplacer le token précédemment stocké.
+Une commande ultérieure pouvait donc être exécutée avec le mauvais token
+Swissdata.
+
+\begin{longtable}{p{0.28\linewidth}p{0.66\linewidth}}
+\toprule
+\textbf{Élément} & \textbf{Problème avant correctif} \\
+\midrule
+Identité frontend & Le navigateur pouvait envoyer \code{userRef="local-dev"}. \\
+Stockage token & Le token Swissdata était associé à cette clé partagée. \\
+Isolation panier & Deux comptes web pouvaient se retrouver sur la même clé runtime. \\
+Passage de commande & Le compte utilisé dépendait du token stocké en dernier sous la clé partagée. \\
+Audit sécurité & Les logs confirmaient que des appels web utilisaient encore \code{local-dev}. \\
+\bottomrule
+\end{longtable}
+
+\section{Classification du risque}
+
+\subsection{Sévérité}
+
+Le risque est classé \riskpzero{} parce qu'il peut provoquer une action
+irréversible ou sensible sur le mauvais compte client :
+\begin{itemize}
+  \item commande passée avec le mauvais client Swissdata;
+  \item confirmation envoyée au mauvais destinataire;
+  \item panier d'un utilisateur visible ou modifiable depuis une autre session;
+  \item violation potentielle de confidentialité et d'intégrité des données.
+\end{itemize}
+
+\subsection{Lien avec OWASP et bonnes pratiques}
+
+Le problème correspond principalement à deux familles de risques :
+\begin{itemize}
+  \item \textbf{Broken Authentication / Session Management} : l'identité n'était
+  pas suffisamment portée par une session serveur isolée.
+  \item \textbf{Broken Object Level Authorization} : une action panier ou
+  commande pouvait être appliquée au mauvais objet utilisateur si la clé runtime
+  était partagée.
+\end{itemize}
+
+La mitigation suit une règle simple : le backend ne doit jamais faire confiance
+à une identité utilisateur choisie par le client pour une action mutante.
+
+\section{Design du correctif}
+
+\subsection{Principe retenu}
+
+Le correctif introduit une session web opaque créée côté serveur au moment du
+login. Cette session devient la seule source d'identité pour les routes web
+authentifiées.
+
+\begin{quote}
+Le navigateur peut demander une action, mais il ne choisit plus le compte
+Swissdata sur lequel cette action s'exécute.
+\end{quote}
+
+\subsection{Flux corrigé}
+
+\begin{verbatim}
+POST /ai/login
+  -> authentification Swissdata avec username/password
+  -> création session serveur aléatoire
+  -> stockage token sous userRef interne web:<sessionId>
+  -> cookie HttpOnly envoyé au navigateur
+
+POST /ai/chat
+GET  /ai/basket
+POST /ai/logout
+GET  /ai/history-suggestions
+  -> lecture cookie
+  -> récupération session serveur
+  -> récupération userRef interne
+  -> action Swissdata avec le bon token
+\end{verbatim}
+
+\subsection{Avant / après}
+
+\begin{longtable}{p{0.24\linewidth}p{0.34\linewidth}p{0.34\linewidth}}
+\toprule
+\textbf{Point} & \textbf{Avant} & \textbf{Après} \\
+\midrule
+Principal utilisateur & Fourni par le frontend via \code{userRef}. & Dérivé côté serveur depuis un cookie de session. \\
+Valeur web typique & \code{local-dev}, partagée. & \code{web:<sessionId>}, aléatoire et par session. \\
+Route chat/panier & Acceptait l'identité du client. & Ignore l'identité envoyée par le client. \\
+Session expirée & Risque de comportement ambigu selon token mémoire. & Réponse \code{401} si aucune session valide. \\
+Logout & Déconnexion frontend seulement ou partielle. & Suppression session serveur, token Swissdata et cookie. \\
+Logs & Certains logs pouvaient exposer trop de détail panier. & Logs réduits et redaction de données sensibles. \\
+\bottomrule
+\end{longtable}
+
+\section{Implémentation technique}
+
+\subsection{Session serveur}
+
+Le fichier \code{src/swissdata/session.ts} a été étendu pour gérer des sessions
+web opaques :
+\begin{itemize}
+  \item génération d'un identifiant aléatoire via cryptographie Node;
+  \item mapping \code{sessionId -> userRef};
+  \item préfixe interne \code{web:} pour distinguer les sessions navigateur;
+  \item stockage du username authentifié, de la date de création et de mise à
+  jour;
+  \item expiration et suppression des sessions;
+  \item fonction de masquage pour les logs.
+\end{itemize}
+
+Cette approche garde l'état de session en mémoire, ce qui est suffisant pour le
+prototype et le déploiement actuel mono-instance. Une section de limites détaille
+les améliorations nécessaires en cas de scaling horizontal.
+
+\subsection{Authentification et cookie}
+
+Le fichier \code{src/routes/ai.routes.ts} introduit une couche d'authentification
+web :
+\begin{itemize}
+  \item lecture contrôlée du cookie de session;
+  \item helper \code{authenticatedUser} pour récupérer le principal courant;
+  \item helper \code{requireAuthenticatedUser} pour bloquer les routes sensibles;
+  \item cookie \code{HttpOnly};
+  \item \code{SameSite=Lax};
+  \item \code{Secure} en HTTPS ou en production;
+  \item compatibilité locale sans \code{Secure} sur \code{localhost}.
+\end{itemize}
+
+Le cookie ne contient pas le token Swissdata. Il contient seulement un
+identifiant opaque qui n'a de sens que pour le serveur Zelo AI.
+
+\subsection{Routes protégées}
+
+Les routes web sensibles ne prennent plus leur identité depuis le body ou la
+query string :
+\begin{itemize}
+  \item \code{/ai/chat};
+  \item \code{/ai/basket};
+  \item \code{/ai/history-suggestions};
+  \item \code{/ai/build-meal-search};
+  \item \code{/ai/logout};
+  \item \code{/ai/whoami}.
+\end{itemize}
+
+Même si un client envoie volontairement \code{userRef="local-dev"} dans le
+payload, le backend l'ignore pour les actions authentifiées et utilise la
+session serveur.
+
+\subsection{Frontend}
+
+Les fichiers \code{public/index.html} et \code{public/index_simple.html} ont été
+mis à jour :
+\begin{itemize}
+  \item suppression de l'identité fixe \code{local-dev} pour les appels
+  authentifiés;
+  \item login sans \code{userRef};
+  \item chat sans \code{userRef};
+  \item panier sans \code{userRef} en query string;
+  \item suggestions history sans \code{userRef};
+  \item logout serveur via \code{/ai/logout}.
+\end{itemize}
+
+Un identifiant non sensible peut encore être utilisé pour du feedback
+d'entraînement UI, mais il ne pilote plus les mutations panier ou commande.
+
+\subsection{Réduction des logs sensibles}
+
+Le service panier a été durci pour éviter de journaliser trop de détails :
+\begin{itemize}
+  \item pas de token;
+  \item pas de mot de passe;
+  \item pas d'adresse complète;
+  \item pas de panier complet en debug générique;
+  \item résumé limité : nombre de lignes, total, identifiant partiel, produit
+  traité.
+\end{itemize}
+
+Cette réduction est importante pour la conformité : les logs sont souvent une
+source secondaire de fuite de données personnelles.
+
+\section{Pourquoi cette solution est plus sûre}
+
+\subsection{Moindre confiance dans le client}
+
+Le changement principal est architectural : l'identité utilisateur n'est plus un
+paramètre métier envoyé par le navigateur. Elle devient une décision serveur
+après authentification.
+
+Cela empêche les scénarios suivants :
+\begin{itemize}
+  \item un client forge \code{userRef="local-dev"};
+  \item un onglet réutilise une identité d'un autre test;
+  \item deux comptes écrasent le même token runtime;
+  \item une action panier s'applique au dernier compte connecté sous la même clé.
+\end{itemize}
+
+\subsection{Isolation par session}
+
+Chaque login crée une session distincte. Deux navigateurs ou deux fenêtres
+privées peuvent donc coexister :
+\begin{itemize}
+  \item le compte A a son cookie et son \code{web:<sessionId>};
+  \item le compte B a un autre cookie et un autre \code{web:<sessionId>};
+  \item les tokens Swissdata sont stockés sous deux clés différentes;
+  \item panier et checkout suivent le token de la session courante.
+\end{itemize}
+
+\subsection{Extension WhatsApp passwordless}
+
+Le canal WhatsApp ne peut pas s'appuyer sur le cookie \code{HttpOnly} utilisé
+par l'interface web. Il a donc été traité comme un canal authentifié séparé,
+avec son propre principal serveur \code{wa:<numero>}.
+
+Le flux retenu est le suivant :
+\begin{enumerate}
+  \item le client écrit au numéro WhatsApp de l'assistant;
+  \item Zelo AI normalise le numéro et construit le principal \code{wa:<numero>};
+  \item si une session WhatsApp vérifiée existe déjà, la demande passe au moteur
+  conversationnel;
+  \item sinon, Zelo AI cherche via l'API Swissdata admin du shop le customer
+  correspondant au numéro;
+  \item si un customer unique est trouvé et lié à un user avec e-mail, Zelo AI
+  génère un OTP à six chiffres;
+  \item l'OTP est envoyé par e-mail et stocké côté Zelo AI uniquement sous forme
+  de hash salé avec expiration;
+  \item le client répond sur WhatsApp avec le code;
+  \item après validation, Zelo AI crée une session serveur WhatsApp contenant
+  le \code{customerId}, le \code{userId} et l'e-mail du compte vérifié;
+  \item les commandes \code{add_items}, \code{show_cart}, \code{clear_cart},
+  \code{discover_meals} et \code{exec_cart} utilisent alors exclusivement cette
+  session.
+\end{enumerate}
+
+\subsection{Décision d'intégration avec Swissdata}
+
+La revue du code Swissdata a montré que \code{/auth/token} supporte bien le
+mode \code{double-auth}, mais seulement après création d'un token double-auth
+par le processus d'authentification Swissdata existant. Swissdata n'expose pas,
+via API publique, un endpoint permettant de créer un vrai token client à partir
+du seul numéro de téléphone.
+
+Pour respecter la contrainte de ne pas modifier \code{swissdata-api}, le flux
+WhatsApp utilise donc un adapter \emph{customer-scoped} côté Zelo AI :
+\begin{itemize}
+  \item la preuve d'identité vient du code OTP envoyé à l'e-mail du user
+  associé au numéro;
+  \item les opérations panier passent par les routes Swissdata autorisées pour
+  le shop;
+  \item chaque action est filtrée sur le \code{customerId} vérifié;
+  \item aucune session globale ou token partagé n'est réutilisé;
+  \item la confirmation de commande WhatsApp est envoyée à l'e-mail du customer
+  vérifié.
+\end{itemize}
+
+Cette approche évite l'accès direct Mongo en runtime, conserve le flux Meta
+Cloud API existant, et sépare les identités WhatsApp sans demander de mot de
+passe dans la conversation.
+
+\subsection{Contrôles de sécurité WhatsApp}
+
+\begin{longtable}{p{0.34\linewidth}p{0.58\linewidth}}
+\toprule
+\textbf{Contrôle} & \textbf{Mesure appliquée} \\
+\midrule
+Pas de mot de passe en chat & WhatsApp ne demande jamais le mot de passe Zelo. Les anciens messages \code{login ...} ne sont plus utilisés en mode OTP. \\
+Anti-bruteforce & OTP à six chiffres, TTL court, nombre d'essais limité, cooldown avant renvoi. \\
+Anti-replay & Le challenge est supprimé après validation, expiration ou verrouillage. \\
+No account enumeration & Numéro inconnu, ambigu ou non lié : réponse générique, sans révéler si le compte existe. \\
+Isolation session & Chaque session est indexée par \code{wa:<numero>} et liée au \code{customerId} vérifié. \\
+Logs sûrs & Aucun OTP, token, mot de passe, hash, email complet, téléphone complet ou panier complet en logs. \\
+Least privilege & En production, utiliser un compte Swissdata de service avec permissions minimales sur customers et orders du shop. \\
+Routes legacy & Les routes \code{/link} sont admin-only en développement et désactivées en production. \\
+\bottomrule
+\end{longtable}
+
+\section{Validation réalisée}
+
+\subsection{Tests automatisés}
+
+\begin{longtable}{p{0.34\linewidth}p{0.18\linewidth}p{0.40\linewidth}}
+\toprule
+\textbf{Test} & \textbf{Résultat} & \textbf{Objectif} \\
+\midrule
+\code{npm run test:session-isolation} & \statusok & Vérifier que deux sessions web gardent des tokens distincts et qu'une suppression ne contamine pas l'autre. \\
+\code{npm run test:agent-formatting} & \statusok & Garantir que les réponses contrôlées restent valides. \\
+\code{npm run test:whatsapp} & \statusok & Vérifier que le transport WhatsApp n'est pas cassé. \\
+\code{npm run test:smoke} & \statusok & Vérifier le flux local complet : login, panier, add, clear, demandes longues. \\
+\code{npm run build} & \statusok & Vérifier la compilation TypeScript. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Test multi-compte local}
+
+Un scénario local a été exécuté avec deux comptes distincts dans
+l'environnement Docker local :
+
+\begin{enumerate}
+  \item login du compte A;
+  \item vidage du panier A;
+  \item ajout d'un produit marqueur dans le panier A;
+  \item login du compte B dans une session séparée;
+  \item vidage du panier B;
+  \item vérification que le panier B ne contient pas le produit du compte A;
+  \item ajout de produits marqueurs dans le panier B;
+  \item retour au compte A et vérification que les produits du compte B sont
+  absents;
+  \item envoi volontaire d'un payload contenant \code{userRef="local-dev"} avec
+  le cookie du compte A;
+  \item vérification que le backend ignore ce \code{userRef} forgé;
+  \item passage de commande sur le compte B;
+  \item nettoyage du panier A.
+\end{enumerate}
+
+Résultat : les deux paniers sont restés séparés, le checkout a utilisé la
+session active correcte et la tentative de forger \code{local-dev} n'a pas
+modifié le principal serveur.
+
+\subsection{Ajout au preflight deploy}
+
+Le script \code{deploy/01-local-preflight.sh} lance maintenant
+\code{npm run test:session-isolation}. L'objectif est d'éviter une régression
+avant un futur déploiement.
+
+\section{Impact conformité nLPD/GDPR}
+
+\subsection{Confidentialité}
+
+Le correctif réduit fortement le risque qu'un utilisateur voie ou modifie le
+panier d'un autre utilisateur. C'est directement lié au principe de
+confidentialité et d'intégrité des données personnelles.
+
+\subsection{Minimisation}
+
+Le navigateur ne reçoit plus le token Swissdata dans la réponse de login. Il ne
+porte qu'un cookie opaque, ce qui réduit la quantité de données sensibles
+exposées côté client.
+
+\subsection{Privacy by design}
+
+La séparation des sessions est maintenant intégrée au design :
+\begin{itemize}
+  \item identité côté serveur;
+  \item cookie \code{HttpOnly};
+  \item logs redacted;
+  \item suppression token/session au logout;
+  \item tests dédiés anti-régression.
+\end{itemize}
+
+\subsection{Accountability}
+
+La documentation, les tests et le preflight constituent des éléments de preuve
+internes : ils montrent que le risque a été identifié, corrigé et validé.
+
+\section{Limites et prochaines améliorations}
+
+\subsection{Session store en mémoire}
+
+Le store actuel est en mémoire Node.js. C'est acceptable pour un service
+mono-instance, mais ce n'est pas suffisant pour un scaling horizontal ou un
+redémarrage sans perte de session.
+
+Amélioration recommandée \riskpone{} :
+\begin{itemize}
+  \item stocker les sessions dans Redis avec TTL;
+  \item signer ou hacher les identifiants de session au repos;
+  \item invalider proprement les sessions anciennes après rotation.
+\end{itemize}
+
+\subsection{Protection CSRF}
+
+\code{SameSite=Lax} réduit le risque CSRF, mais une protection CSRF dédiée peut
+être ajoutée si l'interface devient exposée publiquement avec cookies de
+session.
+
+Amélioration recommandée \riskpone{} :
+\begin{itemize}
+  \item token CSRF pour mutations web;
+  \item validation d'origine \code{Origin}/\code{Referer} pour routes sensibles;
+  \item rate limiting sur login/chat/checkout.
+\end{itemize}
+
+\subsection{Journalisation structurée}
+
+Les logs sont plus sûrs, mais un vrai audit trail structuré serait préférable :
+\begin{itemize}
+  \item identifiant court de session;
+  \item action métier;
+  \item résultat;
+  \item statut amont Swissdata;
+  \item jamais de token, mot de passe, cookie ou panier complet.
+\end{itemize}
+
+\subsection{Tests production avant déploiement}
+
+Avant le prochain déploiement, il faut refaire le scénario multi-compte sur
+l'environnement cible :
+\begin{itemize}
+  \item deux navigateurs ou profils séparés;
+  \item deux comptes Zelo distincts;
+  \item paniers marqueurs différents;
+  \item tentative de payload forgé;
+  \item checkout sur un seul compte de test validé.
+\end{itemize}
+
+\section{Conclusion}
+
+Le défaut initial était critique car il mélangeait l'identité client web avec
+une valeur contrôlable et partagée. Le correctif appliqué remet l'identité au
+bon endroit : côté serveur, après authentification, sous forme de session
+opaque.
+
+La solution améliore significativement la sécurité de Zelo AI :
+\begin{itemize}
+  \item séparation effective des sessions client;
+  \item suppression de \code{local-dev} pour les mutations web;
+  \item cookies \code{HttpOnly};
+  \item routes sensibles protégées par session;
+  \item logout serveur réel;
+  \item logs moins sensibles;
+  \item tests d'isolation ajoutés au preflight.
+\end{itemize}
+
+Le risque P0 identifié est donc traité pour l'architecture actuelle. Les
+prochaines étapes concernent surtout le durcissement production : session store
+Redis, protection CSRF/rate limit et audit trail structuré.
+
+\end{document}

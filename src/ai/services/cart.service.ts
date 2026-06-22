@@ -301,8 +301,20 @@ export async function handleAddToCartAction(
     : [];
 
   console.log("[ADD_TO_CART RESULT]", JSON.stringify({
-    resolvedItems,
-    updated,
+    resolvedItems: resolvedItems.map((item) => ({
+      query: item.query,
+      ok: item.ok,
+      productId: item.product?.id,
+      productName: item.product?.name,
+      basketQty: item.basketQty,
+      optionsSkipped: Boolean(item.optionsSkipped),
+    })),
+    basket: {
+      id: typeof updated?.id === "string" ? `${updated.id.slice(0, 6)}…` : undefined,
+      productLines: Array.isArray(updated?.products) ? updated.products.length : 0,
+      totalPriceTTC: updated?.totalPriceTTC,
+      estimatedDeliveryDate: updated?.estimatedDeliveryDate,
+    },
   }, null, 2));
 
   return {
