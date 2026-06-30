@@ -15,6 +15,11 @@
       .trim();
   }
 
+  function hasRecurringKeyword(input){
+    const normalized = normalizeText(input);
+    return /\b(?:commandes?\s+)?(?:recurrentes?|recurantes?|recurrantes?|recurring)\b/i.test(normalized);
+  }
+
   function tokenize(text){
     const normalized = normalizeText(text);
     return normalized ? normalized.split(" ").filter(Boolean) : [];
@@ -427,7 +432,9 @@
           rawScores[label] = (biases[label] || 0) + dotArtifactWeights(weights[label] || {}, vector);
         });
 
-        const ranking = Object.entries(rawScores).sort((left, right) => right[1] - left[1]);
+        const ranking = Object.entries(rawScores)
+          .filter(([label]) => label !== "recurring_orders" || hasRecurringKeyword(normalized))
+          .sort((left, right) => right[1] - left[1]);
         const bestEntry = ranking[0];
         const secondEntry = ranking[1] || [fallbackIntent?.key || "noop", bestEntry?.[1] || 0];
         if (!bestEntry || !intentsByKey[bestEntry[0]]) {
@@ -565,7 +572,9 @@
         const inputCounts = buildFeatureCounts(normalized);
         const inputVector = vectorizeCounts(inputCounts, idf);
 
-        const linearScores = scoreLinearModel(linearModel, inputCounts, intents).sort((left, right) => right.score - left.score);
+        const linearScores = scoreLinearModel(linearModel, inputCounts, intents)
+          .filter((entry) => entry.intentKey !== "recurring_orders" || hasRecurringKeyword(normalized))
+          .sort((left, right) => right.score - left.score);
         const linearMap = mapLinearScores(linearScores);
         const topLinearKey = linearScores[0]?.intentKey || fallbackIntent?.key;
 

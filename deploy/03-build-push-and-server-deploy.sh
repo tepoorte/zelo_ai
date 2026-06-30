@@ -22,7 +22,13 @@ SERVER_PORT="${SERVER_PORT:-5222}"
 SERVER_USER="${SERVER_USER:-ubuntu}"
 SERVER_RUNTIME_DIR="${SERVER_RUNTIME_DIR:-/home/ubuntu/zelo-ai}"
 LOCAL_COMPOSE_FILE="${LOCAL_COMPOSE_FILE:-deploy/docker-compose.with-ollama.yml}"
-LOCAL_ENV_FILE="${LOCAL_ENV_FILE:-deploy/production.env.example}"
+if [ -z "${LOCAL_ENV_FILE:-}" ]; then
+  if [ -f deploy/production.env ]; then
+    LOCAL_ENV_FILE="deploy/production.env"
+  else
+    LOCAL_ENV_FILE="deploy/production.env.example"
+  fi
+fi
 REMOTE_COMPOSE_FILE="${REMOTE_COMPOSE_FILE:-docker-compose.yml}"
 PROXYNET="${PROXYNET:-traefik-net}"
 
@@ -222,6 +228,66 @@ echo "== Render .env =="
 cp .env.template .env
 sed -i "s/^VERSION=.*/VERSION=$VERSION/" .env
 sed -i "s/^AI_HOST=.*/AI_HOST=$AI_HOST/" .env
+
+if [ -f "$BACKUP_DIR/zelo_ai_env_before_$STAMP.env" ]; then
+  echo "== Preserve existing production-only secrets when template leaves them empty =="
+
+  read_env_value() {
+    local key="$1"
+    local file="$2"
+    awk -F= -v key="$key" '$1 == key { sub(/^[^=]*=/, ""); print; exit }' "$file"
+  }
+
+  write_env_value() {
+    local key="$1"
+    local value="$2"
+    local file="$3"
+    local escaped
+    escaped="$(printf '%s\n' "$value" | sed -e 's/[\/&]/\\&/g')"
+    if grep -q "^${key}=" "$file"; then
+      sed -i "s/^${key}=.*/${key}=${escaped}/" "$file"
+    else
+      printf '%s=%s\n' "$key" "$value" >> "$file"
+    fi
+  }
+
+  PRESERVE_IF_TEMPLATE_EMPTY_KEYS="
+META_VERIFY_TOKEN
+META_APP_SECRET
+META_GRAPH_TOKEN
+META_WHATSAPP_PHONE_NUMBER_ID
+META_WHATSAPP_BUSINESS_ACCOUNT_ID
+WHATSAPP_ADMIN_TOKEN
+WHATSAPP_TEST_PHONE
+WHATSAPP_ALLOWED_PHONES
+SWISSDATA_ADMIN_TOKEN
+SWISSDATA_ADMIN_USERNAME
+SWISSDATA_ADMIN_PASSWORD
+SMTP_HOST
+SMTP_PORT
+SMTP_SECURE
+SMTP_USER
+SMTP_PASS
+SMTP_FROM
+OPENAI_API_KEY
+DOCKERUSERNAME
+DOCKERPASSWORD
+TOKEN
+TWILIO_SWISSDATA_USERNAME
+TWILIO_SWISSDATA_PASSWORD
+"
+
+  PRESERVED_COUNT=0
+  for KEY in $PRESERVE_IF_TEMPLATE_EMPTY_KEYS; do
+    NEW_VALUE="$(read_env_value "$KEY" .env)"
+    OLD_VALUE="$(read_env_value "$KEY" "$BACKUP_DIR/zelo_ai_env_before_$STAMP.env")"
+    if [ -z "$NEW_VALUE" ] && [ -n "$OLD_VALUE" ]; then
+      write_env_value "$KEY" "$OLD_VALUE" .env
+      PRESERVED_COUNT=$((PRESERVED_COUNT + 1))
+    fi
+  done
+  echo "Preserved $PRESERVED_COUNT existing secret/config values."
+fi
 
 echo "== Restore cache archive =="
 if tar -tzf "$ARCHIVE_BASENAME" | grep -Eq '^\.cache/(tmp|whatsapp-web-session)(/|$)'; then

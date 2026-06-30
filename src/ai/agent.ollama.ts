@@ -26,6 +26,7 @@ import { ollamaChat } from "./services/ollama-client.js";
 import {
   planUserIntent,
 } from "./services/planner.service.js";
+import { tryHandleRecurringOrders } from "./services/recurring-orders.service.js";
 import type {
   FrontendIntentHint,
   Plan,
@@ -275,6 +276,14 @@ export async function runAgentOllama(
   );
   if (pendingOptionReply) {
     return pendingOptionReply;
+  }
+
+  const recurringOrdersReply = await timeAsync(
+    "agent.recurring_orders",
+    async () => await tryHandleRecurringOrders(userRef, userText, intentHint)
+  );
+  if (recurringOrdersReply) {
+    return recurringOrdersReply;
   }
 
   if (isExplicitShowCartRequest(normalizedText)) {

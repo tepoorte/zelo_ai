@@ -50,6 +50,7 @@ export type FrontendIntentHint = {
     | "exec_cart"
     | "build_meal"
     | "discover_meals"
+    | "recurring_orders"
     | "noop";
   confidence?: number;
   family?: string;

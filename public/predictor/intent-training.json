@@ -92,6 +92,12 @@
       "veux"
     ]
   },
+  "feedback": {
+    "overrides": {
+      "ok": "exec_cart"
+    },
+    "reinforced": {}
+  },
   "intents": [
     {
       "key": "add_items",
@@ -325,6 +331,33 @@
         "que me conseilles tu si je recois des amis",
         "des produits pour la maison",
         "une selection pour la maison"
+      ]
+    },
+    {
+      "key": "recurring_orders",
+      "family": "recurring",
+      "label": "RECURRING_ORDERS",
+      "planner": "planner/recurring_orders",
+      "reason": "Le texte mentionne explicitement une commande recurrente existante a consulter ou modifier.",
+      "canonical": {
+        "mode": "fixed",
+        "default": "Montre mes commandes recurrentes"
+      },
+      "examples": [
+        "montre mes commandes recurrentes",
+        "montre mes commandes récurrentes",
+        "affiche mes commandes recurrentes",
+        "je veux voir mes commandes recurrentes",
+        "liste mes commandes recurrentes",
+        "qu est ce qu il y a dans ma commande recurrente",
+        "ajoute du pain a ma commande recurrente du mardi",
+        "rajoute du lait dans ma commande recurrante du jeudi",
+        "mets des oeufs dans la commande récurrente du vendredi",
+        "retire le lait de ma commande recurrente du jeudi",
+        "enleve 2 oeufs de ma commande recurrente",
+        "supprime les pommes de ma commande recurrante",
+        "garde 1 pain dans ma commande recurrente",
+        "modifie ma commande récurrente du mardi"
       ]
     },
     {

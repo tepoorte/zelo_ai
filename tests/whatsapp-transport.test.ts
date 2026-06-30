@@ -186,6 +186,46 @@ import { parseBaileysInboundTextMessage } from "../src/integrations/meta/whatsap
 }
 
 {
+  let passwordlessText = "";
+  const deps: WhatsAppSessionDeps = {
+    getStoredToken: () => undefined,
+    getWhatsAppCustomerSession: () => ({
+      userRef: "wa:41000000002",
+      phone: "41000000002",
+      phoneHash: "phone-hash",
+      customerId: "customer-1",
+      userId: "user-1",
+      email: "sa***@example.test",
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 60_000,
+    }),
+    ensurePasswordlessSession: async (input) => {
+      passwordlessText = input.text;
+      return { ok: false, message: "Session WhatsApp fermée." };
+    },
+    login: async () => {
+      throw new Error("password login must not be called in otp mode");
+    },
+    setSession: () => {
+      throw new Error("legacy session must not be set in otp mode");
+    },
+    nodeEnv: "production",
+    testPhone: "41000000002",
+    testUsername: "public-contact-003@example.invalid",
+    testPassword: "dummy_public_test_password",
+    authMode: "otp",
+  };
+
+  const result = await ensureWhatsAppSwissdataSession(
+    { userRef: "wa:41000000002", phone: "41000000002", text: "déconnexion" },
+    deps
+  );
+
+  assert.deepEqual(result, { ok: false, message: "Session WhatsApp fermée." });
+  assert.equal(passwordlessText, "déconnexion");
+}
+
+{
   let runAgentText = "";
   let hintAction = "";
   const deps: WhatsAppConversationDeps = {

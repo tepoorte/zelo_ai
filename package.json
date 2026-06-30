@@ -10,6 +10,8 @@
     "test:delivery": "node --loader ts-node/esm ./tests/delivery-date.test.ts",
     "test:add-items": "node --loader ts-node/esm ./tests/add-items-extractor.test.ts",
     "test:clear-cart": "node --loader ts-node/esm ./tests/clear-cart-extractor.test.ts",
+    "test:recurring-orders": "node --loader ts-node/esm ./tests/recurring-orders.test.ts",
+    "fixture:recurring-orders:samuel": "node --loader ts-node/esm ./tests/recurring-orders-samuel-fixture.ts",
     "test:agent-formatting": "node --loader ts-node/esm ./tests/agent-action-formatting.test.ts",
     "test:add-items-random": "node --loader ts-node/esm ./tests/add-items-random-catalog.test.ts",
     "test:build-meal-family": "node --loader ts-node/esm ./tests/build-meal-family.test.ts",

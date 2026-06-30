@@ -55,6 +55,13 @@ const requiredSpotChecks: Case[] = [
   { text: "Salut André, tu peux me mettre deux pains aux noix et un litre de lait pour demain ?", expected: "add_items" },
   { text: "Finalement enlève tout ce que j'ai mis dans le panier", expected: "clear_cart" },
   { text: "Salut, tu vas bien aujourd'hui ?", expected: "noop" },
+  { text: "Montre mes commandes récurrentes", expected: "recurring_orders" },
+  { text: "Ajoute du pain à ma commande récurrente du mardi", expected: "recurring_orders" },
+  { text: "Retire le lait de ma commande recurrante du jeudi", expected: "recurring_orders" },
+  { text: "ok", expected: "exec_cart" },
+  { text: "passe la commande", expected: "exec_cart" },
+  { text: "ajoute du pain", expected: "add_items" },
+  { text: "montre mon panier", expected: "show_cart" },
 ];
 
 async function main(): Promise<void> {

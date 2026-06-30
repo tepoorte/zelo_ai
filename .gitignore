@@ -12,6 +12,7 @@ __pycache__/
 **/.DS_Store
 
 # Local archives and temporary deployment backups
+deploy/production.env
 docs/*
 !docs/plan_travail_livrables/
 docs/plan_travail_livrables/*

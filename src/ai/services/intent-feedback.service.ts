@@ -9,6 +9,7 @@ type IntentKey =
   | "exec_cart"
   | "build_meal"
   | "discover_meals"
+  | "recurring_orders"
   | "noop";
 
 type FeedbackKind = "positive" | "correction";

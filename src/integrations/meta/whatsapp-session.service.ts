@@ -2,7 +2,10 @@ import { env } from "../../config/env.js";
 import { getStoredToken, login } from "../../swissdata/auth.js";
 import { setSession } from "../../swissdata/session.js";
 import { getWhatsAppCustomerSession } from "../../swissdata/whatsapp-customer-session.js";
-import { ensureWhatsAppPasswordlessSession } from "./whatsapp-auth.service.js";
+import {
+  ensureWhatsAppPasswordlessSession,
+  isWhatsAppLogoutCommand,
+} from "./whatsapp-auth.service.js";
 
 export type WhatsAppLoginCommand =
   | { kind: "missing" }
@@ -101,6 +104,10 @@ export async function ensureWhatsAppSwissdataSession(
   const loginCommand = parseWhatsAppLoginCommand(input.text);
 
   if (authMode !== "legacy_dev") {
+    if (isWhatsAppLogoutCommand(input.text)) {
+      return await deps.ensurePasswordlessSession(input);
+    }
+
     if (loginCommand.kind === "login" || loginCommand.kind === "invalid_format") {
       return await deps.ensurePasswordlessSession({
         userRef: input.userRef,

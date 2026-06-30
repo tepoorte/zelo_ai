@@ -36,10 +36,45 @@ export type PendingMealSuggestionChoice = {
   }>;
 };
 
+export type PendingRecurringOrderSummary = {
+  id: string;
+  name: string;
+  dayLabels: string[];
+  deliveryTime?: string | null;
+  nextDates: string[];
+  products: Array<{
+    productId: string;
+    name: string;
+    quantity: number;
+  }>;
+};
+
+export type PendingRecurringOrderChoice = {
+  type: "awaiting_recurring_order_choice";
+  originalText: string;
+  recurringOrders: PendingRecurringOrderSummary[];
+};
+
+export type PendingRecurringOrderChange = {
+  type: "awaiting_recurring_order_change";
+  recurringOrder: PendingRecurringOrderSummary;
+};
+
+export type PendingRecurringOrderConfirmation = {
+  type: "awaiting_recurring_order_confirmation";
+  recurringOrder: PendingRecurringOrderSummary;
+  beforeProducts: PendingRecurringOrderSummary["products"];
+  afterProducts: PendingRecurringOrderSummary["products"];
+  changes: string[];
+};
+
 export type PendingState =
   | PendingOptionChoice
   | PendingMealCategoryChoice
-  | PendingMealSuggestionChoice;
+  | PendingMealSuggestionChoice
+  | PendingRecurringOrderChoice
+  | PendingRecurringOrderChange
+  | PendingRecurringOrderConfirmation;
 
 const pending = new Map<string, PendingState>();
 

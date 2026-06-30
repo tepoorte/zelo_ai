@@ -483,6 +483,11 @@
         "propose-moi quelque chose avec 30 francs",
         "propose-moi quelque chose pour demain matin",
         "propose-moi quelque chose avec du poisson"
+      ],
+      recurring: [
+        "montre mes commandes récurrentes",
+        "ajoute du lait à ma commande récurrente du jeudi",
+        "retire le pain de ma commande récurrente du mardi"
       ]
     };
 
@@ -645,6 +650,14 @@
         };
       }
 
+      if (family === "recurring") {
+        return {
+          lead: "On dirait une demande sur tes commandes récurrentes.",
+          hint: "Tu peux les afficher, préparer un ajout ou un retrait, puis confirmer explicitement.",
+          suggestions: QUICK_ACTIONS.recurring
+        };
+      }
+
       return {
         lead: "Écris simplement ce que tu veux commander.",
         hint: "Exemples : propose-moi quelque chose avec 30 francs, ou ajoute 1 pain, 6 œufs et 2 yogourts nature.",
@@ -803,6 +816,19 @@
                     <span>supprime le pain</span>
                     <span>retire les œufs</span>
                     <span>enlève le kéfir du panier</span>
+                  </div>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
+                <summary>Gérer tes commandes récurrentes</summary>
+                <div class="guideStepBody">
+                  <p>Tu peux consulter tes commandes récurrentes existantes, puis préparer un ajout ou un retrait sur le jour voulu. Par sécurité, la modification n’est appliquée qu’après confirmation explicite.</p>
+                  <div class="guideExamples">
+                    <span>montre mes commandes récurrentes</span>
+                    <span>ajoute du lait à ma commande récurrente du jeudi</span>
+                    <span>retire le pain de ma commande récurrente du mardi</span>
+                    <span>confirme la commande récurrente</span>
                   </div>
                 </div>
               </details>

@@ -2254,6 +2254,11 @@
         "propose-moi quelque chose avec 30 francs",
         "propose-moi quelque chose pour demain matin",
         "propose-moi quelque chose avec du poisson"
+      ],
+      recurring: [
+        "montre mes commandes récurrentes",
+        "ajoute du lait à ma commande récurrente du jeudi",
+        "retire le pain de ma commande récurrente du mardi"
       ]
     };
 
@@ -2338,7 +2343,8 @@
       general: { label: "Générale", color: "#5CB135" },
       cart: { label: "Panier", color: "#5CB135" },
       add: { label: "Ajout", color: "#D9A441" },
-      meal: { label: "Repas", color: "#5CB135" }
+      meal: { label: "Repas", color: "#5CB135" },
+      recurring: { label: "Récurrente", color: "#2F8F83" }
     };
 
     const FEEDBACK_LABELS = {
@@ -2346,6 +2352,7 @@
       clear_cart: "Vider",
       show_cart: "Voir panier",
       exec_cart: "Commander",
+      recurring_orders: "Commandes récurrentes",
       build_meal: "Construire repas",
       discover_meals: "Propositions",
       noop: "Général"
@@ -3497,6 +3504,19 @@
               </details>
 
               <details class="guideStep guideNested">
+                <summary>Gérer tes commandes récurrentes</summary>
+                <div class="guideStepBody">
+                  <p>Tu peux consulter tes commandes récurrentes existantes, puis préparer un ajout ou un retrait sur le jour voulu. Par sécurité, la modification n’est appliquée qu’après confirmation explicite.</p>
+                  <div class="guideExamples">
+                    <span>montre mes commandes récurrentes</span>
+                    <span>ajoute du lait à ma commande récurrente du jeudi</span>
+                    <span>retire le pain de ma commande récurrente du mardi</span>
+                    <span>confirme la commande récurrente</span>
+                  </div>
+                </div>
+              </details>
+
+              <details class="guideStep guideNested">
                 <summary>Découvrir des idées ou passer commande</summary>
                 <div class="guideStepBody">
                   <p>Demande des idées avec « qu’est-ce que tu me proposes aujourd’hui ? ». Pour finaliser, écris « ok » ou « passe la commande ». Pour l’instant, la commande part sur la prochaine date disponible.</p>
@@ -3738,6 +3758,20 @@
         };
       }
 
+      if (intent === "recurring") {
+        return {
+          signalValue: "Commande récurrente",
+          signalMeta: "Le texte mentionne explicitement une commande récurrente.",
+          narrative: "L’assistant prépare une consultation ou une modification sécurisée d’une commande récurrente existante.",
+          lead: "Tu interagis avec tes commandes récurrentes.",
+          hint: "Tu peux les afficher, puis demander un ajout ou un retrait. La modification demande une confirmation explicite.",
+          sendEyebrow: "Récurrente",
+          sendLabel: "Gérer",
+          sendSub: "Je prépare l’action sur la commande récurrente.",
+          subtitle: "Les commandes récurrentes restent séparées du panier actuel."
+        };
+      }
+
       return {
         signalValue: "Réponse naturelle",
         signalMeta: "Le texte ressemble à une conversation générale.",
@@ -3784,7 +3818,7 @@
       predictorState.latestPrediction = prediction;
       predictorState.latestText = String(text || "");
       const intent = prediction.family;
-      const palette = intentPalette[intent];
+      const palette = intentPalette[intent] || intentPalette.general;
       const copy = getIntentCopy(intent, text, prediction);
 
       signalValue.textContent = copy.signalValue;

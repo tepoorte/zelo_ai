@@ -27,6 +27,7 @@ ACTIVE_LABELS = [
     "show_cart",
     "exec_cart",
     "discover_meals",
+    "recurring_orders",
     "noop",
 ]
 
@@ -40,6 +41,7 @@ LABEL_META = {
     "show_cart": {"family": "cart", "label": "SHOW_CART", "planner": "planner/show_cart"},
     "exec_cart": {"family": "cart", "label": "EXEC_CART", "planner": "planner/exec_cart"},
     "discover_meals": {"family": "meal", "label": "DISCOVER_MEALS", "planner": "planner/discover_meals"},
+    "recurring_orders": {"family": "recurring", "label": "RECURRING_ORDERS", "planner": "planner/recurring_orders"},
     "noop": {"family": "general", "label": "NOOP", "planner": "planner/general"},
 }
 
@@ -347,6 +349,55 @@ def generate_samples(products: list[str], full: bool, rng: random.Random) -> lis
     for _ in range(int(500 * scale)):
         add_augmented(rows, "exec_cart", rng.choice(exec_templates), "generated_exec", rng)
 
+    recurring_keywords = [
+        "commande récurrente",
+        "commandes récurrentes",
+        "commande recurrente",
+        "commandes recurrentes",
+        "commande recurrante",
+        "commandes recurrantes",
+        "recurrente",
+        "recurrante",
+        "récurrente",
+    ]
+    recurring_days = ["lundi", "mardi", "mercredi", "jeudi", "vendredi"]
+    recurring_show_templates = [
+        "montre mes {keyword}",
+        "affiche mes {keyword}",
+        "qu'est-ce que j'ai dans mes {keyword}",
+        "je veux voir mes {keyword}",
+        "liste mes {keyword}",
+        "mes {keyword}",
+    ]
+    recurring_add_templates = [
+        "ajoute {item} a ma {keyword} du {day}",
+        "rajoute {item} dans ma {keyword} du {day}",
+        "mets {item} dans la {keyword} du {day}",
+        "peux-tu ajouter {item} a ma {keyword}",
+        "ajoute {item} a mes {keyword}",
+    ]
+    recurring_remove_templates = [
+        "retire {item} de ma {keyword} du {day}",
+        "enleve {item} de la {keyword} du {day}",
+        "supprime {item} dans ma {keyword}",
+        "je ne veux plus {item} dans ma {keyword} du {day}",
+        "garde seulement 1 {item} dans ma {keyword}",
+    ]
+    for _ in range(int(900 * scale) + 20):
+        keyword = rng.choice(recurring_keywords)
+        day = rng.choice(recurring_days)
+        product = choose_product(products, rng)
+        item = qty_prefix(product, rng)
+        template = rng.choice(recurring_show_templates + recurring_add_templates + recurring_remove_templates)
+        add_augmented(
+            rows,
+            "recurring_orders",
+            template.format(keyword=keyword, day=day, item=item),
+            "generated_recurring",
+            rng,
+            8,
+        )
+
     needs = [
         "un repas sain",
         "quelque chose de leger",
@@ -420,8 +471,21 @@ def generate_samples(products: list[str], full: bool, rng: random.Random) -> lis
         ("discover_meals", "de quoi faire un repas sain"),
         ("discover_meals", "de quoi faire un repas vegetarien"),
         ("discover_meals", "j'aimerais faire des crepes"),
+        ("discover_meals", "je veux manger mieux mais sans trop cuisiner"),
+        ("add_items", "bonjour, selon les dispos: filets de perche, pommes, salade verte"),
         ("noop", "ja ne sai pas"),
-        ("noop", "ok"),
+        ("exec_cart", "ok"),
+        ("noop", "ok parfait"),
+        ("noop", "ok je comprends"),
+        ("noop", "ok je comprend"),
+        ("noop", "ok je comprends merci"),
+        ("noop", "ok parfait je comprends"),
+        ("noop", "ok c'est clair"),
+        ("noop", "ok c est clair"),
+        ("noop", "ok d'accord je comprends"),
+        ("noop", "ok d accord je comprends"),
+        ("noop", "ok merci"),
+        ("noop", "ok super"),
         ("noop", "bonjour"),
         ("noop", "bonjour andre"),
         ("noop", "merci c'est tout"),
@@ -432,6 +496,15 @@ def generate_samples(products: list[str], full: bool, rng: random.Random) -> lis
         ("noop", "d'accord merci"),
         ("noop", "d accord merci"),
         ("clear_cart", "supprime 1 lard du begnins de mon panier"),
+        ("exec_cart", "passe la commande"),
+        ("exec_cart", "finalise mon panier"),
+        ("add_items", "ajoute du pain"),
+        ("clear_cart", "vide mon panier"),
+        ("show_cart", "montre mon panier"),
+        ("recurring_orders", "montre mes commandes récurrentes"),
+        ("recurring_orders", "ajoute du pain à ma commande récurrente du mardi"),
+        ("recurring_orders", "retire le lait de ma commande recurrante du jeudi"),
+        ("recurring_orders", "enlève 2 oeufs de ma commande recurrente"),
     ]
     for label, text in hard_cases:
         for _ in range(14 if full else 4):
@@ -694,6 +767,18 @@ def fixed_ui_holdout() -> list[dict[str, Any]]:
             "De quoi faire un repas végétarien",
             "Je veux compléter mon panier pour demain matin",
             "J'ai envie d'un truc simple mais bon",
+        ],
+        "recurring_orders": [
+            "Montre mes commandes récurrentes",
+            "Je veux voir mes commandes recurrentes",
+            "Ajoute du pain à ma commande récurrente du mardi",
+            "Rajoute du lait dans ma commande recurrante du jeudi",
+            "Retire le lait de ma commande récurrente du vendredi",
+            "Enlève 2 oeufs de ma commande recurrente",
+            "Supprime les pommes de ma commande récurrente",
+            "Qu'est-ce qu'il y a dans ma commande recurrante du mardi ?",
+            "Liste mes commandes récurrentes",
+            "Garde 1 pain dans ma commande recurrente",
         ],
         "noop": [
             "Salut, tu vas bien aujourd'hui ?",
