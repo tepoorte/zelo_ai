@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-12T15:30:41.018Z",
+  "updatedAt": "2026-07-01T13:18:02.414Z",
   "events": [
     {
       "id": "b57624e0-2d89-4be3-aa2a-fd4dba06387e",
@@ -181,6 +181,26 @@
       "correctAction": "exec_cart",
       "createdAt": "2026-06-12T15:29:55.723Z",
       "userRef": "local-dev"
+    },
+    {
+      "id": "bdf28ccf-7872-4382-8476-36edb0728e9c",
+      "kind": "correction",
+      "text": "mon père voudrais des ide",
+      "normalizedText": "mon pere voudrais des ide",
+      "predictedAction": "add_items",
+      "correctAction": "discover_meals",
+      "createdAt": "2026-07-01T13:17:31.412Z",
+      "userRef": "web-ui"
+    },
+    {
+      "id": "423884bb-4b32-4a46-a217-ec027e1b0669",
+      "kind": "correction",
+      "text": "mon père voudrais des ide",
+      "normalizedText": "mon pere voudrais des ide",
+      "predictedAction": "add_items",
+      "correctAction": "discover_meals",
+      "createdAt": "2026-07-01T13:18:02.414Z",
+      "userRef": "web-ui"
     }
   ]
 }

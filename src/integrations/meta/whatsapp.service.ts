@@ -4,7 +4,11 @@ import { buildServerFrontendIntentHint } from "../../ai/services/server-intent-h
 import type { WhatsAppInboundTextMessage, WhatsAppOutboundTextMessage } from "./types.js";
 import { resolveWhatsAppUserRef } from "./store/identity-map.js";
 import { hasSeenMessage, markMessageSeen } from "./store/message-dedup.js";
-import { sendWhatsAppText, splitWhatsAppText } from "./whatsapp.send.js";
+import {
+  sendWhatsAppText,
+  sendWhatsAppTypingIndicator,
+  splitWhatsAppText,
+} from "./whatsapp.send.js";
 import {
   ensureWhatsAppSwissdataSession,
   isAllowedWhatsAppPhone,
@@ -36,6 +40,7 @@ export async function processIncomingWhatsAppText(message: WhatsAppInboundTextMe
     return { ok: true, deduped: true as const };
   }
   markMessageSeen(message.messageId);
+  void sendWhatsAppTypingIndicatorBestEffort(message.messageId);
 
   const reply = await buildWhatsAppConversationReply(message);
 
@@ -55,6 +60,16 @@ export async function processIncomingWhatsAppText(message: WhatsAppInboundTextMe
     userRef: reply.userRef,
     partsSent: parts.length,
   };
+}
+
+async function sendWhatsAppTypingIndicatorBestEffort(messageId?: string) {
+  if (!messageId) return;
+  try {
+    await sendWhatsAppTypingIndicator({ messageId });
+  } catch {
+    // UX-only signal: never block the actual assistant response if Meta rejects it.
+    console.warn("[whatsapp] typing indicator unavailable; continuing without it");
+  }
 }
 
 export async function buildWhatsAppConversationReply(

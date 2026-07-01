@@ -7,6 +7,10 @@ type GraphSendResponse = {
   messages?: Array<{ id?: string; message_status?: string }>;
 };
 
+type GraphStatusResponse = {
+  success?: boolean;
+};
+
 export async function sendWhatsAppText(input: WhatsAppOutboundTextMessage) {
   assertWhatsAppSendConfig();
 
@@ -43,6 +47,44 @@ export async function sendWhatsAppText(input: WhatsAppOutboundTextMessage) {
 
   if (!response.ok) {
     throw new Error(`WhatsApp send failed (${response.status}): ${raw}`);
+  }
+
+  return data;
+}
+
+export async function sendWhatsAppTypingIndicator(input: { messageId: string }) {
+  assertWhatsAppSendConfig();
+
+  const url =
+    `${metaEnv.graphBaseUrl}/${metaEnv.graphVersion}/` +
+    `${metaEnv.whatsappPhoneNumberId}/messages`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${metaEnv.graphToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      status: "read",
+      message_id: input.messageId,
+      typing_indicator: {
+        type: "text",
+      },
+    }),
+  });
+
+  const raw = await response.text();
+  let data: GraphStatusResponse | { error?: unknown };
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = { error: raw };
+  }
+
+  if (!response.ok) {
+    throw new Error(`WhatsApp typing indicator failed (${response.status}): ${raw}`);
   }
 
   return data;

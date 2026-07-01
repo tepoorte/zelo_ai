@@ -31,8 +31,12 @@ app.get("/", (_req, res) => {
 app.use("/health", healthRouter);
 app.use("/ai", aiRoutes());
 app.use("/integrations/meta/whatsapp", whatsappMetaRoutes());
-app.use("/integrations/meta/whatsapp-web", whatsappWebRoutes());
-app.use("/integrations/twilio/whatsapp", twilioWhatsAppRoutes());
+if (env.whatsappProvider === "web_session") {
+  app.use("/integrations/meta/whatsapp-web", whatsappWebRoutes());
+}
+if (env.whatsappProvider === "twilio") {
+  app.use("/integrations/twilio/whatsapp", twilioWhatsAppRoutes());
+}
 
 app.use(errorHandler);
 

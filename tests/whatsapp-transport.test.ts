@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 
-import { splitWhatsAppText } from "../src/integrations/meta/whatsapp.send.js";
+import { metaEnv } from "../src/integrations/meta/env.js";
+import {
+  sendWhatsAppTypingIndicator,
+  splitWhatsAppText,
+} from "../src/integrations/meta/whatsapp.send.js";
 import { buildWhatsAppOtpEmail } from "../src/integrations/meta/whatsapp-auth-mailer.service.js";
 import {
   buildWhatsAppOtpSentMessage,
@@ -123,6 +127,54 @@ import { parseBaileysInboundTextMessage } from "../src/integrations/meta/whatsap
   assert.equal(email.html.includes("+41 00 000 00 02"), true);
   assert.equal(/password|mot de passe|hash|token/i.test(email.text), false);
   assert.equal(/password|mot de passe|hash|token/i.test(email.html), false);
+}
+
+{
+  const originalFetch = globalThis.fetch;
+  const originalMetaEnv = {
+    graphToken: metaEnv.graphToken,
+    graphBaseUrl: metaEnv.graphBaseUrl,
+    graphVersion: metaEnv.graphVersion,
+    whatsappPhoneNumberId: metaEnv.whatsappPhoneNumberId,
+  };
+  let calledUrl = "";
+  let calledInit: RequestInit | undefined;
+
+  try {
+    metaEnv.graphToken = "TEST_GRAPH_TOKEN";
+    metaEnv.graphBaseUrl = "https://graph.facebook.test";
+    metaEnv.graphVersion = "v25.0";
+    metaEnv.whatsappPhoneNumberId = "PHONE_NUMBER_ID";
+    globalThis.fetch = (async (input: any, init?: RequestInit) => {
+      calledUrl = String(input);
+      calledInit = init;
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
+    }) as typeof fetch;
+
+    const response = await sendWhatsAppTypingIndicator({ messageId: "wamid.TEST" });
+
+    assert.deepEqual(response, { success: true });
+    assert.equal(calledUrl, "https://graph.facebook.test/v25.0/PHONE_NUMBER_ID/messages");
+    assert.equal(calledInit?.method, "POST");
+    assert.deepEqual(calledInit?.headers, {
+      Authorization: "Bearer TEST_GRAPH_TOKEN",
+      "Content-Type": "application/json",
+    });
+    assert.deepEqual(JSON.parse(String(calledInit?.body)), {
+      messaging_product: "whatsapp",
+      status: "read",
+      message_id: "wamid.TEST",
+      typing_indicator: {
+        type: "text",
+      },
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    metaEnv.graphToken = originalMetaEnv.graphToken;
+    metaEnv.graphBaseUrl = originalMetaEnv.graphBaseUrl;
+    metaEnv.graphVersion = originalMetaEnv.graphVersion;
+    metaEnv.whatsappPhoneNumberId = originalMetaEnv.whatsappPhoneNumberId;
+  }
 }
 
 {

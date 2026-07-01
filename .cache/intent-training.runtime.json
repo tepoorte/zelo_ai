@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 1,
   "fallbackIntent": "noop",
   "common": {
     "stopwords": [
@@ -94,9 +94,112 @@
   },
   "feedback": {
     "overrides": {
-      "ok": "exec_cart"
+      "ok": "exec_cart",
+      "j'ai trouve un person dehors la maison": "noop",
+      "mon pere voudrais des ide": "discover_meals"
     },
-    "reinforced": {}
+    "reinforced": {
+      "noop": [
+        {
+          "text": "comment je vais a la gare a pie?",
+          "normalized": "comment je vais a la gare a pie",
+          "count": 2
+        },
+        {
+          "text": "ja ne sai pas",
+          "normalized": "ja ne sai pas",
+          "count": 2
+        },
+        {
+          "text": "j'ai trouvé un person dehors la maison",
+          "normalized": "j'ai trouve un person dehors la maison",
+          "count": 4
+        }
+      ],
+      "add_items": [
+        {
+          "text": "Non, je veux le pain balance coupé en tranche",
+          "normalized": "non je veux le pain balance coupe en tranche",
+          "count": 2
+        },
+        {
+          "text": "A. Lait Bio pasteurisé",
+          "normalized": "a lait bio pasteurise",
+          "count": 2
+        },
+        {
+          "text": "Salut André, j’espère que tu vas bien. Si c’est possible pour ta tournée, je te prends volontiers 2 litres de lait sapalet, 8 œufs, 250 gr de fromage aléatoire gimelan et 2kg de pommes. Si pas possible ou que c’est trop, c’est pas grave! Merci et bonne journée, Loraine",
+          "normalized": "salut andre j espere que tu vas bien si c est possible pour ta tournee je te prends volontiers 2 litres de lait sapalet 8 ufs 250 gr de fromage aleatoire gimelan et 2kg de pommes si pas possible ou que c est trop c est pas grave merci et bonne journee loraine",
+          "count": 2
+        },
+        {
+          "text": "je veux une farine pour une pizz",
+          "normalized": "je veux une farine pour une pizz",
+          "count": 2
+        },
+        {
+          "text": "quels tomates as-tu ?",
+          "normalized": "quels tomates as tu",
+          "count": 2
+        },
+        {
+          "text": "lard",
+          "normalized": "lard",
+          "count": 2
+        }
+      ],
+      "clear_cart": [
+        {
+          "text": "Enlève le pain balance du panier",
+          "normalized": "enleve le pain balance du panier",
+          "count": 2
+        },
+        {
+          "text": "supprime 1 lard du begnins de mon panier",
+          "normalized": "supprime 1 lard du begnins de mon panier",
+          "count": 2
+        },
+        {
+          "text": "garde hot dog",
+          "normalized": "garde hot dog",
+          "count": 2
+        }
+      ],
+      "discover_meals": [
+        {
+          "text": "aide moi",
+          "normalized": "aide moi",
+          "count": 2
+        },
+        {
+          "text": "une boisson pour accompagner",
+          "normalized": "une boisson pour accompagner",
+          "count": 2
+        },
+        {
+          "text": "j’ai envie d’un truc simple mais bon",
+          "normalized": "j ai envie d un truc simple mais bon",
+          "count": 2
+        },
+        {
+          "text": "je veux compléter mon panier pour demain matin",
+          "normalized": "je veux completer mon panier pour demain matin",
+          "count": 2
+        },
+        {
+          "text": "mon père voudrais des ide",
+          "normalized": "mon pere voudrais des ide",
+          "count": 4
+        }
+      ],
+      "exec_cart": [
+        {
+          "text": "ok",
+          "normalized": "ok",
+          "count": 2
+        }
+      ]
+    }
   },
   "intents": [
     {
@@ -162,6 +265,12 @@
         "j aime avoir ajoutee",
         "j aimerais mettre du lard de begnins",
         "je veux du lard de begnins dans mon panier",
+        "Non, je veux le pain balance coupé en tranche",
+        "A. Lait Bio pasteurisé",
+        "Salut André, j’espère que tu vas bien. Si c’est possible pour ta tournée, je te prends volontiers 2 litres de lait sapalet, 8 œufs, 250 gr de fromage aléatoire gimelan et 2kg de pommes. Si pas possible ou que c’est trop, c’est pas grave! Merci et bonne journée, Loraine",
+        "je veux une farine pour une pizz",
+        "quels tomates as-tu ?",
+        "lard",
         "bonjour andre, je veux bien 4 kg de Sels de bain Eucalyptus, 1 kg de Chocolat Blanc Amandes, 6 Pain au lait (allongé), 200g de Lassi, 4 Fizzy Mirtillo, merci",
         "Salut Andr, peux-tu me mettre 2 kg de Pot Zélo, 4 kg de Confiture aux abricots ?",
         "ajoute 3 litres de Mille-Feuille par 3 puis 3 kg de Lentilles Corail Bio",
@@ -895,6 +1004,9 @@
         "retire le panier budget 50 de mon panier",
         "supprime panier budget 50",
         "enleve panier budget 50",
+        "Enlève le pain balance du panier",
+        "supprime 1 lard du begnins de mon panier",
+        "garde hot dog",
         "enleve juste 400g de Capsules à Café Rose Bio",
         "supprime 3 litres de Naan à l'ail de mon panier",
         "supprime Brosse pour vaisselle de mon panier",
@@ -1036,7 +1148,6 @@
         "retire 300g de oCnfiture aux abricots",
         "enleev tout du panier",
         "supprime 5 Mousse aux 3 chocolats (pour 4) de mon panier",
-        "supprime 1 lard du begnins de mon panier",
         "finalement pas de 1 litre de Penne (pâtes)",
         "supprime 2 kg de Escalope de veau de mon panier",
         "tu peux enlever 4 Ananas séchés seulement",
@@ -1687,6 +1798,7 @@
         "on commande",
         "je veux commander maintenant",
         "termine la commande",
+        "ok",
         "ko",
         "finalise la commaned",
         "c est bon tu peux envoyer la commande",
@@ -1789,6 +1901,10 @@
         "que me conseilles tu si je recois des amis",
         "des produits pour la maison",
         "une selection pour la maison",
+        "aide moi",
+        "j’ai envie d’un truc simple mais bon",
+        "je veux compléter mon panier pour demain matin",
+        "mon père voudrais des ide",
         "je ne sais pas quoi prendre pour de quoi faire un repas sain",
         "que prendre si je veux une selection de fruits",
         "je chreche une idee pas trop chere",
@@ -1819,7 +1935,6 @@
         "tu em conseilles quoi pour une idee vegetarienne",
         "propose moi quelque chose de leger",
         "propos emoi des idees pour mieux manger",
-        "aide moi",
         "que prendre si je veux de quoi faire un repas vegetarien",
         "donne moi des idees pour je ne sais pas quoi commander",
         "que prendre si je veux de quoi faire un repas sian",
@@ -2060,7 +2175,6 @@
         "tu me conseilles quoi pour un petit dejeuner equilibre",
         "propose mo ije ne sais pas quoi commander",
         "donne moi des idees pour une idee pas trop chere",
-        "j’ai envie d’un truc simple mais bon",
         "donne moi des idees pour un repas sain",
         "rpopose moi un dessert simple",
         "j'ai envie de je ne sais pas quoi commander",
@@ -2769,6 +2883,9 @@
         "bonne journee",
         "raconte moi quelque chose",
         "que fais tu aujourd hui",
+        "comment je vais a la gare a pie?",
+        "ja ne sai pas",
+        "j'ai trouvé un person dehors la maison",
         "a plus trad",
         "raconte moi quelque cohse",
         "quel temps fait-il aujourd'hui",
@@ -2811,13 +2928,11 @@
         "ok je compernds",
         "qelle heure est-il",
         "ok je comprends",
-        "comment je vais a la gare a pie?",
         "ca rolue",
         "ca roule",
         "ok super",
         "ca ruole",
         "je teste seulment l'application",
-        "j'ai trouvé un person dehors la maison",
         "merci beauocup",
         "quel temps fait-il aujurd'hui",
         "commet ca va",
@@ -2876,7 +2991,6 @@
         "ja ne sai psa",
         "tu fais quoi aujour'dhui",
         "quel temps fait-il aujourd'hi",
-        "ja ne sai pas",
         "bonojur",
         "quel temps fait-il aujoud'hui",
         "hah amerci c'est drole",
@@ -2895,6 +3009,7 @@
       ]
     }
   ],
+  "updatedAt": "2026-07-01T13:18:15.763Z",
   "intentModel": {
     "type": "linear_tfidf_v1",
     "labels": [
@@ -105671,5 +105786,260 @@
       }
     }
   },
-  "updatedAt": "2026-06-29T12:42:11.160939+00:00"
+  "intentModelMeta": {
+    "generatedAt": "2026-06-29T12:42:11.160939+00:00",
+    "validationReport": {
+      "accuracy": 0.9947,
+      "total": 1136,
+      "perLabel": {
+        "add_items": {
+          "precision": 0.9938,
+          "recall": 0.9984,
+          "total": 640,
+          "tp": 639,
+          "fp": 4,
+          "fn": 1
+        },
+        "clear_cart": {
+          "precision": 0.9962,
+          "recall": 0.9925,
+          "total": 266,
+          "tp": 264,
+          "fp": 1,
+          "fn": 2
+        },
+        "show_cart": {
+          "precision": 1,
+          "recall": 0.9,
+          "total": 10,
+          "tp": 9,
+          "fp": 0,
+          "fn": 1
+        },
+        "exec_cart": {
+          "precision": 1,
+          "recall": 0.9091,
+          "total": 11,
+          "tp": 10,
+          "fp": 0,
+          "fn": 1
+        },
+        "discover_meals": {
+          "precision": 1,
+          "recall": 1,
+          "total": 70,
+          "tp": 70,
+          "fp": 0,
+          "fn": 0
+        },
+        "recurring_orders": {
+          "precision": 1,
+          "recall": 1,
+          "total": 114,
+          "tp": 114,
+          "fp": 0,
+          "fn": 0
+        },
+        "noop": {
+          "precision": 0.96,
+          "recall": 0.96,
+          "total": 25,
+          "tp": 24,
+          "fp": 1,
+          "fn": 1
+        }
+      },
+      "confusionMatrix": {
+        "add_items": {
+          "add_items": 639,
+          "clear_cart": 1
+        },
+        "clear_cart": {
+          "clear_cart": 264,
+          "add_items": 2
+        },
+        "show_cart": {
+          "show_cart": 9,
+          "add_items": 1
+        },
+        "exec_cart": {
+          "exec_cart": 10,
+          "noop": 1
+        },
+        "discover_meals": {
+          "discover_meals": 70
+        },
+        "recurring_orders": {
+          "recurring_orders": 114
+        },
+        "noop": {
+          "noop": 24,
+          "add_items": 1
+        }
+      },
+      "confidenceThresholds": {
+        "add_items": 45,
+        "clear_cart": 45,
+        "show_cart": 68,
+        "exec_cart": 68,
+        "discover_meals": 45,
+        "recurring_orders": 45,
+        "noop": 68
+      },
+      "failures": [
+        {
+          "text": "reitre 3 litres de Sauce soja traditionnelle",
+          "expected": "clear_cart",
+          "detected": "add_items",
+          "confidence": 16,
+          "margin": 0.1102,
+          "secondChoice": "clear_cart"
+        },
+        {
+          "text": "finalemen tpas de 1 litre de A. Citron Bio",
+          "expected": "clear_cart",
+          "detected": "add_items",
+          "confidence": 31,
+          "margin": 0.3257,
+          "secondChoice": "clear_cart"
+        },
+        {
+          "text": "qu ies-tu",
+          "expected": "noop",
+          "detected": "add_items",
+          "confidence": 17,
+          "margin": 0.1086,
+          "secondChoice": "clear_cart"
+        },
+        {
+          "text": "ok",
+          "expected": "exec_cart",
+          "detected": "noop",
+          "confidence": 71,
+          "margin": 1.2444,
+          "secondChoice": "discover_meals"
+        },
+        {
+          "text": "rajuote juste 250g de Pain au chocolat - banane",
+          "expected": "add_items",
+          "detected": "clear_cart",
+          "confidence": 21,
+          "margin": 0.0683,
+          "secondChoice": "add_items"
+        },
+        {
+          "text": "qu est ce qu il y a dans mon panier",
+          "expected": "show_cart",
+          "detected": "add_items",
+          "confidence": 18,
+          "margin": 0.0241,
+          "secondChoice": "clear_cart"
+        }
+      ]
+    },
+    "uiHoldoutReport": {
+      "accuracy": 0.989,
+      "total": 91,
+      "perLabel": {
+        "add_items": {
+          "precision": 1,
+          "recall": 0.9524,
+          "total": 21,
+          "tp": 20,
+          "fp": 0,
+          "fn": 1
+        },
+        "clear_cart": {
+          "precision": 1,
+          "recall": 1,
+          "total": 20,
+          "tp": 20,
+          "fp": 0,
+          "fn": 0
+        },
+        "show_cart": {
+          "precision": 0,
+          "recall": 0,
+          "total": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0
+        },
+        "exec_cart": {
+          "precision": 0,
+          "recall": 0,
+          "total": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0
+        },
+        "discover_meals": {
+          "precision": 1,
+          "recall": 1,
+          "total": 20,
+          "tp": 20,
+          "fp": 0,
+          "fn": 0
+        },
+        "recurring_orders": {
+          "precision": 0.9091,
+          "recall": 1,
+          "total": 10,
+          "tp": 10,
+          "fp": 1,
+          "fn": 0
+        },
+        "noop": {
+          "precision": 1,
+          "recall": 1,
+          "total": 20,
+          "tp": 20,
+          "fp": 0,
+          "fn": 0
+        }
+      },
+      "confusionMatrix": {
+        "add_items": {
+          "add_items": 20,
+          "recurring_orders": 1
+        },
+        "clear_cart": {
+          "clear_cart": 20
+        },
+        "show_cart": {},
+        "exec_cart": {},
+        "discover_meals": {
+          "discover_meals": 20
+        },
+        "recurring_orders": {
+          "recurring_orders": 10
+        },
+        "noop": {
+          "noop": 20
+        }
+      },
+      "confidenceThresholds": {
+        "add_items": 45,
+        "clear_cart": 45,
+        "show_cart": 68,
+        "exec_cart": 68,
+        "discover_meals": 45,
+        "recurring_orders": 45,
+        "noop": 45
+      },
+      "failures": [
+        {
+          "text": "A. Lait Bio pasteurisé (Sapalet)",
+          "expected": "add_items",
+          "detected": "recurring_orders",
+          "confidence": 21,
+          "margin": 0.06,
+          "secondChoice": "add_items"
+        }
+      ]
+    },
+    "hiddenIntents": [
+      "build_meal"
+    ]
+  }
 }
