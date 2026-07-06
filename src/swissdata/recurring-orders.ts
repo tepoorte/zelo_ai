@@ -24,6 +24,10 @@ export type CustomerRecurringOrder = {
   customerId: string;
   daysOfWeek: number[];
   deliveryTime?: string | null;
+  frequencyUnit?: string | null;
+  recurringOrderStatus?: string | null;
+  start?: string | null;
+  end?: string | null;
   nextDates: string[];
   products: RecurringOrderProductLine[];
   raw?: Record<string, unknown>;
@@ -120,6 +124,10 @@ function normalizeRecurringOrder(
     customerId,
     daysOfWeek: days,
     deliveryTime: typeof order?.deliveryTime === "string" ? order.deliveryTime : null,
+    frequencyUnit: typeof order?.frequencyUnit === "string" ? order.frequencyUnit : null,
+    recurringOrderStatus: typeof order?.recurringOrderStatus === "string" ? order.recurringOrderStatus : null,
+    start: order?.start ? String(order.start) : null,
+    end: order?.end ? String(order.end) : null,
     nextDates: rawNextDates.map((date: unknown) => String(date)).filter(Boolean).slice(0, 5),
     products: normalizeProducts(Array.isArray(order?.products) ? order.products : [], productNames),
     raw: order && typeof order === "object" ? order : undefined,

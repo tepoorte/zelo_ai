@@ -41,6 +41,11 @@ export type PendingRecurringOrderSummary = {
   name: string;
   dayLabels: string[];
   deliveryTime?: string | null;
+  frequencyUnit?: string | null;
+  frequencyLabel?: string | null;
+  recurringOrderStatus?: string | null;
+  start?: string | null;
+  end?: string | null;
   nextDates: string[];
   products: Array<{
     productId: string;

@@ -11,6 +11,13 @@ import { extractAddItemsFromText, type ExtractedAddItemsPlan } from "./add-items
 import { extractClearCartPartialFromBasket } from "./clear-cart-extractor.service.js";
 import { normalizeLooseText } from "./product-options.service.js";
 import { resolveProduct } from "./product-resolution.service.js";
+import {
+  recurringFrequencyLabel,
+  recurringStatusLabel,
+  recurringTargetAliases,
+  resolveRecurringOrderTarget,
+  type RecurringOrderTargetResolution,
+} from "./recurring-order-target-resolver.service.js";
 import type { AgentResponse } from "./agent-response.service.js";
 import type { FrontendIntentHint } from "./planner-types.js";
 
@@ -35,7 +42,7 @@ const DEFAULT_DEPS: RecurringOrdersDeps = {
 const CONFIRM_RECURRING_TEXT = "confirme la commande récurrente";
 
 function recurringKeywordPattern(): RegExp {
-  return /\b(?:commandes?\s+)?(?:r[eé]currentes?|recurrentes?|r[eé]curantes?|recurantes?|recurrantes?|r[eé]currantes?|recurr?ing)\b/i;
+  return /\b(?:commandes?\s+)?(?:r[eé]currentes?|recurrentes?|r[eé]curantes?|recurantes?|recurrantes?|r[eé]currantes?|r[eé]currences?|recurrences?|recurrances?|recurances?|recurr?ing)\b/i;
 }
 
 function hasRecurringKeyword(text: string): boolean {
@@ -52,21 +59,70 @@ function isShortOk(text: string): boolean {
 }
 
 function isCancel(text: string): boolean {
-  return /\b(annule|annuler|cancel|oublie|laisse tomber|stop)\b/i.test(normalizeLooseText(text));
+  return /\b(annule|annuler|annul|annull|annulla|cancel|oublie|laisse tomber|stop)\b/i.test(normalizeLooseText(text));
 }
 
 function detectOperation(text: string): "show" | "add" | "remove" {
   const normalized = normalizeLooseText(text);
 
-  if (/\b(retire|retirer|enleve|enlever|supprime|supprimer|ote|ôter|pas de|plus de|je ne veux plus|garde|gardes)\b/i.test(normalized)) {
+  if (removeOperationPattern().test(normalized)) {
     return "remove";
   }
 
-  if (/\b(ajoute|ajouter|rajoute|rajouter|mets|met|mettre|prends|prendre)\b/i.test(normalized)) {
+  if (addOperationPattern().test(normalized)) {
     return "add";
   }
 
   return "show";
+}
+
+type RecurringChangeOperation = "add" | "remove";
+
+type RecurringChangeStep = {
+  operation: RecurringChangeOperation;
+  text: string;
+};
+
+function addOperationPattern(): RegExp {
+  return /\b(ajoute|ajouter|rajoute|rajouter|mets|met|mettre|prends|prendre)\b/i;
+}
+
+function removeOperationPattern(): RegExp {
+  return /\b(retire|retirer|enleve|enlever|supprime|supprimer|ote|oter|pas de|plus de|je ne veux plus|garde|gardes)\b/i;
+}
+
+function splitChangeSteps(text: string): RecurringChangeStep[] {
+  const normalized = normalizeLooseText(text);
+  const triggers: Array<{ index: number; operation: RecurringChangeOperation }> = [];
+  const triggerPattern = /\b(ajoute|ajouter|rajoute|rajouter|mets|met|mettre|prends|prendre|retire|retirer|enleve|enlever|supprime|supprimer|ote|oter|garde|gardes)\b/gi;
+
+  for (const match of normalized.matchAll(triggerPattern)) {
+    const word = match[1] || "";
+    const index = match.index ?? -1;
+    if (index < 0) continue;
+    triggers.push({
+      index,
+      operation: addOperationPattern().test(word) ? "add" : "remove",
+    });
+  }
+
+  const phraseRemove = normalized.search(/\b(pas de|plus de|je ne veux plus)\b/i);
+  if (phraseRemove >= 0) {
+    triggers.push({ index: phraseRemove, operation: "remove" });
+  }
+
+  const sorted = triggers
+    .sort((left, right) => left.index - right.index)
+    .filter((trigger, index, all) => index === 0 || trigger.index !== all[index - 1]?.index);
+
+  if (!sorted.length) return [];
+  if (sorted.length === 1) return [{ operation: sorted[0].operation, text }];
+
+  return sorted.map((trigger, index) => {
+    const next = sorted[index + 1];
+    const segment = normalized.slice(trigger.index, next?.index ?? normalized.length);
+    return { operation: trigger.operation, text: segment };
+  });
 }
 
 function dayLabel(day: number): string {
@@ -97,6 +153,10 @@ function summarizeRecurringOrder(order: CustomerRecurringOrder): PendingRecurrin
     name: order.name,
     dayLabels: order.daysOfWeek.map(dayLabel),
     deliveryTime: order.deliveryTime,
+    frequencyUnit: order.frequencyUnit,
+    recurringOrderStatus: order.recurringOrderStatus,
+    start: order.start,
+    end: order.end,
     nextDates: order.nextDates,
     products: order.products.map((line) => ({
       productId: line.productId,
@@ -135,8 +195,15 @@ function formatRecurringHeader(order: PendingRecurringOrderSummary, index?: numb
   const displayName = recurringDisplayName(order);
   const days = order.dayLabels.length ? order.dayLabels.join(", ") : "jour non précisé";
   const time = order.deliveryTime ? ` à ${order.deliveryTime}` : "";
+  const frequency = recurringFrequencyLabel(order);
+  const status = recurringStatusLabel(order.recurringOrderStatus);
+  const details = [
+    frequency,
+    status ? `statut ${status}` : "",
+  ].filter(Boolean);
+  const detailText = details.length ? `, ${details.join(", ")}` : "";
   const dates = order.nextDates.length ? `\n   Prochaines dates : ${order.nextDates.slice(0, 3).join(", ")}` : "";
-  return `${prefix}${displayName}\n   ${days}${time}${dates}`;
+  return `${prefix}${displayName}\n   ${days}${time}${detailText}${dates}`;
 }
 
 function formatRecurringOrdersList(orders: PendingRecurringOrderSummary[]): string {
@@ -152,6 +219,13 @@ function formatRecurringOrdersList(orders: PendingRecurringOrderSummary[]): stri
   );
 }
 
+function formatRecurringOrderChoicePrompt(orders: PendingRecurringOrderSummary[]): string {
+  return (
+    `${formatRecurringOrdersList(orders)}\n\n` +
+    `Laquelle veux-tu modifier ? Réponds avec le numéro, le nom, l’horaire, la fréquence ou une prochaine date.`
+  );
+}
+
 function compactProducts(products: PendingRecurringOrderSummary["products"]): Array<{ productId: string; quantity: number }> {
   return products
     .map((line) => ({
@@ -161,61 +235,35 @@ function compactProducts(products: PendingRecurringOrderSummary["products"]): Ar
     .filter((line) => line.productId && line.quantity > 0);
 }
 
-function normalizeIndexChoice(text: string): number | null {
-  const normalized = normalizeLooseText(text);
-  const numeric = normalized.match(/\b([1-9][0-9]?)\b/);
-  if (numeric) return Number(numeric[1]) - 1;
-
-  const words: Record<string, number> = {
-    un: 0,
-    une: 0,
-    premier: 0,
-    premiere: 0,
-    deux: 1,
-    deuxieme: 1,
-    second: 1,
-    seconde: 1,
-    trois: 2,
-    troisieme: 2,
-    quatre: 3,
-    quatrieme: 3,
-    cinq: 4,
-    cinquieme: 4,
-  };
-
-  for (const [word, index] of Object.entries(words)) {
-    if (new RegExp(`\\b${word}\\b`).test(normalized)) return index;
-  }
-
-  return null;
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function selectRecurringOrder(
-  text: string,
-  orders: PendingRecurringOrderSummary[]
-): PendingRecurringOrderSummary | null {
-  if (orders.length === 1) return orders[0];
+function removeLoosePhrase(text: string, normalizedPhrase: string): string {
+  const words = normalizeLooseText(normalizedPhrase)
+    .split(/\s+/)
+    .map((word) => escapeRegExp(word))
+    .filter(Boolean);
+  if (!words.length) return text;
+  const pattern = words.join("[\\s\\W_]+");
+  return text.replace(new RegExp(`\\b${pattern}\\b`, "gi"), " ");
+}
 
-  const normalized = normalizeLooseText(text);
-  const selectedIndex = normalizeIndexChoice(text);
-  if (selectedIndex != null && orders[selectedIndex]) {
-    return orders[selectedIndex];
+function selectedRecurringOrder(
+  resolution: RecurringOrderTargetResolution
+): PendingRecurringOrderSummary | null {
+  return resolution.status === "selected" ? resolution.order : null;
+}
+
+function ambiguousRecurringOrders(
+  resolution: RecurringOrderTargetResolution,
+  fallbackOrders: PendingRecurringOrderSummary[]
+): PendingRecurringOrderSummary[] {
+  if (resolution.status === "ambiguous" && resolution.candidates.length) {
+    return resolution.candidates.map((candidate) => candidate.order);
   }
 
-  const dayMatches = orders.filter((order) =>
-    order.dayLabels.some((label) => new RegExp(`\\b${normalizeLooseText(label)}\\b`).test(normalized))
-  );
-  if (dayMatches.length === 1) return dayMatches[0];
-
-  const nameMatches = orders.filter((order) => {
-    const names = [order.name, recurringDisplayName(order)]
-      .map((name) => normalizeLooseText(name))
-      .filter(Boolean);
-    return names.some((normalizedName) => normalized.includes(normalizedName) || normalizedName.includes(normalized));
-  });
-  if (nameMatches.length === 1) return nameMatches[0];
-
-  return null;
+  return fallbackOrders;
 }
 
 function sanitizeRecurringChangeText(text: string, order?: PendingRecurringOrderSummary): string {
@@ -225,10 +273,19 @@ function sanitizeRecurringChangeText(text: string, order?: PendingRecurringOrder
   cleaned = cleaned.replace(/\b(a|à|dans|pour|sur)\s+(ma|mes|la|les|une|des)\s+commande[s]?\b/gi, " ");
   cleaned = cleaned.replace(/\b(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/gi, " ");
   if (order?.name) {
-    cleaned = cleaned.replace(new RegExp(order.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), " ");
+    cleaned = cleaned.replace(new RegExp(escapeRegExp(order.name), "gi"), " ");
     const displayName = recurringDisplayName(order);
-    cleaned = cleaned.replace(new RegExp(displayName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), " ");
+    cleaned = cleaned.replace(new RegExp(escapeRegExp(displayName), "gi"), " ");
   }
+  if (order) {
+    for (const alias of recurringTargetAliases(order)) {
+      cleaned = removeLoosePhrase(cleaned, alias);
+    }
+  }
+  cleaned = cleaned.replace(/\b(?:(?:toutes?|tous)\s+les?|chaque)\s+(?:\d+|un|une|deux|trois|quatre|cinq|six|sept|huit|neuf|dix)\s+(?:semaines?|sem\.?|mois)\b/gi, " ");
+  cleaned = cleaned.replace(/\b(?:1|une?)\s+(?:sem\.?|semaine)\s+sur\s+(?:\d+|deux|trois|quatre|cinq|six|sept|huit|neuf|dix)\b/gi, " ");
+  cleaned = cleaned.replace(/\b\d{1,2}\s*h(?:\s*\d{2})?\b/gi, " ");
+  cleaned = cleaned.replace(/\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/g, " ");
   return cleaned.replace(/\s+/g, " ").trim();
 }
 
@@ -457,10 +514,27 @@ async function prepareRecurringChange(
     };
   }
 
+  const steps = splitChangeSteps(text);
+  if (!steps.length) {
+    return {
+      message:
+        `Je n’ai pas identifié de modification sûre à appliquer à « ${displayName} ».\n` +
+        `Tu peux reformuler avec le produit exact, par exemple « ajoute du pain » ou « retire le lait ».`,
+    };
+  }
+
   const before = [...order.products];
-  const { after, errors } = operation === "add"
-    ? await buildAddChange(userRef, text, order, deps)
-    : buildRemoveChange(text, order);
+  let after = before;
+  const errors: string[] = [];
+
+  for (const step of steps) {
+    const stepOrder = { ...order, products: after };
+    const result = step.operation === "add"
+      ? await buildAddChange(userRef, step.text, stepOrder, deps)
+      : buildRemoveChange(step.text, stepOrder);
+    after = result.after;
+    errors.push(...result.errors);
+  }
   const changes = changeSummary(before, after);
 
   if (!changes.length) {
@@ -524,13 +598,14 @@ export async function tryHandleRecurringOrders(
       return { message: "D’accord, je n’ai pas modifié tes commandes récurrentes." };
     }
 
-    const selected = selectRecurringOrder(userText, pending.recurringOrders);
+    const resolution = resolveRecurringOrderTarget(userText, pending.recurringOrders);
+    const selected = selectedRecurringOrder(resolution);
     if (!selected) {
+      const choices = ambiguousRecurringOrders(resolution, pending.recurringOrders);
       return {
         message:
           `Je n’ai pas reconnu quelle commande récurrente modifier.\n\n` +
-          `${formatRecurringOrdersList(pending.recurringOrders)}\n\n` +
-          `Réponds avec le numéro ou le jour, par exemple « mardi ».`,
+          `${formatRecurringOrderChoicePrompt(choices)}`,
       };
     }
 
@@ -565,18 +640,16 @@ export async function tryHandleRecurringOrders(
     return { message: formatRecurringOrdersList(orders) };
   }
 
-  const selected = selectRecurringOrder(userText, orders);
+  const resolution = resolveRecurringOrderTarget(userText, orders);
+  const selected = selectedRecurringOrder(resolution);
   if (!selected) {
+    const choices = ambiguousRecurringOrders(resolution, orders);
     setPending(userRef, {
       type: "awaiting_recurring_order_choice",
       originalText: userText,
-      recurringOrders: orders,
+      recurringOrders: choices,
     });
-    return {
-      message:
-        `${formatRecurringOrdersList(orders)}\n\n` +
-        `Laquelle veux-tu modifier ? Réponds avec le numéro ou le jour, par exemple « mardi ».`,
-    };
+    return { message: formatRecurringOrderChoicePrompt(choices) };
   }
 
   return await prepareRecurringChange(userRef, userText, selected, deps);
