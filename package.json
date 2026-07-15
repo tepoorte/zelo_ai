@@ -22,6 +22,7 @@
     "test:history-suggestions": "node --loader ts-node/esm ./tests/history-suggestions.test.ts",
     "test:session-isolation": "node --loader ts-node/esm ./tests/session-isolation.test.ts",
     "test:whatsapp": "node --loader ts-node/esm ./tests/whatsapp-transport.test.ts",
+    "test:security": "node --loader ts-node/esm ./tests/security-hardening.test.ts",
     "audit:intents": "node ./tests/intent-ui-audit.mjs",
     "audit:discover-budget": "node ./tests/discover-budget-ui-audit.mjs",
     "audit:discover-semantic": "node --loader ts-node/esm ./tests/discover-semantic-audit.ts",

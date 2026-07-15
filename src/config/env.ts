@@ -22,6 +22,10 @@ export const env = {
   metaVerifyToken: process.env.META_VERIFY_TOKEN ?? "",
   metaAppSecret: process.env.META_APP_SECRET ?? "",
   metaGraphToken: process.env.META_GRAPH_TOKEN ?? "",
+  metaGraphVersion: process.env.META_GRAPH_VERSION ?? "v25.0",
+  metaGraphBaseUrl: process.env.META_GRAPH_BASE_URL ?? "https://graph.facebook.com",
+  metaWhatsappPhoneNumberId: process.env.META_WHATSAPP_PHONE_NUMBER_ID ?? "",
+  metaWhatsappBusinessAccountId: process.env.META_WHATSAPP_BUSINESS_ACCOUNT_ID ?? "",
 
   // WhatsApp transport
   whatsappProvider: process.env.WHATSAPP_PROVIDER ?? "meta_cloud",
@@ -61,3 +65,64 @@ export const env = {
     process.env.SMTP_FROM ??
     (process.env.NODE_ENV !== "production" ? "Zelo AI <public-contact-002@example.invalid>" : ""),
 };
+
+export type AppEnv = typeof env;
+
+function missingRequired(candidate: AppEnv, key: keyof AppEnv): string | undefined {
+  const value = candidate[key];
+  if (typeof value === "string" && value.trim()) return undefined;
+  if (typeof value === "number" && Number.isFinite(value)) return undefined;
+  if (typeof value === "boolean") return undefined;
+  return String(key);
+}
+
+export function validateProductionEnv(candidate: AppEnv = env): string[] {
+  if (candidate.nodeEnv !== "production") return [];
+
+  const findings: string[] = [];
+
+  if (candidate.whatsappProvider !== "meta_cloud") {
+    findings.push("WHATSAPP_PROVIDER must be meta_cloud in production");
+  }
+
+  const required: Array<keyof AppEnv> = [
+    "metaVerifyToken",
+    "metaAppSecret",
+    "metaGraphToken",
+    "metaWhatsappPhoneNumberId",
+    "whatsappAdminToken",
+    "swissdataBaseUrl",
+    "swissdataShopId",
+    "swissdataApiKey",
+    "smtpHost",
+    "smtpFrom",
+    "smtpUser",
+    "smtpPass",
+  ];
+
+  for (const key of required) {
+    const missing = missingRequired(candidate, key);
+    if (missing) findings.push(`Missing production env: ${missing}`);
+  }
+
+  const hasAdminToken = Boolean(candidate.swissdataAdminToken.trim());
+  const hasAdminCredentials = Boolean(
+    candidate.swissdataAdminUsername.trim() && candidate.swissdataAdminPassword.trim()
+  );
+  if (!hasAdminToken && !hasAdminCredentials) {
+    findings.push("Missing Swissdata admin auth: provide token or username/password");
+  }
+
+  if (candidate.aiProvider === "openai" && !candidate.openaiApiKey.trim()) {
+    findings.push("Missing production env: openaiApiKey");
+  }
+
+  return findings;
+}
+
+export function assertProductionEnv(candidate: AppEnv = env): void {
+  const findings = validateProductionEnv(candidate);
+  if (findings.length === 0) return;
+
+  throw new Error(`Invalid production configuration:\n- ${findings.join("\n- ")}`);
+}

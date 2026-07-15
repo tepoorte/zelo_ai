@@ -36,6 +36,8 @@ import {
   setSession,
 } from "../swissdata/session.js";
 import { withPerfTrace } from "../utils/perf.js";
+import { isAdminTokenAuthorized } from "../utils/admin-auth.js";
+import { redactSensitive } from "../utils/redaction.js";
 
 function bodyString(req: any, key: string, fallback = ""): string {
   return String(req.body?.[key] ?? fallback);
@@ -133,7 +135,15 @@ function maskEmail(email: string | undefined): string | null {
 }
 
 function logSecurityEvent(event: string, meta: Record<string, unknown>): void {
-  console.log(`[SECURITY] ${event}`, JSON.stringify(meta));
+  console.log(`[SECURITY] ${event}`, JSON.stringify(redactSensitive(meta)));
+}
+
+function allowInternalRoute(req: any, res: any): boolean {
+  if (env.nodeEnv !== "production") return true;
+  if (isAdminTokenAuthorized(req)) return true;
+
+  res.sendStatus(404);
+  return false;
 }
 
 function upstreamStatus(error: any): number | undefined {
@@ -227,8 +237,10 @@ function registerAuthRoutes(router: Router): void {
 }
 
 function registerIntentTrainingRoutes(router: Router): void {
-  router.get("/intent-training", async (_req, res, next) => {
+  router.get("/intent-training", async (req, res, next) => {
     try {
+      if (!allowInternalRoute(req, res)) return;
+
       const training = await getIntentTrainingRuntime();
       res.json({ ok: true, training });
     } catch (error) {
@@ -238,6 +250,8 @@ function registerIntentTrainingRoutes(router: Router): void {
 
   router.post("/intent-feedback", async (req, res, next) => {
     try {
+      if (!allowInternalRoute(req, res)) return;
+
       const result = await recordIntentFeedback({
         userRef: bodyString(req, "userRef", "web-ui"),
         text: bodyString(req, "text"),
@@ -260,6 +274,8 @@ function registerIntentTrainingRoutes(router: Router): void {
 function registerBuildMealTrainingRoutes(router: Router): void {
   router.get("/build-meal-training", async (req, res, next) => {
     try {
+      if (!allowInternalRoute(req, res)) return;
+
       const training = await getBuildMealTrainingRuntime(optionalQueryString(req, "userRef"));
       res.json({ ok: true, training });
     } catch (error) {
@@ -267,8 +283,10 @@ function registerBuildMealTrainingRoutes(router: Router): void {
     }
   });
 
-  router.get("/build-meal-learning-state", async (_req, res, next) => {
+  router.get("/build-meal-learning-state", async (req, res, next) => {
     try {
+      if (!allowInternalRoute(req, res)) return;
+
       const state = await getBuildMealLearningState();
       res.json({ ok: true, ...state });
     } catch (error) {
@@ -278,6 +296,8 @@ function registerBuildMealTrainingRoutes(router: Router): void {
 
   router.get("/build-meal-recipes", async (req, res, next) => {
     try {
+      if (!allowInternalRoute(req, res)) return;
+
       const store = await getBuildMealUserRecipes(optionalQueryString(req, "userRef"));
       res.json({ ok: true, ...store });
     } catch (error) {
@@ -287,6 +307,8 @@ function registerBuildMealTrainingRoutes(router: Router): void {
 
   router.post("/build-meal-recipes", async (req, res, next) => {
     try {
+      if (!allowInternalRoute(req, res)) return;
+
       const result = await createBuildMealUserRecipe({
         userRef: optionalBodyString(req, "userRef"),
         key: optionalBodyString(req, "key"),
@@ -313,6 +335,8 @@ function registerBuildMealTrainingRoutes(router: Router): void {
 
   router.post("/build-meal-feedback", async (req, res, next) => {
     try {
+      if (!allowInternalRoute(req, res)) return;
+
       const result = await recordBuildMealFeedback({
         mealKey: bodyString(req, "mealKey"),
         ingredientKey: bodyString(req, "ingredientKey"),
@@ -335,6 +359,8 @@ function registerBuildMealTrainingRoutes(router: Router): void {
 
   router.post("/build-meal-match-feedback", async (req, res, next) => {
     try {
+      if (!allowInternalRoute(req, res)) return;
+
       const mealKey = bodyString(req, "mealKey").trim();
       const text = bodyString(req, "text").trim();
       const action = bodyString(req, "action").trim();
@@ -397,6 +423,8 @@ function registerBuildMealTrainingRoutes(router: Router): void {
 function registerBuildMealUtilityRoutes(router: Router): void {
   router.post("/build-meal-search", async (req, res, next) => {
     try {
+      if (!allowInternalRoute(req, res)) return;
+
       const auth = requireAuthenticatedUser(req, res);
       if (!auth) return;
 
@@ -429,6 +457,8 @@ function registerBuildMealUtilityRoutes(router: Router): void {
 
   router.post("/test", async (req, res, next) => {
     try {
+      if (!allowInternalRoute(req, res)) return;
+
       const parsed = await BuildMealEngine.preview(
         bodyString(req, "text"),
         optionalBodyString(req, "userRef")
@@ -479,7 +509,7 @@ function registerBasketAndChatRoutes(router: Router): void {
         async () => await runAgent(auth.userRef, text, frontendIntentHint),
         {
           principal: maskPrincipal(auth.userRef),
-          textPreview: text.slice(0, 80),
+          textLength: text.length,
           frontendIntentHintAction: frontendIntentHint?.actionKey,
           frontendIntentHintConfidence: frontendIntentHint?.confidence,
         }

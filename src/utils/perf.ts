@@ -1,6 +1,8 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 
+import { redactSensitive } from "./redaction.js";
+
 type PerfStep = {
   label: string;
   durationMs: number;
@@ -23,7 +25,7 @@ function roundMs(value: number): number {
 
 function formatMeta(meta?: Record<string, unknown>): string {
   if (!meta || Object.keys(meta).length === 0) return "";
-  return ` ${JSON.stringify(meta)}`;
+  return ` ${JSON.stringify(redactSensitive(meta))}`;
 }
 
 function currentNowMs(): number {
@@ -38,7 +40,7 @@ export async function withPerfTrace<T>(
   const trace: PerfTrace = {
     id: randomUUID().slice(0, 8),
     name,
-    meta,
+    meta: redactSensitive(meta),
     startedAtMs: currentNowMs(),
     steps: [],
   };
@@ -53,7 +55,7 @@ export async function withPerfTrace<T>(
       const summary = trace.steps.map((step) => ({
         label: step.label,
         ms: step.durationMs,
-        ...(step.meta ? { meta: step.meta } : {}),
+        ...(step.meta ? { meta: redactSensitive(step.meta) } : {}),
       }));
 
       console.log(
@@ -77,7 +79,7 @@ export async function timeAsync<T>(
     return await fn();
   } finally {
     const durationMs = roundMs(currentNowMs() - startedAtMs);
-    trace.steps.push({ label, durationMs, meta });
+    trace.steps.push({ label, durationMs, meta: redactSensitive(meta) });
     console.log(`[PERF][${trace.id}] ${label} ${durationMs}ms${formatMeta(meta)}`);
   }
 }
@@ -96,7 +98,7 @@ export function timeSync<T>(
     return fn();
   } finally {
     const durationMs = roundMs(currentNowMs() - startedAtMs);
-    trace.steps.push({ label, durationMs, meta });
+    trace.steps.push({ label, durationMs, meta: redactSensitive(meta) });
     console.log(`[PERF][${trace.id}] ${label} ${durationMs}ms${formatMeta(meta)}`);
   }
 }
@@ -106,6 +108,6 @@ export function perfMeta(meta: Record<string, unknown>) {
   if (!trace) return;
   trace.meta = {
     ...(trace.meta ?? {}),
-    ...meta,
+    ...redactSensitive(meta),
   };
 }

@@ -43,6 +43,11 @@ function orderCustomerId(order: SwissdataOrder): string {
   return idOf(order.customerId ?? order.customer?.id ?? order.customer?._id);
 }
 
+export function isOrderOwnedByCustomerForHistory(order: SwissdataOrder, customerId: unknown): boolean {
+  const orderOwnerId = orderCustomerId(order);
+  return Boolean(orderOwnerId && sameId(orderOwnerId, customerId));
+}
+
 function listFromResponse(data: unknown): SwissdataOrder[] {
   if (Array.isArray(data)) return data as SwissdataOrder[];
   if (data && typeof data === "object") {
@@ -127,10 +132,9 @@ async function getWhatsAppPurchaseHistory(userRef: string): Promise<PurchaseHist
     { limit: 50, source: "whatsapp" }
   );
 
-  const orders = listFromResponse(res.data).filter((order) => {
-    const customerId = orderCustomerId(order);
-    return !customerId || sameId(customerId, session.customerId);
-  });
+  const orders = listFromResponse(res.data).filter((order) =>
+    isOrderOwnedByCustomerForHistory(order, session.customerId)
+  );
 
   return historyFromOrders(orders);
 }

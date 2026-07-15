@@ -3071,7 +3071,7 @@
         title.innerHTML = `
           <strong>${escapeHtml(ingredient.label)}</strong>
           <span class="mealIngredientMeta">
-            ${escapeHtml(ingredient.role)} · ${ingredient.qty} ${escapeHtml(ingredient.unit)} · ${ingredient.isCore ? "cœur de recette" : "optionnel"}
+            ${escapeHtml(ingredient.role)} · ${escapeHtml(String(ingredient.qty))} ${escapeHtml(ingredient.unit)} · ${ingredient.isCore ? "cœur de recette" : "optionnel"}
           </span>
         `;
 
@@ -3913,6 +3913,7 @@
       const products = Array.isArray(basket.products) ? basket.products : [];
       const fees = Array.isArray(basket.fees) ? basket.fees : [];
       const currency = basket.currency || "";
+      const currencyLabel = escapeHtml(String(currency));
       const hasItems = products.length > 0;
       const deliveryLabel = basket.estimatedDeliveryDate
         ? (isBasketDeliveryDateFuture(basket.estimatedDeliveryDate) ? String(basket.estimatedDeliveryDate) : "À confirmer")
@@ -3939,7 +3940,7 @@
           html += `
             <div class="basketItem">
               <div class="basketItemName">${escapeHtml(name)}</div>
-              <div class="basketItemQty">${qty} ×</div>
+              <div class="basketItemQty">${escapeHtml(String(qty))} ×</div>
             </div>
           `;
         }
@@ -3959,7 +3960,7 @@
           html += `
             <div class="basketRow">
               <span class="basketMuted">${escapeHtml(String(feeName))}</span>
-              <span>${feePrice} ${currency}</span>
+              <span>${feePrice} ${currencyLabel}</span>
             </div>
           `;
         }
@@ -3972,14 +3973,14 @@
         html += `
           <div class="basketRow basketStrong">
             <span>Total TTC</span>
-            <span>${Number(basket.totalPriceTTC).toFixed(2)} ${currency}</span>
+            <span>${Number(basket.totalPriceTTC).toFixed(2)} ${currencyLabel}</span>
           </div>
         `;
       } else if(basket.totalPrice != null){
         html += `
           <div class="basketRow basketStrong">
             <span>Total</span>
-            <span>${Number(basket.totalPrice).toFixed(2)} ${currency}</span>
+            <span>${Number(basket.totalPrice).toFixed(2)} ${currencyLabel}</span>
           </div>
         `;
       }

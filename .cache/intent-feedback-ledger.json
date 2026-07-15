@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-01T13:18:02.414Z",
+  "updatedAt": "2026-07-10T11:27:58.196Z",
   "events": [
     {
       "id": "b57624e0-2d89-4be3-aa2a-fd4dba06387e",
@@ -200,6 +200,16 @@
       "predictedAction": "add_items",
       "correctAction": "discover_meals",
       "createdAt": "2026-07-01T13:18:02.414Z",
+      "userRef": "web-ui"
+    },
+    {
+      "id": "0462eaf9-aa8f-4e74-b58e-2e1e245cf522",
+      "kind": "correction",
+      "text": "ajout du pain a ma commande",
+      "normalizedText": "ajout du pain a ma commande",
+      "predictedAction": "exec_cart",
+      "correctAction": "add_items",
+      "createdAt": "2026-07-10T11:27:58.196Z",
       "userRef": "web-ui"
     }
   ]

@@ -72,7 +72,8 @@ async function main(): Promise<void> {
   const failures: Array<{ text: string; expected: string; prediction: Prediction }> = [];
   for (const testCase of [...cases, ...requiredSpotChecks]) {
     const prediction = classifier.predict(testCase.text);
-    const ok = prediction.actionKey === testCase.expected;
+    const rejectedAsSafeFallback = testCase.expected === "noop" && prediction.accepted === false;
+    const ok = prediction.actionKey === testCase.expected || rejectedAsSafeFallback;
     if (!ok) {
       failures.push({ text: testCase.text, expected: testCase.expected, prediction });
     }

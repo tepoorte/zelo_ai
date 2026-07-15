@@ -11,6 +11,7 @@ import {
 } from "./whatsapp-admin.service.js";
 import { normalizeWhatsAppPhone } from "./whatsapp-session.service.js";
 import { env } from "../../config/env.js";
+import { safeError } from "../../utils/redaction.js";
 
 function readVerificationQuery(req: any) {
   return {
@@ -49,7 +50,7 @@ export function whatsappMetaRoutes() {
     if (messages.length === 0) return;
 
     void processIncomingWhatsAppTexts(messages).catch((error) => {
-      console.error("[whatsapp] processing error", error);
+      console.error("[whatsapp] processing error", safeError(error));
     });
   });
 

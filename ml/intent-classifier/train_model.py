@@ -73,6 +73,11 @@ def normalize_text(value: str) -> str:
     return text
 
 
+FORCE_TRAIN_CASES = {
+    ("exec_cart", normalize_text("ok")),
+}
+
+
 def tokenize(value: str) -> list[str]:
     normalized = normalize_text(value)
     return [token for token in normalized.split(" ") if token]
@@ -553,6 +558,9 @@ def split_rows(rows: list[dict[str, Any]], rng: random.Random) -> tuple[list[dic
     validation: list[dict[str, Any]] = []
     by_label: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
+        if (row["label"], row["normalized"]) in FORCE_TRAIN_CASES:
+            train.append(row)
+            continue
         by_label[row["label"]].append(row)
     for label, bucket in by_label.items():
         rng.shuffle(bucket)

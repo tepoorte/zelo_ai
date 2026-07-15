@@ -13,6 +13,7 @@ import {
   selectLivraisonDeliveryType,
 } from "./delivery-type.js";
 import type { SwissdataPaymentMethod } from "./cart.js";
+import { withAssistantOrderMetadata } from "./order-source-metadata.js";
 
 type BasketLike = {
   id?: string;
@@ -31,6 +32,7 @@ type BasketLike = {
   country?: string;
   currency?: string;
   totalPriceTTC?: number;
+  metadata?: Array<{ key?: string; value?: unknown }>;
 };
 
 type CustomerAddress = {
@@ -550,7 +552,10 @@ export async function whatsappPlaceCurrentBasketOrder(
   const id = basketId(preparedBasket);
   if (!id) throw new Error("Basket not found");
 
-  await updateBasketProperties(id, { paymentMethod });
+  await updateBasketProperties(id, {
+    paymentMethod,
+    metadata: withAssistantOrderMetadata(preparedBasket.metadata ?? currentBasket.metadata, "whatsapp"),
+  });
   const res = await api.put(`/shop/admin/${shopId}/order/${id}/validate`, {
     validationDate: todayAsBasketDate(),
   });

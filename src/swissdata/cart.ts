@@ -13,6 +13,7 @@ import {
   selectLivraisonDeliveryType,
 } from "./delivery-type.js";
 import { isWhatsAppUserRef } from "./whatsapp-customer-session.js";
+import { withAssistantOrderMetadata } from "./order-source-metadata.js";
 import {
   whatsappAddProductToBasket,
   whatsappClearCurrentBasket,
@@ -39,6 +40,7 @@ type BasketLike = {
   billingAddress?: Record<string, unknown>;
   paymentMethod?: string;
   acceptedTermsDate?: string | null;
+  metadata?: Array<{ key?: string; value?: unknown }>;
   products?: Array<{ productType?: string }>;
 };
 
@@ -551,7 +553,10 @@ export async function placeCurrentBasketOrder(
 
   await api.put(
     `/shop/${shopId}/order/${basket.id}`,
-    { paymentMethod },
+    {
+      paymentMethod,
+      metadata: withAssistantOrderMetadata(basket.metadata ?? currentBasket.metadata, "web"),
+    },
     { params: { country } }
   );
 
