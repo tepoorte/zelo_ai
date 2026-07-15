@@ -382,6 +382,17 @@ async function rawCurrentBasket(userRef: string): Promise<BasketLike> {
   return notEmpty ?? baskets[0] ?? await createCustomerBasket(userRef);
 }
 
+async function fetchCustomerBasketById(userRef: string, basketIdValue: string): Promise<BasketLike | null> {
+  if (!basketIdValue) return null;
+  const baskets = await fetchCustomerBaskets(userRef);
+  return baskets.find((basket) => sameId(basketId(basket), basketIdValue)) ?? null;
+}
+
+async function enrichWhatsAppBasket(userRef: string, basket: BasketLike): Promise<BasketLike> {
+  const catalog = await getAllProducts(userRef);
+  return enrichBasketProductsWithNames(basket, catalog);
+}
+
 async function prepareBasketDeliverySlot(userRef: string, basket: BasketLike) {
   const id = basketId(basket);
   if (!id || !basketNeedsDeliverySlot(basket)) return basket;
@@ -429,8 +440,7 @@ export async function whatsappEnsureCurrentBasketFutureDelivery(userRef: string)
 
 export async function whatsappGetCurrentBasket(userRef: string) {
   const basket = await rawCurrentBasket(userRef);
-  const catalog = await getAllProducts(userRef);
-  return enrichBasketProductsWithNames(basket, catalog);
+  return await enrichWhatsAppBasket(userRef, basket);
 }
 
 export async function whatsappAddProductToBasket(
@@ -489,6 +499,7 @@ export async function whatsappRemoveProductFromBasket(
 
 export async function whatsappClearCurrentBasket(userRef: string) {
   const basket = await whatsappGetCurrentBasket(userRef);
+  const currentBasketId = basketId(basket);
   const products = Array.isArray(basket.products) ? basket.products : [];
 
   for (const product of products) {
@@ -496,13 +507,14 @@ export async function whatsappClearCurrentBasket(userRef: string) {
     if (!productId) continue;
     await whatsappRemoveProductFromBasket(
       userRef,
-      basketId(basket),
+      currentBasketId,
       productId,
       Array.isArray(product.optionsIds) ? product.optionsIds : []
     );
   }
 
-  return await whatsappGetCurrentBasket(userRef);
+  const refreshedBasket = await fetchCustomerBasketById(userRef, currentBasketId);
+  return await enrichWhatsAppBasket(userRef, refreshedBasket ?? { ...basket, products: [] });
 }
 
 async function sendOrderConfirmationEmail(userRef: string, order: BasketLike) {
