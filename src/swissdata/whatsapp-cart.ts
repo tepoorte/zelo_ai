@@ -15,7 +15,7 @@ import {
 import type { SwissdataPaymentMethod } from "./cart.js";
 import { withAssistantOrderMetadata } from "./order-source-metadata.js";
 
-type BasketLike = {
+export type BasketLike = {
   id?: string;
   _id?: string;
   region?: string;
@@ -29,9 +29,12 @@ type BasketLike = {
   products?: Array<any>;
   status?: string;
   customerId?: string;
+  recurringId?: unknown;
   country?: string;
   currency?: string;
   totalPriceTTC?: number;
+  _updatedAt?: string;
+  updatedAt?: string;
   metadata?: Array<{ key?: string; value?: unknown }>;
 };
 
@@ -89,6 +92,24 @@ function basketId(basket: BasketLike): string {
 
 function sameId(left: unknown, right: unknown): boolean {
   return Boolean(idOf(left) && idOf(left) === idOf(right));
+}
+
+function basketUpdatedAtMs(basket: BasketLike): number {
+  const value = basket._updatedAt ?? basket.updatedAt;
+  if (!value) return 0;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+export function selectDirectCustomerBaskets(
+  baskets: BasketLike[],
+  customerId: string
+): BasketLike[] {
+  return baskets
+    .filter((basket) => basket.status === "basket")
+    .filter((basket) => sameId(basket.customerId, customerId))
+    .filter((basket) => basket.recurringId == null || basket.recurringId === "")
+    .sort((left, right) => basketUpdatedAtMs(right) - basketUpdatedAtMs(left));
 }
 
 function enrichBasketProductsWithNames(basket: any, catalog: Array<{ id: string; name?: string }>) {
@@ -345,12 +366,7 @@ async function fetchCustomerBaskets(userRef: string): Promise<BasketLike[]> {
       ? res.data.items
       : [];
 
-  return baskets
-    .filter((basket) => basket.status === "basket")
-    .filter((basket) => !basket.customerId || sameId(basket.customerId, session.customerId))
-    .sort((left: any, right: any) =>
-      String(right?._updatedAt ?? "").localeCompare(String(left?._updatedAt ?? ""))
-    );
+  return selectDirectCustomerBaskets(baskets, session.customerId);
 }
 
 async function createCustomerBasket(userRef: string): Promise<BasketLike> {
@@ -378,8 +394,7 @@ async function createCustomerBasket(userRef: string): Promise<BasketLike> {
 
 async function rawCurrentBasket(userRef: string): Promise<BasketLike> {
   const baskets = await fetchCustomerBaskets(userRef);
-  const notEmpty = baskets.find((basket) => Array.isArray(basket.products) && basket.products.length > 0);
-  return notEmpty ?? baskets[0] ?? await createCustomerBasket(userRef);
+  return baskets[0] ?? await createCustomerBasket(userRef);
 }
 
 async function fetchCustomerBasketById(userRef: string, basketIdValue: string): Promise<BasketLike | null> {
