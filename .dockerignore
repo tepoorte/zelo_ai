@@ -11,6 +11,8 @@ node_modules
 dist
 docs
 .cache
+ml/discover-meals/.venv
+**/__pycache__
 
 *.zip
 *.tgz
