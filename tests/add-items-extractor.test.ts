@@ -7,8 +7,12 @@ import { computeBasketQty } from "../src/ai/services/cart-quantity.service.js";
 import { applyVagueQuantityPolicyToPlan } from "../src/ai/services/vague-quantity-policy.service.js";
 import { matchIngredientToProduct } from "../src/domain/matcher.js";
 import { rankProductsByQuery, type Product } from "../src/swissdata/products.js";
+import {
+  BLOCKED_ASSISTANT_CATEGORY_IDS,
+  BLOCKED_ASSISTANT_PRODUCT_IDS,
+} from "../src/ai/product-eligibility.js";
 
-const catalog: Product[] = [
+const catalog: Product[] = ([
   { id: "muesli-choco", name: "Muesli choco-amaranth Bio", size: "750g" },
   { id: "muesli-fruits", name: "Muesli aux fruits Bio", size: "700g" },
   { id: "pommes", name: "Pommes Bio ou VV", size: "1kg", priceType: "per-weight", refWeight: 1000, refWeightUnit: "g" },
@@ -69,7 +73,7 @@ const catalog: Product[] = [
   { id: "ballon-pavot", name: "Ballon au pavot", size: "1 pièce" },
   { id: "pate-tartiner-base", name: "Pâte à tartiner bio", size: "250g" },
   { id: "pate-tartiner-famille", name: "Pâte à tartiner bio (format famille)", size: "500g" },
-];
+] as Product[]).map((product) => ({ type: "sell", ...product }));
 
 function items(text: string) {
   return extractAddItemsFromTextWithCatalog(text, catalog).actions[0].items;
@@ -530,13 +534,101 @@ Si par hasard il reste 2 Birchers de feuillantine ? Sinon ce n’est pas grave �
 
 {
   const parsed = extractAddItemsFromTextWithCatalog("Deux pizza margaritas and", [
-    { id: "pizza-jambon", name: "Pizza Jambon", size: "1 pièce" },
+    { id: "pizza-jambon", name: "Pizza Jambon", size: "1 pièce", type: "sell" },
   ]).actions[0].items;
 
   assert.equal(parsed.length, 1);
   assert.equal(parsed[0].productId, undefined);
   assert.equal(parsed[0].query, "pizza margaritas and");
   assert.equal(parsed[0].qty, 2);
+}
+
+{
+  const blockedByCategory: Product = {
+    id: "blocked-category-product",
+    name: "Casque vélo cargo",
+    type: "sell",
+    categories: [BLOCKED_ASSISTANT_CATEGORY_IDS[0]],
+  };
+  const blockedById: Product = {
+    id: BLOCKED_ASSISTANT_PRODUCT_IDS[0],
+    name: "Crédit Zélo",
+    type: "digital",
+    categories: [],
+  };
+  const parsed = extractAddItemsFromTextWithCatalog(
+    "ajoute un casque vélo cargo et un crédit Zélo",
+    [blockedByCategory, blockedById]
+  ).actions[0].items;
+
+  assert.equal(
+    parsed.length,
+    0,
+    "A blocked request must not survive as an unknown query that fuzzy resolution can substitute"
+  );
+
+  const directId = extractAddItemsFromTextWithCatalog(
+    `ajoute le produit ${BLOCKED_ASSISTANT_PRODUCT_IDS.at(-1)}`,
+    [
+      ...catalog,
+      {
+        id: BLOCKED_ASSISTANT_PRODUCT_IDS.at(-1)!,
+        name: "Récupération contenants",
+        type: "sell",
+        categories: [],
+      },
+    ]
+  ).actions[0].items;
+  assert.equal(directId.length, 0, "A direct blocked ID must yield no add action");
+
+  const mixed = extractAddItemsFromTextWithCatalog(
+    "ajoute Pain Balance et Casque vélo cargo",
+    [...catalog, blockedByCategory]
+  ).actions[0].items;
+  assert.deepEqual(
+    mixed.map((item) => item.productId),
+    ["pain-balance"],
+    "Mixed requests must preserve allowed products while dropping blocked segments"
+  );
+
+  const blockedGlassLock: Product = {
+    id: "blocked-glasslock",
+    name: "GlassLock Moyen",
+    type: "sell",
+    categories: [BLOCKED_ASSISTANT_CATEGORY_IDS[1]],
+  };
+  const blockedMilkBottle: Product = {
+    id: "blocked-milk-bottle",
+    name: "Bouteille de lait",
+    type: "sell",
+    categories: [BLOCKED_ASSISTANT_CATEGORY_IDS[1]],
+  };
+  const allowedMilk: Product = {
+    id: "allowed-milk",
+    name: "Lait cru",
+    type: "sell",
+    categories: [],
+  };
+  const fuzzyCatalog = [...catalog, allowedMilk, blockedGlassLock, blockedMilkBottle];
+
+  assert.equal(
+    extractAddItemsFromTextWithCatalog("ajoute un glasslok moyen", fuzzyCatalog).actions[0].items.length,
+    0,
+    "A typo for GlassLock Moyen must not become an allowed fuzzy substitute"
+  );
+  assert.equal(
+    extractAddItemsFromTextWithCatalog("ajoute une bouteil de lait", fuzzyCatalog).actions[0].items.length,
+    0,
+    "A typo for Bouteille de lait must not become an allowed milk substitute"
+  );
+  assert.equal(
+    extractAddItemsFromTextWithCatalog(
+      "ajoute Pain Balance en soutien aux producteurs locaux",
+      fuzzyCatalog
+    ).actions[0].items.some((item) => item.productId === "pain-balance"),
+    true,
+    "Contextual soutien wording must preserve an explicitly requested allowed product"
+  );
 }
 
 {

@@ -1,9 +1,13 @@
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { normalizeText } from "../../domain/normalizer.js";
-import { fetchFullProduct, type Product } from "../../swissdata/products.js";
+import type { Product } from "../../swissdata/products.js";
 import { readJsonFile, writeJsonFile } from "../../utils/json-file.js";
-import { CATEGORY_NAME_BY_ID, EXCLUDED_CATEGORY_IDS } from "../food-taxonomy.js";
+import { CATEGORY_NAME_BY_ID } from "../food-taxonomy.js";
+import {
+  fetchCurrentAssistantEligibleProduct,
+  isAssistantProductEligible,
+} from "../product-eligibility.js";
 import {
   makeBuildMealIngredientKey,
   makeBuildMealKey,
@@ -196,6 +200,15 @@ export async function recordBuildMealFeedback(input: {
   if (!input.productId && !input.productName) {
     throw new Error("Missing productId or productName");
   }
+  if (input.action === "prefer_product" && input.productId) {
+    const product = await fetchCurrentAssistantEligibleProduct(
+      input.userRef || "local-dev",
+      input.productId
+    );
+    if (!product) {
+      throw new Error("Produit indisponible dans l’Assistant Zélo.");
+    }
+  }
 
   const ledger = await loadLedger();
   const event: BuildMealFeedbackEvent = {
@@ -230,10 +243,7 @@ function validUnit(value: unknown): BuildMealUnit {
 
 function productCategoryNames(product: Product): string[] {
   const categoryIds = Array.isArray(product.categories) ? product.categories.map(String) : [];
-  const excluded = categoryIds.some((categoryId) =>
-    EXCLUDED_CATEGORY_IDS.includes(categoryId as never)
-  );
-  if (excluded) {
+  if (!isAssistantProductEligible(product)) {
     throw new Error(`Produit exclu du build_meal: ${product.name}`);
   }
 
@@ -306,8 +316,10 @@ export async function createBuildMealUserRecipe(input: {
     const productId = String(raw?.productId || "").trim();
     if (!productId) throw new Error("Missing productId for recipe ingredient");
 
-    const product = await fetchFullProduct(catalogUserRef, productId);
-    if (!product) throw new Error(`Produit catalogue introuvable: ${productId}`);
+    const product = await fetchCurrentAssistantEligibleProduct(catalogUserRef, productId);
+    if (!product) {
+      throw new Error(`Produit catalogue introuvable ou indisponible: ${productId}`);
+    }
 
     const ingredientLabel = String(raw.label || raw.productName || product.name || "").trim();
     let ingredientKey = raw.key

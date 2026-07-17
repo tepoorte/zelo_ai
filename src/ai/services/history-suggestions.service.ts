@@ -1,6 +1,7 @@
 import { ensureCurrentBasketFutureDelivery } from "../../swissdata/cart.js";
 import { getPurchaseHistory, type PurchaseHistory } from "../../swissdata/history.js";
 import { getAllProducts, type Product } from "../../swissdata/products.js";
+import { isAssistantProductEligible } from "../product-eligibility.js";
 
 export type HistorySuggestionSource = "history" | "random";
 
@@ -147,7 +148,8 @@ export async function getNextHistorySuggestions(
 
   const normalizedProducts = products
     .map(normalizeProduct)
-    .filter((product): product is Product => Boolean(product));
+    .filter((product): product is Product => Boolean(product))
+    .filter(isAssistantProductEligible);
   if (!normalizedProducts.length) return [];
 
   const excludedIds = new Set<string>([
@@ -196,4 +198,3 @@ export async function getNextHistorySuggestions(
 
   return suggestions;
 }
-

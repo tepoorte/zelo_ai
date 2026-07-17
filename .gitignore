@@ -13,6 +13,7 @@ __pycache__/
 
 # Local archives and temporary deployment backups
 deploy/production.env
+documenti_PDM/
 docs/*
 !docs/plan_travail_livrables/
 docs/plan_travail_livrables/*
@@ -30,4 +31,5 @@ pre_stage_merge_backup/
 .cache/tmp/
 .cache/whatsapp-web-session/
 .cache/discover-budget-ui-audit-results.json
+.cache/product-eligibility-ui-audit-results.json
 .cache/intent-ui-audit-results.json

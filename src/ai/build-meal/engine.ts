@@ -1,5 +1,9 @@
 import { addProductToBasket, getCurrentBasket } from "../../swissdata/cart.js";
 import { normalizeText } from "../../domain/normalizer.js";
+import {
+  fetchCurrentAssistantEligibleProduct,
+  isAssistantProductEligible,
+} from "../product-eligibility.js";
 import { computeBasketQty } from "../services/cart-quantity.service.js";
 import { resolveCatalogProduct } from "./catalog-resolver.js";
 import { getBuildMealTrainingRuntime } from "./training.service.js";
@@ -104,8 +108,18 @@ async function addResolvedProducts(
   const missing: BuildMealMissingIngredient[] = [];
 
   for (const ingredient of recipe.ingredients) {
-    const product = await resolveCatalogProduct(userRef, ingredient);
-    if (!product) {
+    const resolvedProduct = await resolveCatalogProduct(userRef, ingredient);
+    const currentProduct = resolvedProduct
+      ? await fetchCurrentAssistantEligibleProduct(userRef, resolvedProduct.id)
+      : null;
+    const product = resolvedProduct && currentProduct
+      ? {
+          ...resolvedProduct,
+          ...currentProduct,
+          defaultSupplier: currentProduct.defaultSupplier ?? resolvedProduct.defaultSupplier,
+        }
+      : null;
+    if (!product || !isAssistantProductEligible(product)) {
       missing.push({
         ingredientKey: ingredient.key,
         ingredient: ingredient.label,

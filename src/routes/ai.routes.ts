@@ -15,6 +15,7 @@ import {
   recordBuildMealFeedback,
 } from "../ai/build-meal/training.service.js";
 import { CATEGORY_NAME_BY_ID } from "../ai/food-taxonomy.js";
+import { rankAssistantEligibleProducts } from "../ai/product-eligibility.js";
 import { parseFrontendIntentHint } from "../ai/services/frontend-intent-hint.service.js";
 import {
   getIntentTrainingRuntime,
@@ -25,7 +26,7 @@ import { env } from "../config/env.js";
 import { normalizeText } from "../domain/normalizer.js";
 import { clearStoredToken, login } from "../swissdata/auth.js";
 import { ensureCurrentBasketFutureDelivery } from "../swissdata/cart.js";
-import { searchProducts } from "../swissdata/products.js";
+import { getAllProducts } from "../swissdata/products.js";
 import {
   SESSION_COOKIE_NAME,
   clearSession,
@@ -438,7 +439,11 @@ function registerBuildMealUtilityRoutes(router: Router): void {
         return res.status(400).json({ ok: false, error: "Missing query" });
       }
 
-      const products = await searchProducts(auth.userRef, query, limit);
+      const products = rankAssistantEligibleProducts(
+        query,
+        await getAllProducts(auth.userRef),
+        limit
+      );
       res.json({
         ok: true,
         products: products.map((product) => ({

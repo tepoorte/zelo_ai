@@ -39,7 +39,7 @@ const catalog: Product[] = [
   { id: "jus", name: "Jus de pomme Bio", categories: [CATEGORIES.drink], tags: ["Bio"], price: { price: 4 } },
   { id: "kefir", name: "Kéfir Menthe Citron", categories: [CATEGORIES.drink], price: { price: 5 } },
   { id: "lessive", name: "Lessive écologique", categories: [CATEGORIES.cleaning] },
-];
+].map((product) => ({ type: "sell", ...product }));
 
 const training = await loadDiscoverTrainingArtifacts();
 const profiles = profileCatalog(catalog, training);

@@ -1,6 +1,7 @@
 import { normalizeText, tokenizeForMatch } from "../../domain/normalizer.js";
 import { getAllProducts, type Product } from "../../swissdata/products.js";
-import { CATEGORY_NAME_BY_ID, EXCLUDED_CATEGORY_IDS } from "../food-taxonomy.js";
+import { CATEGORY_NAME_BY_ID } from "../food-taxonomy.js";
+import { filterAssistantEligibleProducts } from "../product-eligibility.js";
 import type { BuildMealIngredientTraining } from "./types.js";
 
 type CatalogProductDoc = {
@@ -62,12 +63,10 @@ async function getCatalogDocs(userRef: string): Promise<CatalogProductDoc[]> {
   if (cached?.docs.length && cached.expiresAt > Date.now()) return cached.docs;
 
   // The training stays stable, but product availability/names/categories must follow Swissdata.
-  const products = await getAllProducts(userRef, { forceRefresh: Boolean(cached) });
+  const products = filterAssistantEligibleProducts(
+    await getAllProducts(userRef, { forceRefresh: Boolean(cached) })
+  );
   const docs = products
-    .filter((product) => {
-      const categoryIds = Array.isArray(product.categories) ? product.categories.map(String) : [];
-      return !categoryIds.some((categoryId) => EXCLUDED_CATEGORY_IDS.includes(categoryId as never));
-    })
     .map((product) => {
       const categoryIds = Array.isArray(product.categories) ? product.categories.map(String) : [];
       return {

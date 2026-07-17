@@ -8,15 +8,17 @@ import {
 import type { CustomerRecurringOrder } from "../src/swissdata/recurring-orders.js";
 import type { Product } from "../src/swissdata/products.js";
 import { computeBasketQty } from "../src/ai/services/cart-quantity.service.js";
+import { BLOCKED_ASSISTANT_CATEGORY_IDS } from "../src/ai/product-eligibility.js";
 
 const products: Record<string, Product> = {
-  pain: { id: "p-pain", name: "Pain Balance" },
-  lait: { id: "p-lait", name: "Lait Bio" },
-  oeufs: { id: "p-oeufs", name: "Oeuf Bio à la pièce" },
-  courges: { id: "p-courges", name: "Graines de courges" },
+  pain: { id: "p-pain", name: "Pain Balance", type: "sell" },
+  lait: { id: "p-lait", name: "Lait Bio", type: "sell" },
+  oeufs: { id: "p-oeufs", name: "Oeuf Bio à la pièce", type: "sell" },
+  courges: { id: "p-courges", name: "Graines de courges", type: "sell" },
   lard: {
     id: "p-lard",
     name: "A. Lard de Begnins",
+    type: "sell",
     size: "100g",
     priceType: "per-weight",
     refWeight: 100,
@@ -25,8 +27,15 @@ const products: Record<string, Product> = {
   pizza: {
     id: "p-pizza",
     name: "Pizza Marguerite",
+    type: "sell",
     optionsIds: ["opt-pizza"],
     availableOptions: [{ id: "opt-pizza", name: "Option pizza" }],
+  },
+  blocked: {
+    id: "p-blocked",
+    name: "Produit hors périmètre",
+    type: "sell",
+    categories: [BLOCKED_ASSISTANT_CATEGORY_IDS[0]],
   },
 };
 
@@ -205,6 +214,7 @@ function makeDeps(initialOrders: CustomerRecurringOrder[] = baseOrders()) {
       if (normalized.includes("courge")) items.push({ query: "graines de courges", qty: 1, productId: "p-courges" });
       if (normalized.includes("lard")) items.push({ query: "A. Lard de Begnins", qty: 2, unit: "kg", productId: "p-lard" });
       if (normalized.includes("pizza")) items.push({ query: "Pizza Marguerite", qty: 1, unit: "piece", productId: "p-pizza" });
+      if (normalized.includes("hors périmètre")) items.push({ query: "Produit hors périmètre", qty: 1, productId: "p-blocked" });
       if (normalized.includes("oeuf") || normalized.includes("œuf")) items.push({ query: "oeufs", qty: 2 });
       return {
         intent: "ADD_ITEMS",
@@ -220,6 +230,7 @@ function makeDeps(initialOrders: CustomerRecurringOrder[] = baseOrders()) {
       if (normalized.includes("courge")) return products.courges;
       if (normalized.includes("lard")) return products.lard;
       if (normalized.includes("pizza")) return products.pizza;
+      if (normalized.includes("hors périmètre")) return products.blocked;
       if (normalized.includes("oeuf") || normalized.includes("œuf")) return products.oeufs;
       return null;
     },
@@ -703,6 +714,77 @@ async function testNoKeywordReturnsNullWithoutHint(): Promise<void> {
   assert.equal(response, null);
 }
 
+async function testBlockedProductCannotBePreparedForRecurringOrder(): Promise<void> {
+  const userRef = "test:recurring:blocked-prepare";
+  clearPending(userRef);
+  const { deps, updates } = makeDeps();
+
+  const response = await tryHandleRecurringOrders(
+    userRef,
+    "ajoute le produit hors périmètre à ma commande récurrente du mardi",
+    { actionKey: "recurring_orders" },
+    deps
+  );
+
+  assert(response);
+  assertIncludes(response.message, "introuvable ou indisponible");
+  assert.equal(updates.length, 0);
+  const confirmation = await tryHandleRecurringOrders(userRef, "ok", undefined, deps);
+  assert.equal(confirmation, null);
+  assert.equal(updates.length, 0);
+}
+
+async function testRecurringConfirmationRechecksEligibility(): Promise<void> {
+  const userRef = "test:recurring:blocked-confirmation";
+  clearPending(userRef);
+  const { deps, updates } = makeDeps();
+
+  const prepared = await tryHandleRecurringOrders(
+    userRef,
+    "ajoute du pain à ma commande récurrente du mardi",
+    { actionKey: "recurring_orders" },
+    deps
+  );
+  assert(prepared);
+  assertIncludes(prepared.message, "Changements proposés");
+
+  const originalFetch = deps.fetchFullProduct;
+  deps.fetchFullProduct = async (ref, productId) =>
+    productId === "p-pain"
+      ? { ...products.pain, type: "sell", categories: [BLOCKED_ASSISTANT_CATEGORY_IDS[0]] }
+      : originalFetch(ref, productId);
+
+  const confirmation = await tryHandleRecurringOrders(userRef, "ok", undefined, deps);
+  assert(confirmation);
+  assertIncludes(confirmation.message, "n’a pas été modifiée");
+  assert.equal(updates.length, 0);
+}
+
+async function testExistingBlockedRecurringLineCanStillBeRemoved(): Promise<void> {
+  const userRef = "test:recurring:blocked-remove";
+  clearPending(userRef);
+  const orders = baseOrders();
+  orders[0].products.push({
+    productId: "p-blocked",
+    name: "Produit hors périmètre",
+    quantity: 1,
+  });
+  const { deps, updates } = makeDeps(orders);
+
+  const prepared = await tryHandleRecurringOrders(
+    userRef,
+    "retire le produit hors périmètre de ma commande récurrente du mardi",
+    { actionKey: "recurring_orders" },
+    deps
+  );
+  assert(prepared);
+  assertIncludes(prepared.message, "Retrait");
+
+  await tryHandleRecurringOrders(userRef, "ok", undefined, deps);
+  assert.equal(updates.length, 1);
+  assert(!updates[0].products.some((line) => line.productId === "p-blocked"));
+}
+
 async function main(): Promise<void> {
   await testShowRecurringOrders();
   await testAmbiguousAddRequiresChoiceThenOkConfirmation();
@@ -726,6 +808,9 @@ async function main(): Promise<void> {
   await testAnnullCancelsRecurringPending();
   await testRecurringKeywordTypoShowsOrders();
   await testNoKeywordReturnsNullWithoutHint();
+  await testBlockedProductCannotBePreparedForRecurringOrder();
+  await testRecurringConfirmationRechecksEligibility();
+  await testExistingBlockedRecurringLineCanStillBeRemoved();
   console.log("[recurring-orders.test] all checks passed.");
 }
 

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import type { Product } from "../src/swissdata/products.js";
 
+let assistantProductEligible: (product: Product) => boolean = () => false;
+
 type FrontendIntentHint = {
   actionKey:
     | "add_items"
@@ -155,7 +157,7 @@ function shuffle<T>(items: T[], rng: () => number): T[] {
 function isSafeRandomProduct(product: Product): boolean {
   const name = String(product?.name ?? "").trim();
   if (!product?.id || !name) return false;
-  if (product.type && product.type !== "sell") return false;
+  if (!assistantProductEligible(product)) return false;
   if (name.length < 3 || name.length > 80) return false;
   if (/[,;|\n\r]/.test(name)) return false;
   if (MUTATE_NAMES && !/[A-Za-zÀ-ÖØ-öø-ÿ].*[A-Za-zÀ-ÖØ-öø-ÿ].*[A-Za-zÀ-ÖØ-öø-ÿ].*[A-Za-zÀ-ÖØ-öø-ÿ]/.test(name)) return false;
@@ -382,10 +384,12 @@ async function main() {
   assert.ok(PASSWORD, "Missing ZELO_TEST_PASSWORD");
 
   prepareLocalSwissdataBaseUrl();
-  const [{ login }, { getAllProducts }] = await Promise.all([
+  const [{ login }, { getAllProducts }, eligibility] = await Promise.all([
     import("../src/swissdata/auth.js"),
     import("../src/swissdata/products.js"),
+    import("../src/ai/product-eligibility.js"),
   ]);
+  assistantProductEligible = eligibility.isAssistantProductEligible;
 
   await login(USER_REF, USERNAME, PASSWORD);
 
@@ -426,6 +430,11 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error);
+  const name = error instanceof Error ? error.name : "Error";
+  const message = error instanceof Error ? error.message : String(error);
+  const code = typeof error === "object" && error && "code" in error
+    ? String((error as { code?: unknown }).code ?? "")
+    : "";
+  console.error(`[ADD_ITEMS_RANDOM] ${name}: ${message}${code ? ` (${code})` : ""}`);
   process.exitCode = 1;
 });

@@ -1,6 +1,7 @@
-import { searchProducts } from "../swissdata/products.js";
+import { getAllProducts } from "../swissdata/products.js";
 import { timeAsync, perfMeta } from "../utils/perf.js";
 import { BuildMealEngine } from "./build-meal/engine.js";
+import { rankAssistantEligibleProducts } from "./product-eligibility.js";
 import { clearPending, getPending } from "./pending.js";
 import { systemPrompt } from "./prompts.js";
 import { extractAddItemsFromText } from "./services/add-items-extractor.service.js";
@@ -104,7 +105,11 @@ async function executePlannedAction(
   if (action.type === "search_products") {
     const result = await timeAsync(
       "agent.action.search_products",
-      async () => await searchProducts(userRef, action.query, action.limit ?? 5),
+      async () => rankAssistantEligibleProducts(
+        action.query,
+        await getAllProducts(userRef),
+        action.limit ?? 5
+      ),
       { query: action.query, limit: action.limit ?? 5 }
     );
     return { action, result };

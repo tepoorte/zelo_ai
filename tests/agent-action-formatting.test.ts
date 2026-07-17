@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   formatAddItemsResponse,
   formatClearCartResponse,
+  formatExecCartResponse,
 } from "../src/ai/services/agent-response.service.js";
 
 {
@@ -56,6 +57,17 @@ import {
   assert.equal(response.message.includes("Tu prends souvent aussi"), true);
   assert.equal(response.message.includes("• Oeuf Bio à la pièce"), true);
   assert.equal(response.message.includes("Si tu veux, écris « ajoute ... », ou « ok » pour passer la commande."), true);
+}
+
+{
+  const response = formatExecCartResponse({
+    ok: false,
+    error: "ASSISTANT_PRODUCT_UNAVAILABLE",
+    unavailableProducts: ["Produit déjà présent"],
+  });
+
+  assert.equal(response.message.includes("Produit déjà présent"), true);
+  assert.equal(response.message.includes("Retire les produits indiqués"), true);
 }
 
 console.log("agent-action-formatting tests passed");

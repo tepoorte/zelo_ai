@@ -3,6 +3,7 @@ import {
   getNextHistorySuggestions,
   resetHistorySuggestions,
 } from "../src/ai/services/history-suggestions.service.js";
+import { BLOCKED_ASSISTANT_CATEGORY_IDS } from "../src/ai/product-eligibility.js";
 
 const products = [
   { id: "A", name: "Alpha" },
@@ -14,7 +15,7 @@ const products = [
   { id: "R1", name: "Random un" },
   { id: "R2", name: "Random deux" },
   { id: "R3", name: "Random trois" },
-] as any[];
+].map((product) => ({ type: "sell", ...product })) as any[];
 
 const history = {
   A: 9,
@@ -27,14 +28,58 @@ const history = {
 
 function dependencies(
   basket: any = { products: [] },
-  historyOverride: Record<string, number> = history
+  historyOverride: Record<string, number> = history,
+  productsOverride: any[] = products
 ) {
   return {
     getHistory: async () => historyOverride,
-    getProducts: async () => products,
+    getProducts: async () => productsOverride,
     getBasket: async () => basket,
     random: () => 0,
   };
+}
+
+{
+  const userRef = "history-policy-refill-rotation";
+  resetHistorySuggestions(userRef);
+  const policyProducts = [
+    { id: "blocked-cargo", name: "Vélo cargo", type: "sell", categories: [BLOCKED_ASSISTANT_CATEGORY_IDS[0]] },
+    { id: "blocked-container", name: "Contenant", type: "sell", categories: [BLOCKED_ASSISTANT_CATEGORY_IDS[1]] },
+    { id: "blocked-audit", name: "Audit", type: "sell", categories: [BLOCKED_ASSISTANT_CATEGORY_IDS[2]] },
+    { id: "blocked-credit", name: "Crédit", type: "digital", categories: [] },
+    { id: "allowed-history-1", name: "Produit historique un", type: "sell", categories: [] },
+    { id: "allowed-history-2", name: "Produit historique deux", type: "sell", categories: [] },
+    { id: "allowed-random-1", name: "Produit aléatoire un", type: "sell", categories: [] },
+    { id: "allowed-random-2", name: "Produit aléatoire deux", type: "sell", categories: [] },
+    { id: "allowed-random-3", name: "Produit aléatoire trois", type: "sell", categories: [] },
+    { id: "allowed-random-4", name: "Produit aléatoire quatre", type: "sell", categories: [] },
+  ];
+  const policyHistory = {
+    "blocked-cargo": 100,
+    "blocked-container": 99,
+    "blocked-audit": 98,
+    "blocked-credit": 97,
+    "allowed-history-1": 10,
+    "allowed-history-2": 9,
+  };
+  const deps = dependencies({ products: [] }, policyHistory, policyProducts);
+  const first = await getNextHistorySuggestions(userRef, { dependencies: deps });
+  const second = await getNextHistorySuggestions(userRef, { dependencies: deps });
+  const blockedIds = new Set(["blocked-cargo", "blocked-container", "blocked-audit", "blocked-credit"]);
+
+  assert.deepEqual(first.map((item) => item.source), ["history", "history", "random"]);
+  assert.equal(first.length, 3, "Filtered history must refill to the requested limit");
+  assert.equal(second.length, 3, "Rotation must continue with the remaining eligible products");
+  assert.equal(
+    [...first, ...second].some((item) => blockedIds.has(item.productId)),
+    false,
+    "Blocked products must never appear in history suggestions"
+  );
+  assert.equal(
+    first.some((firstItem) => second.some((secondItem) => secondItem.productId === firstItem.productId)),
+    false,
+    "Only emitted eligible products may consume the history rotation"
+  );
 }
 
 function names(items: Array<{ name: string }>) {

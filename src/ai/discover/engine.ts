@@ -3,6 +3,7 @@ import { normalizeText, tokenizeForMatch } from "../../domain/normalizer.js";
 import { textSimilarity, tokenSimilarity } from "../../domain/text-similarity.js";
 import type { PurchaseHistory } from "../../swissdata/history.js";
 import { getAllProducts, type Product } from "../../swissdata/products.js";
+import { filterAssistantEligibleProducts } from "../product-eligibility.js";
 import { buildBudgetAwareProposal } from "./budget-composer.js";
 import { extractDiscoverBudgetSignal } from "./budget-extractor.js";
 import { profileCatalog } from "./catalog-profiler.js";
@@ -1726,7 +1727,8 @@ export async function buildDiscoverMealIdeas(
   options: BuildDiscoverOptions = {}
 ): Promise<DiscoverResult> {
   const training = options.training ?? await loadDiscoverTrainingArtifacts();
-  const products = options.products ?? await getAllProducts(userRef);
+  const rawProducts = options.products ?? await getAllProducts(userRef);
+  const products = filterAssistantEligibleProducts(rawProducts);
   const history: PurchaseHistory = {};
   const model = training.model;
   const budget = extractDiscoverBudgetSignal(query, model?.budgetPolicy);
@@ -1941,7 +1943,14 @@ export async function buildDiscoverMealIdeas(
 
   const diversitySensitive = isOpenQuery || needs.some((need) => ["weekly_basket", "balanced", "healthy"].includes(need.label));
   const semanticallyRanked = rankSemanticProposals(proposals, semanticFrame);
-  const ranked = rankDiverseProposals(semanticallyRanked, maxProposals, diversitySensitive);
+  const eligibleProductIds = new Set(products.map((product) => String(product.id)));
+  const ranked = rankDiverseProposals(semanticallyRanked, maxProposals, diversitySensitive)
+    // Final fail-closed invariant. Drop an entire contaminated proposal rather
+    // than individual lines, which would make totals and composition incoherent.
+    .filter((proposal) =>
+      proposal.products.length > 0 &&
+      proposal.products.every((product) => eligibleProductIds.has(String(product.productId)))
+    );
 
   const resultWithoutMessage = {
     ok: true,

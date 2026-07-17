@@ -1,7 +1,16 @@
 import { matchIngredientToProduct } from "../../domain/matcher.js";
 import { getPurchaseHistory } from "../../swissdata/history.js";
-import { fetchFullProduct, searchProducts, type Product } from "../../swissdata/products.js";
+import {
+  fetchFullProduct,
+  getAllProducts,
+  type Product,
+} from "../../swissdata/products.js";
 import { timeAsync, timeSync } from "../../utils/perf.js";
+import {
+  hasBlockedAssistantProductReference,
+  isAssistantProductEligible,
+  rankAssistantEligibleProducts,
+} from "../product-eligibility.js";
 
 export function looksLikeProductId(value: string): boolean {
   return /^[a-f0-9]{24}$/i.test(value.trim());
@@ -9,17 +18,26 @@ export function looksLikeProductId(value: string): boolean {
 
 export async function resolveProduct(userRef: string, rawItem: string): Promise<Product | null> {
   const item = rawItem.trim();
+  const catalog = await getAllProducts(userRef);
+
+  if (hasBlockedAssistantProductReference(item, catalog)) return null;
 
   if (looksLikeProductId(item)) {
-    return {
-      id: item,
-      name: item,
-    } as Product;
+    const product = await timeAsync(
+      "resolve.fetch_direct_product",
+      async () => await fetchFullProduct(userRef, item),
+      { productId: item }
+    );
+    return product && isAssistantProductEligible(product) ? product : null;
   }
 
   const candidates = await timeAsync(
     "resolve.search_products",
-    async () => await searchProducts(userRef, item, 20),
+    async () => rankAssistantEligibleProducts(
+      item,
+      catalog,
+      20
+    ),
     { query: item }
   );
   console.log("[RESOLVE] item =", item);
@@ -53,5 +71,5 @@ export async function resolveProduct(userRef: string, rawItem: string): Promise<
   );
   console.log("[RESOLVE] fetched full =", JSON.stringify(full, null, 2));
 
-  return full ?? selected;
+  return full && isAssistantProductEligible(full) ? full : null;
 }

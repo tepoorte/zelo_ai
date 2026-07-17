@@ -153,6 +153,19 @@ export function formatClearCartResponse(clearResult: any): AgentResponse {
 
 export function formatExecCartResponse(execResult: any): AgentResponse {
   if (!execResult?.ok) {
+    if (
+      execResult?.error === "ASSISTANT_PRODUCT_UNAVAILABLE" &&
+      Array.isArray(execResult?.unavailableProducts) &&
+      execResult.unavailableProducts.length
+    ) {
+      return {
+        message:
+          "Je ne peux pas passer la commande tant que le panier contient " +
+          "un ou plusieurs produits indisponibles via l’Assistant Zélo :\n" +
+          execResult.unavailableProducts.map((name: string) => `• ${name}`).join("\n") +
+          "\nRetire les produits indiqués du panier, puis confirme à nouveau.",
+      };
+    }
     return {
       message: "Je n’ai pas réussi à passer la commande.",
     };

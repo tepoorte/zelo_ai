@@ -20,6 +20,11 @@ import {
 } from "./recurring-order-target-resolver.service.js";
 import type { AgentResponse } from "./agent-response.service.js";
 import type { FrontendIntentHint } from "./planner-types.js";
+import {
+  fetchCurrentAssistantEligibleProduct,
+  isAssistantProductEligible,
+  type AssistantCurrentProductReader,
+} from "../product-eligibility.js";
 
 export type RecurringOrdersDeps = {
   listCustomerRecurringOrders: typeof listCustomerRecurringOrders;
@@ -28,6 +33,7 @@ export type RecurringOrdersDeps = {
   fetchFullProduct: typeof fetchFullProduct;
   resolveProduct: typeof resolveProduct;
   computeBasketQty: typeof computeBasketQty;
+  fetchCurrentProduct?: AssistantCurrentProductReader;
 };
 
 const DEFAULT_DEPS: RecurringOrdersDeps = {
@@ -37,6 +43,7 @@ const DEFAULT_DEPS: RecurringOrdersDeps = {
   fetchFullProduct,
   resolveProduct,
   computeBasketQty,
+  fetchCurrentProduct: fetchCurrentAssistantEligibleProduct,
 };
 
 const CONFIRM_RECURRING_TEXT = "confirme la commande récurrente";
@@ -420,11 +427,11 @@ async function buildAddChange(
 
   for (const item of items) {
     const product = item.productId
-      ? await deps.fetchFullProduct(userRef, item.productId) ?? ({ id: item.productId, name: item.query || item.productId } as Product)
+      ? await deps.fetchFullProduct(userRef, item.productId)
       : await deps.resolveProduct(userRef, item.query);
 
-    if (!product?.id) {
-      errors.push(`• ${item.query} : introuvable`);
+    if (!product?.id || !isAssistantProductEligible(product)) {
+      errors.push(`• ${item.query} : introuvable ou indisponible`);
       continue;
     }
 
@@ -438,6 +445,41 @@ async function buildAddChange(
   }
 
   return { after, errors };
+}
+
+async function recurringIncreasesAreEligible(
+  userRef: string,
+  before: PendingRecurringOrderSummary["products"],
+  after: PendingRecurringOrderSummary["products"],
+  deps: RecurringOrdersDeps
+): Promise<boolean> {
+  const beforeQuantityById = new Map<string, number>();
+  for (const line of before) {
+    const productId = String(line.productId || "").trim();
+    if (!productId) continue;
+    beforeQuantityById.set(
+      productId,
+      (beforeQuantityById.get(productId) || 0) + Math.max(0, Number(line.quantity || 0))
+    );
+  }
+
+  const afterQuantityById = new Map<string, number>();
+  for (const line of after) {
+    const productId = String(line.productId || "").trim();
+    if (!productId) continue;
+    afterQuantityById.set(
+      productId,
+      (afterQuantityById.get(productId) || 0) + Math.max(0, Number(line.quantity || 0))
+    );
+  }
+
+  for (const [productId, afterQuantity] of afterQuantityById) {
+    if (afterQuantity <= (beforeQuantityById.get(productId) || 0)) continue;
+    const product = await (deps.fetchCurrentProduct ?? deps.fetchFullProduct)(userRef, productId);
+    if (!product || !isAssistantProductEligible(product)) return false;
+  }
+
+  return true;
 }
 
 function buildRemoveChange(
@@ -574,6 +616,20 @@ export async function tryHandleRecurringOrders(
     if (!isConfirmRecurring(userText)) {
       return {
         message: `Je garde la modification en attente. Pour l’appliquer, écris « ok » ou « ${CONFIRM_RECURRING_TEXT} », ou « annule ».`,
+      };
+    }
+
+    if (!await recurringIncreasesAreEligible(
+      userRef,
+      pending.beforeProducts,
+      pending.afterProducts,
+      deps
+    )) {
+      clearPending(userRef);
+      return {
+        message:
+          "La modification contient un produit indisponible via l’Assistant Zélo. " +
+          "La commande récurrente n’a pas été modifiée.",
       };
     }
 

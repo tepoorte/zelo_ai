@@ -11,6 +11,10 @@ import {
 import { loadDiscoverTrainingArtifacts } from "../src/ai/discover/training-artifacts.js";
 import { buildDiscoverPlanFromPlannerChoices } from "../src/ai/services/planner.service.js";
 import { clearPending, getPending } from "../src/ai/pending.js";
+import {
+  BLOCKED_ASSISTANT_CATEGORY_IDS,
+  isAssistantProductEligible,
+} from "../src/ai/product-eligibility.js";
 import type { Product } from "../src/swissdata/products.js";
 
 const CATEGORIES = {
@@ -70,7 +74,7 @@ const catalog: Product[] = [
   { id: "offre", name: "Offre découverte", categories: [CATEGORIES.menu] },
   { id: "surprise", name: "Panier surprise", categories: [CATEGORIES.fruitVeg] },
   { id: "courses", name: "Courses pour 2", categories: [CATEGORIES.fruitVeg] },
-];
+].map((product) => ({ type: "sell", ...product }));
 
 function proposalProductIds(result: Awaited<ReturnType<typeof buildDiscoverMealIdeas>>): string[] {
   return result.proposals.flatMap((proposal) => proposal.products.map((product) => product.productId));
@@ -117,6 +121,50 @@ function assertSomeConcreteProduct(result: Awaited<ReturnType<typeof buildDiscov
 }
 
 const training = await loadDiscoverTrainingArtifacts();
+
+{
+  for (const categoryId of BLOCKED_ASSISTANT_CATEGORY_IDS) {
+    assert.equal(
+      isAssistantProductEligible({ id: `blocked-${categoryId}`, type: "sell", categories: [categoryId] }),
+      false,
+      `Assistant policy must block category ${categoryId}`
+    );
+  }
+
+  assert.equal(
+    isAssistantProductEligible({
+      id: "mixed-food-and-blocked",
+      type: "sell",
+      categories: [CATEGORIES.fruitVeg, BLOCKED_ASSISTANT_CATEGORY_IDS[0]],
+    }),
+    false,
+    "A food category must not override a blocked category"
+  );
+  assert.equal(
+    isAssistantProductEligible({ id: "credit-digital", type: "digital", categories: [] }),
+    false,
+    "Digital credits must not be eligible"
+  );
+  assert.equal(
+    isAssistantProductEligible({ id: "5f48c885e0e73100076c928d", type: "sell", categories: [] }),
+    false,
+    "Known credits must remain blocked if their upstream type changes"
+  );
+  assert.equal(
+    isAssistantProductEligible({ id: "60e67c431c068c000984cfe8", type: "sell", categories: [] }),
+    false,
+    "The uncategorized container-recovery product must remain blocked"
+  );
+  assert.equal(
+    isAssistantProductEligible({ id: "missing-type", categories: [CATEGORIES.fruitVeg] }),
+    false,
+    "Products without an explicit sell type must fail closed"
+  );
+  assert.equal(
+    isAssistantProductEligible({ id: "ordinary-food", type: "sell", categories: [CATEGORIES.fruitVeg] }),
+    true
+  );
+}
 
 {
   const target = extractDiscoverBudgetSignal("quelque chose mais j ai un budget de 100 fr", training.model?.budgetPolicy);
@@ -781,6 +829,79 @@ assert.equal(
   assertOnlyCatalogProducts(result);
   assert.equal(result.budget?.kind, "target");
   assertNoProducts(result, ["lard", "boeuf", "perche", "brochet", "canard", "pate-vaudois"], "Vegetarian budget query should avoid meat/fish");
+}
+
+{
+  const forbiddenBudgetCandidates: Product[] = [
+    {
+      id: "blocked-perfect-budget",
+      name: "Panier végétarien parfait",
+      type: "sell",
+      categories: [CATEGORIES.fruitVeg, BLOCKED_ASSISTANT_CATEGORY_IDS[0]],
+      price: { price: 40 },
+    },
+    {
+      id: "blocked-container",
+      name: "Contenant végétarien",
+      type: "sell",
+      categories: [BLOCKED_ASSISTANT_CATEGORY_IDS[1]],
+      price: { price: 39 },
+    },
+    {
+      id: "blocked-audit",
+      name: "Formule végétarienne audit",
+      type: "sell",
+      categories: [BLOCKED_ASSISTANT_CATEGORY_IDS[2]],
+      price: { price: 40 },
+    },
+    {
+      id: "blocked-credit",
+      name: "Crédits Zélo budget 40",
+      type: "digital",
+      categories: [],
+      price: { price: 40 },
+    },
+    {
+      id: "60e67c431c068c000984cfe8",
+      name: "Récupération contenants",
+      type: "sell",
+      categories: [],
+      price: { price: 40 },
+    },
+  ];
+  const result = await buildDiscoverMealIdeas(
+    "test",
+    "propose moi quelque chose de végétarien avec 40 francs",
+    {
+      products: [...forbiddenBudgetCandidates, ...catalog],
+      history: {},
+      training,
+    }
+  );
+  const productIds = proposalProductIds(result);
+  const forbiddenIds = forbiddenBudgetCandidates.map((product) => product.id);
+
+  assert.equal(result.budget?.kind, "target");
+  assert.equal(result.proposals[0]?.id, "budget_target", "An eligible budget substitute must still be composed");
+  assert.equal((result.proposals[0]?.products.length ?? 0) > 0, true, "Budget substitute must contain products");
+  assert.equal(result.proposals[0]?.estimatedTotalCHF != null, true, "Budget substitute must keep a computed total");
+  assert.equal(
+    productIds.some((productId) => forbiddenIds.includes(productId)),
+    false,
+    `Forbidden budget candidates leaked into Discover: ${productIds.join(", ")}`
+  );
+  for (const forbiddenProduct of forbiddenBudgetCandidates) {
+    assert.equal(
+      result.message.includes(forbiddenProduct.name),
+      false,
+      `Forbidden product leaked into the rendered Discover message: ${forbiddenProduct.name}`
+    );
+  }
+  assert.equal(
+    productIds.some((productId) => catalog.some((product) => product.id === productId)),
+    true,
+    "Discover must replace forbidden candidates with eligible catalog products"
+  );
 }
 
 console.log("[PASS] discover-meals tests");

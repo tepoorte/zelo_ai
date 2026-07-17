@@ -29,6 +29,7 @@ const baseUrl = (process.env.ZELO_TEST_BASE_URL || env.ZELO_TEST_BASE_URL || "ht
 const username = process.env.ZELO_TEST_USERNAME || env.ZELO_TEST_USERNAME;
 const password = process.env.ZELO_TEST_PASSWORD || env.ZELO_TEST_PASSWORD;
 const userRef = process.env.ZELO_TEST_USER_REF || `discover-budget-ui-${Date.now()}`;
+let sessionCookie = "";
 
 if (!username || !password) {
   throw new Error("Missing ZELO_TEST_USERNAME or ZELO_TEST_PASSWORD");
@@ -53,11 +54,16 @@ const cases = [
 ];
 
 async function postJson(route, body) {
+  const headers = { "Content-Type": "application/json" };
+  if (sessionCookie) headers.Cookie = sessionCookie;
+
   const response = await fetch(`${baseUrl}${route}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
+  const setCookie = response.headers.get("set-cookie");
+  if (setCookie) sessionCookie = setCookie.split(";", 1)[0];
   const data = await response.json().catch(async () => ({ raw: await response.text() }));
   if (!response.ok) {
     throw new Error(`${route} failed ${response.status}: ${JSON.stringify(data)}`);

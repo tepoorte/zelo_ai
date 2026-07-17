@@ -11,6 +11,10 @@ import {
 } from "../../domain/quantity-units.js";
 import { bestTokenSimilarity, levenshteinDistance, textSimilarity } from "../../domain/text-similarity.js";
 import { getAllProducts, type Product } from "../../swissdata/products.js";
+import {
+  filterAssistantEligibleProducts,
+  hasBlockedAssistantProductReference,
+} from "../product-eligibility.js";
 import { ollamaChat, safeJsonParse } from "./ollama-client.js";
 import { plannerPromptAddItems } from "./planner.service.js";
 import {
@@ -1408,7 +1412,8 @@ function buildAddItemsPlanFromSegments(
   userText: string,
   products: Product[],
   segments: string[],
-  source: SegmentSource
+  source: SegmentSource,
+  referenceCatalog: Product[] = products
 ): ExtractedAddItemsPlan {
   const normalizedUserText = normalizeInvisibleCharacters(userText);
   const alignedSegments = source === "language_segmenter"
@@ -1459,7 +1464,11 @@ function buildAddItemsPlanFromSegments(
         return parsed;
       })
       .filter((item): item is ParsedSegment => Boolean(item)))
-  ).map((item) => applyVagueQuantityCue(normalizedUserText, item));
+  )
+    .map((item) => applyVagueQuantityCue(normalizedUserText, item))
+    .filter((item) =>
+      !hasBlockedAssistantProductReference(`${item.raw} ${item.query}`, referenceCatalog)
+    );
 
   console.log("[ADD_ITEMS_EXTRACTOR] CATALOG_MENTIONS", JSON.stringify(filteredCatalogMentions.map((item) => ({
     raw: item.raw,
@@ -1508,9 +1517,10 @@ export function extractAddItemsFromTextWithCatalog(
   const normalizedUserText = normalizeInvisibleCharacters(userText);
   return buildAddItemsPlanFromSegments(
     normalizedUserText,
-    products,
+    filterAssistantEligibleProducts(products),
     splitRawSegments(normalizedUserText),
-    "deterministic"
+    "deterministic",
+    products
   );
 }
 
@@ -1522,9 +1532,10 @@ export function extractAddItemsFromTextWithCatalogSegments(
   const normalizedUserText = normalizeInvisibleCharacters(userText);
   return buildAddItemsPlanFromSegments(
     normalizedUserText,
-    products,
+    filterAssistantEligibleProducts(products),
     segments.map((segment) => stripTrailingNoise(stripLeadingIntentNoise(segment))).filter(Boolean),
-    "language_segmenter"
+    "language_segmenter",
+    products
   );
 }
 
@@ -1532,7 +1543,8 @@ export async function extractAddItemsFromText(
   userRef: string,
   userText: string
 ): Promise<ExtractedAddItemsPlan> {
-  const products = await getAllProducts(userRef);
+  const referenceCatalog = await getAllProducts(userRef);
+  const products = filterAssistantEligibleProducts(referenceCatalog);
   console.log("[ADD_ITEMS_EXTRACTOR] START", {
     userRef,
     textPreview: userText.slice(0, 160),
@@ -1545,12 +1557,18 @@ export async function extractAddItemsFromText(
     : null;
 
   let plan = languageSegments?.length
-    ? buildAddItemsPlanFromSegments(normalizedUserText, products, languageSegments, "language_segmenter")
-    : extractAddItemsFromTextWithCatalog(normalizedUserText, products);
+    ? buildAddItemsPlanFromSegments(
+        normalizedUserText,
+        products,
+        languageSegments,
+        "language_segmenter",
+        referenceCatalog
+      )
+    : extractAddItemsFromTextWithCatalog(normalizedUserText, referenceCatalog);
 
   if (languageSegments?.length && plan.actions[0].items.length === 0) {
     console.warn("[ADD_ITEMS_EXTRACTOR] LANGUAGE_SEGMENTER_EMPTY_PLAN_FALLBACK");
-    plan = extractAddItemsFromTextWithCatalog(normalizedUserText, products);
+    plan = extractAddItemsFromTextWithCatalog(normalizedUserText, referenceCatalog);
   }
 
   const adjustedPlan = await applyVagueQuantityPolicyToPlan(userRef, plan);

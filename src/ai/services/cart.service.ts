@@ -8,7 +8,7 @@ import {
   removeProductFromBasket,
   setProductQuantityInBasket,
 } from "../../swissdata/cart.js";
-import { fetchFullProduct, type Product } from "../../swissdata/products.js";
+import { fetchFullProduct, getAllProducts, type Product } from "../../swissdata/products.js";
 import { computeBasketQty } from "./cart-quantity.service.js";
 import { formatCartFr } from "./cart-format.service.js";
 import { basketLineName, selectBasketLinesForRemoval } from "./cart-line-matcher.service.js";
@@ -27,6 +27,12 @@ import {
 } from "./history-suggestions.service.js";
 import { resolveProduct } from "./product-resolution.service.js";
 import { timeAsync, timeSync } from "../../utils/perf.js";
+import {
+  fetchCurrentAssistantEligibleProduct,
+  hasBlockedAssistantProductReference,
+  isAssistantProductEligible,
+  type AssistantCurrentProductReader,
+} from "../product-eligibility.js";
 
 type AddOutcomePending = {
   pending: true;
@@ -39,6 +45,23 @@ type AddOutcomeSuccess = {
 };
 
 export type AddOutcome = AddOutcomePending | AddOutcomeSuccess;
+
+export type AddToCartEligibilityDependencies = {
+  getBasket?: typeof getCurrentBasket;
+  fetchCatalogProduct?: typeof fetchFullProduct;
+  fetchCurrentProduct?: AssistantCurrentProductReader;
+  resolveCatalogProduct?: typeof resolveProduct;
+  addProduct?: typeof addProductToBasket;
+  ensureBasket?: typeof ensureCurrentBasketFutureDelivery;
+  getHistorySuggestions?: typeof getNextHistorySuggestions;
+  getCatalogProducts?: typeof getAllProducts;
+};
+
+export type ExecCartEligibilityDependencies = {
+  getBasket?: typeof getCurrentBasket;
+  fetchCurrentProduct?: AssistantCurrentProductReader;
+  placeOrder?: typeof placeCurrentBasketOrder;
+};
 
 type ClearCartAction = {
   userRef?: string;
@@ -56,14 +79,35 @@ export function shouldAskForProductOptions(itemCount: number): boolean {
   return itemCount === 1;
 }
 
+export type PendingOptionsEligibilityDependencies = {
+  fetchProduct?: (userRef: string, productId: string) => Promise<Product | null>;
+};
+
 export async function tryResolvePendingOptions(
   userRef: string,
-  userText: string
+  userText: string,
+  dependencies: PendingOptionsEligibilityDependencies = {}
 ): Promise<{ message: string } | null> {
   const pending = getPending(userRef);
 
   if (!pending || pending.type !== "awaiting_options") {
     return null;
+  }
+
+  // Pending state can outlive a catalog/policy change. Re-read the product and
+  // fail closed before displaying its options or mutating the basket.
+  const pendingProduct = await timeAsync(
+    "pending.fetch_product_before_add",
+    async () => dependencies.fetchProduct
+      ? await dependencies.fetchProduct(userRef, pending.productId)
+      : await fetchCurrentAssistantEligibleProduct(userRef, pending.productId),
+    { productId: pending.productId }
+  );
+  if (!pendingProduct || !isAssistantProductEligible(pendingProduct)) {
+    clearPending(userRef);
+    return {
+      message: "Ce produit n’est pas disponible via l’Assistant Zélo et n’a pas été ajouté.",
+    };
   }
 
   const selected = timeSync(
@@ -156,7 +200,8 @@ export async function handleAddToCartAction(
       unit?: string;
       productId?: string;
     }>;
-  }
+  },
+  dependencies: AddToCartEligibilityDependencies = {}
 ): Promise<AddOutcome> {
   console.log("[ADD_TO_CART ACTION]", JSON.stringify(action, null, 2));
 
@@ -164,36 +209,74 @@ export async function handleAddToCartAction(
   const askForOptions = shouldAskForProductOptions(action.items.length);
   const basket = await timeAsync(
     "add.get_current_basket_before_items",
-    async () => await getCurrentBasket(targetUserRef)
+    async () => await (dependencies.getBasket ?? getCurrentBasket)(targetUserRef)
   );
+  const referenceCatalog = await (dependencies.getCatalogProducts ?? getAllProducts)(targetUserRef);
   const resolvedItems: any[] = [];
 
   for (let index = 0; index < action.items.length; index++) {
     const it = action.items[index];
     let resolvedProduct: Product | null = null;
 
+    if (hasBlockedAssistantProductReference(
+      `${it.query} ${it.productId ?? ""}`,
+      referenceCatalog
+    )) {
+      resolvedItems.push({
+        query: it.query,
+        ok: false,
+        error: "Product not found or unavailable",
+      });
+      continue;
+    }
+
     if (it.productId) {
       resolvedProduct = await timeAsync(
         "add.fetch_product_by_id",
-        async () => await fetchFullProduct(targetUserRef, it.productId!),
+        async () => await (dependencies.fetchCatalogProduct ?? fetchFullProduct)(targetUserRef, it.productId!),
         { productId: it.productId }
-      ) ?? { id: it.productId, name: it.query || it.productId } as Product;
+      );
     } else {
       resolvedProduct = await timeAsync(
         "add.resolve_product",
-        async () => await resolveProduct(targetUserRef, it.query),
+        async () => await (dependencies.resolveCatalogProduct ?? resolveProduct)(targetUserRef, it.query),
         { query: it.query }
       );
     }
 
-    if (!resolvedProduct?.id) {
+    if (!resolvedProduct?.id || !isAssistantProductEligible(resolvedProduct)) {
       resolvedItems.push({
         query: it.query,
         ok: false,
-        error: "Product not found",
+        error: "Product not found or unavailable",
       });
       continue;
     }
+
+    const currentProduct = await timeAsync(
+      "add.revalidate_product_before_mutation",
+      async () => await fetchCurrentAssistantEligibleProduct(
+        targetUserRef,
+        resolvedProduct!.id,
+        dependencies.fetchCurrentProduct
+      ),
+      { productId: resolvedProduct.id }
+    );
+    if (!currentProduct) {
+      resolvedItems.push({
+        query: it.query,
+        ok: false,
+        error: "Product not found or unavailable",
+      });
+      continue;
+    }
+    resolvedProduct = {
+      ...resolvedProduct,
+      ...currentProduct,
+      optionsIds: currentProduct.optionsIds ?? resolvedProduct.optionsIds,
+      availableOptions: currentProduct.availableOptions ?? resolvedProduct.availableOptions,
+      defaultSupplier: currentProduct.defaultSupplier ?? resolvedProduct.defaultSupplier,
+    };
 
     const basketQty = timeSync(
       "add.compute_basket_qty",
@@ -206,7 +289,7 @@ export async function handleAddToCartAction(
         const addResult = await timeAsync(
           "add.add_product_to_basket",
           async () =>
-            await addProductToBasket(
+            await (dependencies.addProduct ?? addProductToBasket)(
               targetUserRef,
               basket.id,
               resolvedProduct.id,
@@ -265,7 +348,7 @@ export async function handleAddToCartAction(
     const addResult = await timeAsync(
       "add.add_product_to_basket",
       async () =>
-        await addProductToBasket(
+        await (dependencies.addProduct ?? addProductToBasket)(
           targetUserRef,
           basket.id,
           resolvedProduct.id,
@@ -290,11 +373,11 @@ export async function handleAddToCartAction(
 
   const updated = await timeAsync(
     "add.get_current_basket_after_items",
-    async () => await ensureCurrentBasketFutureDelivery(targetUserRef)
+    async () => await (dependencies.ensureBasket ?? ensureCurrentBasketFutureDelivery)(targetUserRef)
   );
   const addedProductIds = resolvedProductIds(resolvedItems);
   const historySuggestions = addedProductIds.length
-    ? await getNextHistorySuggestions(targetUserRef, {
+    ? await (dependencies.getHistorySuggestions ?? getNextHistorySuggestions)(targetUserRef, {
         basket: updated,
         excludeProductIds: addedProductIds,
       }).catch(() => [])
@@ -464,9 +547,55 @@ export async function handleClearCartAction(
   };
 }
 
-export async function handleExecCartAction(userRef: string, action?: { userRef?: string }) {
+export async function handleExecCartAction(
+  userRef: string,
+  action?: { userRef?: string },
+  dependencies: ExecCartEligibilityDependencies = {}
+) {
   const targetUserRef = action?.userRef ?? userRef;
-  const order = await placeCurrentBasketOrder(targetUserRef);
+  const basket = await (dependencies.getBasket ?? getCurrentBasket)(targetUserRef);
+  const basketLines = Array.isArray(basket?.products) ? basket.products : [];
+  const productIds = [...new Set<string>(
+    basketLines
+      .map((line: any) => String(line?.productId ?? line?.product?.id ?? line?.id ?? "").trim())
+      .filter((productId: string) => Boolean(productId))
+  )];
+  const unavailableProducts: string[] = basketLines
+    .filter((line: any) =>
+      !String(line?.productId ?? line?.product?.id ?? line?.id ?? "").trim()
+    )
+    .map((line: any) => String(
+      line?.name ?? line?.productName ?? line?.product?.name ?? "Produit non identifié"
+    ));
+
+  // A cart can survive a deployment or catalog-policy change. Never turn a
+  // stale forbidden line into an order; it remains visible/removable instead.
+  for (const productId of productIds) {
+    const product = await fetchCurrentAssistantEligibleProduct(
+      targetUserRef,
+      productId,
+      dependencies.fetchCurrentProduct
+    );
+    if (!product) {
+      const line = basketLines.find(
+        (candidate: any) =>
+          String(candidate?.productId ?? candidate?.product?.id ?? candidate?.id ?? "").trim() === productId
+      );
+      unavailableProducts.push(String(
+        line?.name ?? line?.productName ?? line?.product?.name ?? productId
+      ));
+    }
+  }
+
+  if (unavailableProducts.length) {
+    return {
+      ok: false,
+      error: "ASSISTANT_PRODUCT_UNAVAILABLE",
+      unavailableProducts,
+    };
+  }
+
+  const order = await (dependencies.placeOrder ?? placeCurrentBasketOrder)(targetUserRef);
   resetHistorySuggestions(targetUserRef);
 
   return {
