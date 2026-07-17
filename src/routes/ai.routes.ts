@@ -238,10 +238,8 @@ function registerAuthRoutes(router: Router): void {
 }
 
 function registerIntentTrainingRoutes(router: Router): void {
-  router.get("/intent-training", async (req, res, next) => {
+  router.get("/intent-training", async (_req, res, next) => {
     try {
-      if (!allowInternalRoute(req, res)) return;
-
       const training = await getIntentTrainingRuntime();
       res.json({ ok: true, training });
     } catch (error) {

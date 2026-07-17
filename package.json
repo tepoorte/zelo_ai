@@ -19,6 +19,7 @@
     "test:discover-meals": "node --loader ts-node/esm ./tests/discover-meals.test.ts",
     "test:discover-semantic": "node --loader ts-node/esm ./tests/discover-semantic.test.ts",
     "test:intents": "node --loader ts-node/esm ./tests/intent-classifier.test.ts",
+    "test:intent-production-route": "node --loader ts-node/esm ./tests/intent-production-route.test.ts",
     "test:history-suggestions": "node --loader ts-node/esm ./tests/history-suggestions.test.ts",
     "test:product-eligibility": "node --loader ts-node/esm ./tests/product-eligibility.test.ts",
     "test:cart-product-eligibility": "node --loader ts-node/esm ./tests/cart-product-eligibility.test.ts",
