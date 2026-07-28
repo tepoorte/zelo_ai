@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { clearPending } from "../src/ai/pending.js";
+import { clearPending, getPending } from "../src/ai/pending.js";
 import {
   tryHandleRecurringOrders,
   type RecurringOrdersDeps,
@@ -362,6 +362,50 @@ async function testRecurringMultiAddSkipsOptionsLikeCartAdd(): Promise<void> {
   assert.equal(updates[0].id, "rec-mardi");
   assert(updates[0].products.some((line) => line.productId === "p-lard" && line.quantity === 20));
   assert(updates[0].products.some((line) => line.productId === "p-pizza" && line.quantity === 1));
+}
+
+async function testRecurringSingleAddAsksOptionsThenContinues(): Promise<void> {
+  const userRef = "test:recurring:single-options";
+  clearPending(userRef);
+  const { deps, updates } = makeDeps(mondayAmbiguousOrders());
+  const painWithOptions: Product = {
+    ...products.pain,
+    optionsIds: ["opt-sliced"],
+    availableOptions: [{ id: "opt-sliced", name: "Coupé en tranches" }],
+  };
+  const originalFetch = deps.fetchFullProduct;
+  const originalResolve = deps.resolveProduct;
+  deps.fetchFullProduct = async (ref, productId) =>
+    productId === painWithOptions.id ? painWithOptions : originalFetch(ref, productId);
+  deps.resolveProduct = async (ref, query) =>
+    query.toLowerCase().includes("pain") ? painWithOptions : originalResolve(ref, query);
+
+  const first = await tryHandleRecurringOrders(
+    userRef,
+    "ajoute 1 pain balance a ma commande recurrante Samuel2",
+    { actionKey: "recurring_orders" },
+    deps
+  );
+  assert(first);
+  assertIncludes(first.message, "Coupé en tranches");
+  assertIncludes(first.message, "Aucune");
+  assert.equal(getPending(userRef)?.type, "awaiting_recurring_product_options");
+  assert.equal(updates.length, 0);
+
+  const selected = await tryHandleRecurringOrders(userRef, "1", undefined, deps);
+  assert(selected);
+  assertIncludes(selected.message, "Changements proposés");
+  assertIncludes(selected.message, "Pain Balance : 1 → 2");
+  assert.equal(getPending(userRef)?.type, "awaiting_recurring_order_confirmation");
+  assert.equal(updates.length, 0);
+
+  const confirmed = await tryHandleRecurringOrders(userRef, "ok", undefined, deps);
+  assert(confirmed);
+  assertIncludes(confirmed.message, "Commande récurrente mise à jour");
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].id, "rec-samuel2");
+  assert(updates[0].products.some((line) => line.productId === "p-pain" && line.quantity === 2));
+  assert.equal(getPending(userRef), undefined);
 }
 
 async function testAmbiguousRemoveDoesNotWrite(): Promise<void> {
@@ -791,6 +835,7 @@ async function main(): Promise<void> {
   await testRemoveFromExplicitDay();
   await testRecurringAddUsesFullProductForWeightUnits();
   await testRecurringMultiAddSkipsOptionsLikeCartAdd();
+  await testRecurringSingleAddAsksOptionsThenContinues();
   await testAmbiguousRemoveDoesNotWrite();
   await testAmbiguousMondayRequiresChoice();
   await testFrequencyAndTimeSelectRightMonday();

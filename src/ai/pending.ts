@@ -65,6 +65,20 @@ export type PendingRecurringOrderChange = {
   recurringOrder: PendingRecurringOrderSummary;
 };
 
+export type PendingRecurringProductOptions = {
+  type: "awaiting_recurring_product_options";
+  recurringOrder: PendingRecurringOrderSummary;
+  originalText: string;
+  productId: string;
+  productName: string;
+  availableOptions: Array<{
+    id: string;
+    name: string;
+    shortDescription?: string;
+    description?: string;
+  }>;
+};
+
 export type PendingRecurringOrderConfirmation = {
   type: "awaiting_recurring_order_confirmation";
   recurringOrder: PendingRecurringOrderSummary;
@@ -79,6 +93,7 @@ export type PendingState =
   | PendingMealSuggestionChoice
   | PendingRecurringOrderChoice
   | PendingRecurringOrderChange
+  | PendingRecurringProductOptions
   | PendingRecurringOrderConfirmation;
 
 const pending = new Map<string, PendingState>();

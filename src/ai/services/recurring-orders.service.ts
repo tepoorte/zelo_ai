@@ -9,7 +9,12 @@ import { computeBasketQty } from "./cart-quantity.service.js";
 import { shouldAskForProductOptions } from "./cart.service.js";
 import { extractAddItemsFromText, type ExtractedAddItemsPlan } from "./add-items-extractor.service.js";
 import { extractClearCartPartialFromBasket } from "./clear-cart-extractor.service.js";
-import { normalizeLooseText } from "./product-options.service.js";
+import {
+  formatOptionQuestion,
+  normalizeLooseText,
+  resolveOptionsFromText,
+  userChoseNoOptions,
+} from "./product-options.service.js";
 import { resolveProduct } from "./product-resolution.service.js";
 import {
   recurringFrequencyLabel,
@@ -416,8 +421,13 @@ async function buildAddChange(
   userRef: string,
   text: string,
   order: PendingRecurringOrderSummary,
-  deps: RecurringOrdersDeps
-): Promise<{ after: PendingRecurringOrderSummary["products"]; errors: string[] }> {
+  deps: RecurringOrdersDeps,
+  resolvedOptionsProductId?: string
+): Promise<{
+  after: PendingRecurringOrderSummary["products"];
+  errors: string[];
+  pendingOptionsProduct?: Product;
+}> {
   const cleaned = sanitizeRecurringChangeText(text, order);
   const plan: ExtractedAddItemsPlan = await deps.extractAddItemsFromText(userRef, cleaned);
   const items = plan.actions[0]?.items ?? [];
@@ -435,8 +445,16 @@ async function buildAddChange(
       continue;
     }
 
-    if (askForOptions && Array.isArray(product.optionsIds) && product.optionsIds.length > 0) {
-      errors.push(`• ${product.name} : options nécessaires, non ajouté à la récurrente`);
+    if (
+      askForOptions &&
+      product.id !== resolvedOptionsProductId &&
+      Array.isArray(product.optionsIds) &&
+      product.optionsIds.length > 0
+    ) {
+      if (Array.isArray(product.availableOptions) && product.availableOptions.length > 0) {
+        return { after, errors, pendingOptionsProduct: product };
+      }
+      errors.push(`• ${product.name} : options indisponibles, non ajouté à la récurrente`);
       continue;
     }
 
@@ -538,7 +556,8 @@ async function prepareRecurringChange(
   userRef: string,
   text: string,
   order: PendingRecurringOrderSummary,
-  deps: RecurringOrdersDeps
+  deps: RecurringOrdersDeps,
+  resolvedOptionsProductId?: string
 ): Promise<AgentResponse> {
   const operation = detectOperation(text);
   const displayName = recurringDisplayName(order);
@@ -572,8 +591,28 @@ async function prepareRecurringChange(
   for (const step of steps) {
     const stepOrder = { ...order, products: after };
     const result = step.operation === "add"
-      ? await buildAddChange(userRef, step.text, stepOrder, deps)
+      ? await buildAddChange(userRef, step.text, stepOrder, deps, resolvedOptionsProductId)
       : buildRemoveChange(step.text, stepOrder);
+    const pendingOptionsProduct = "pendingOptionsProduct" in result
+      ? result.pendingOptionsProduct as Product | undefined
+      : undefined;
+    if (pendingOptionsProduct) {
+      const product = pendingOptionsProduct;
+      setPending(userRef, {
+        type: "awaiting_recurring_product_options",
+        recurringOrder: order,
+        originalText: text,
+        productId: product.id,
+        productName: product.name,
+        availableOptions: product.availableOptions!.map((option) => ({
+          id: option.id,
+          name: option.name || "Option",
+          shortDescription: option.shortDescription,
+          description: option.description,
+        })),
+      });
+      return { message: formatOptionQuestion(product) };
+    }
     after = result.after;
     errors.push(...result.errors);
   }
@@ -606,6 +645,51 @@ export async function tryHandleRecurringOrders(
   deps: RecurringOrdersDeps = DEFAULT_DEPS
 ): Promise<AgentResponse | null> {
   const pending = getPending(userRef);
+
+  if (pending?.type === "awaiting_recurring_product_options") {
+    if (isCancel(userText)) {
+      clearPending(userRef);
+      return { message: "D’accord, je n’ai pas modifié ta commande récurrente." };
+    }
+
+    const choseNoOptions = userChoseNoOptions(userText, pending.availableOptions);
+    const selected = resolveOptionsFromText(userText, pending.availableOptions);
+
+    if (!selected.length && !choseNoOptions) {
+      return {
+        message:
+          `Je n’ai pas reconnu les options demandées pour « ${pending.productName} ».\n\n` +
+          formatOptionQuestion({
+            id: pending.productId,
+            name: pending.productName,
+            availableOptions: pending.availableOptions,
+          }),
+      };
+    }
+
+    const currentProduct = await fetchCurrentAssistantEligibleProduct(
+      userRef,
+      pending.productId,
+      deps.fetchCurrentProduct ?? deps.fetchFullProduct
+    );
+    if (!currentProduct) {
+      clearPending(userRef);
+      return {
+        message:
+          "Ce produit n’est plus disponible via l’Assistant Zélo. " +
+          "La commande récurrente n’a pas été modifiée.",
+      };
+    }
+
+    clearPending(userRef);
+    return await prepareRecurringChange(
+      userRef,
+      pending.originalText,
+      pending.recurringOrder,
+      deps,
+      pending.productId
+    );
+  }
 
   if (pending?.type === "awaiting_recurring_order_confirmation") {
     if (isCancel(userText)) {
