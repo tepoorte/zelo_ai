@@ -41,6 +41,13 @@ export type ExtractedAddItemsPlan = {
   ];
 };
 
+export type ExtractAddItemsOptions = {
+  /** Optional catalog boundary supplied by a caller with stricter business scope. */
+  catalog?: readonly Product[];
+  /** Products already present in the caller's business object, used only as an ambiguity tie-breaker. */
+  preferredProductIds?: readonly string[];
+};
+
 type CatalogMatch = {
   product: Product;
   score: number;
@@ -1194,7 +1201,11 @@ function catalogAliases(product: Product): string[] {
   return [...aliases].filter((alias) => alias.length >= 3);
 }
 
-function findCatalogMention(segment: string, products: Product[]): CatalogMatch | null {
+function findCatalogMention(
+  segment: string,
+  products: Product[],
+  preferredProductIds: ReadonlySet<string> = new Set()
+): CatalogMatch | null {
   const normalizedSegment = ` ${normalizeLoose(segment)} `;
   const queryTokens = [...new Set(meaningfulTokens(segment))];
   const segmentTokens = new Set(queryTokens);
@@ -1208,11 +1219,12 @@ function findCatalogMention(segment: string, products: Product[]): CatalogMatch 
         const aliasTokens = [...new Set(productTokens(alias))];
         const unmatchedQueryTokens = queryTokens.filter((token) => bestTokenSimilarity(token, aliasTokens) < 0.72);
         const fullAliasCoverage = unmatchedQueryTokens.length === 0;
-        const score = fullAliasCoverage
+        const score = (fullAliasCoverage
           ? 1000 + alias.length
           : 115 +
             ((queryTokens.length - unmatchedQueryTokens.length) / Math.max(queryTokens.length, 1)) * 70 +
-            textSimilarity(segment, product.name) * 10;
+            textSimilarity(segment, product.name) * 10) +
+          (preferredProductIds.has(String(product.id)) ? 75 : 0);
         if (!best || score > best.score) {
           best = { product, score, reason: fullAliasCoverage ? "exact" : "fuzzy" };
         }
@@ -1269,7 +1281,8 @@ function findCatalogMention(segment: string, products: Product[]): CatalogMatch 
       averageFuzzyScore * 10 +
       wholeTextScore * 10 -
       Math.max(0, tokens.length - queryTokens.length) * 0.25 +
-      wordOrderBoost;
+      wordOrderBoost +
+      (preferredProductIds.has(String(product.id)) ? 75 : 0);
     const reason = exactQueryCoverage >= 1 ? "tokens" : "fuzzy";
 
     if (!best || score > best.score) {
@@ -1280,11 +1293,15 @@ function findCatalogMention(segment: string, products: Product[]): CatalogMatch 
   return best;
 }
 
-function bestCatalogMention(segments: string[], products: Product[]): CatalogMatch | null {
+function bestCatalogMention(
+  segments: string[],
+  products: Product[],
+  preferredProductIds: ReadonlySet<string> = new Set()
+): CatalogMatch | null {
   let best: CatalogMatch | null = null;
 
   for (const segment of segments) {
-    const match = findCatalogMention(segment, products);
+    const match = findCatalogMention(segment, products, preferredProductIds);
     if (!match) continue;
     if (!best || match.score > best.score) {
       best = match;
@@ -1294,16 +1311,20 @@ function bestCatalogMention(segments: string[], products: Product[]): CatalogMat
   return best;
 }
 
-function parseSegment(raw: string, products: Product[]): ParsedSegment | null {
+function parseSegment(
+  raw: string,
+  products: Product[],
+  preferredProductIds: ReadonlySet<string> = new Set()
+): ParsedSegment | null {
   let cleaned = stripTrailingNoise(stripLeadingIntentNoise(raw));
   let parsed = parseQuantityAndQuery(cleaned);
-  let catalogMatch = bestCatalogMention([parsed.query, cleaned], products);
+  let catalogMatch = bestCatalogMention([parsed.query, cleaned], products, preferredProductIds);
 
   const quantityCueIndex = firstQuantityCueIndex(cleaned);
   if (quantityCueIndex > 0) {
     const tail = cleaned.slice(quantityCueIndex).trim();
     const tailParsed = parseQuantityAndQuery(tail);
-    const tailMatch = bestCatalogMention([tailParsed.query, tail], products);
+    const tailMatch = bestCatalogMention([tailParsed.query, tail], products, preferredProductIds);
 
     if (tailMatch && (!catalogMatch || tailMatch.score > catalogMatch.score)) {
       cleaned = tail;
@@ -1413,7 +1434,8 @@ function buildAddItemsPlanFromSegments(
   products: Product[],
   segments: string[],
   source: SegmentSource,
-  referenceCatalog: Product[] = products
+  referenceCatalog: Product[] = products,
+  preferredProductIds: readonly string[] = []
 ): ExtractedAddItemsPlan {
   const normalizedUserText = normalizeInvisibleCharacters(userText);
   const alignedSegments = source === "language_segmenter"
@@ -1422,9 +1444,10 @@ function buildAddItemsPlanFromSegments(
   const refinedSegments = refineJoinedProductSegments(alignedSegments, products);
   const locatedSegments = locateRawSegments(normalizedUserText, refinedSegments);
   const catalogMentions = extractCatalogMentionsFromSegments(locatedSegments, products);
+  const preferredProductIdSet = new Set(preferredProductIds.map(String));
   const parsedFromSegments = locatedSegments
     .map((segment) => {
-      const parsed = parseSegment(segment.text, products);
+      const parsed = parseSegment(segment.text, products, preferredProductIdSet);
       if (parsed && !shouldKeepUnknownFallback(parsed, segments.length)) {
         return null;
       }
@@ -1512,7 +1535,8 @@ function buildAddItemsPlanFromSegments(
 
 export function extractAddItemsFromTextWithCatalog(
   userText: string,
-  products: Product[]
+  products: Product[],
+  options: Pick<ExtractAddItemsOptions, "preferredProductIds"> = {}
 ): ExtractedAddItemsPlan {
   const normalizedUserText = normalizeInvisibleCharacters(userText);
   return buildAddItemsPlanFromSegments(
@@ -1520,14 +1544,16 @@ export function extractAddItemsFromTextWithCatalog(
     filterAssistantEligibleProducts(products),
     splitRawSegments(normalizedUserText),
     "deterministic",
-    products
+    products,
+    options.preferredProductIds
   );
 }
 
 export function extractAddItemsFromTextWithCatalogSegments(
   userText: string,
   products: Product[],
-  segments: string[]
+  segments: string[],
+  options: Pick<ExtractAddItemsOptions, "preferredProductIds"> = {}
 ): ExtractedAddItemsPlan {
   const normalizedUserText = normalizeInvisibleCharacters(userText);
   return buildAddItemsPlanFromSegments(
@@ -1535,15 +1561,19 @@ export function extractAddItemsFromTextWithCatalogSegments(
     filterAssistantEligibleProducts(products),
     segments.map((segment) => stripTrailingNoise(stripLeadingIntentNoise(segment))).filter(Boolean),
     "language_segmenter",
-    products
+    products,
+    options.preferredProductIds
   );
 }
 
 export async function extractAddItemsFromText(
   userRef: string,
-  userText: string
+  userText: string,
+  options: ExtractAddItemsOptions = {}
 ): Promise<ExtractedAddItemsPlan> {
-  const referenceCatalog = await getAllProducts(userRef);
+  const referenceCatalog = options.catalog
+    ? [...options.catalog]
+    : await getAllProducts(userRef);
   const products = filterAssistantEligibleProducts(referenceCatalog);
   console.log("[ADD_ITEMS_EXTRACTOR] START", {
     userRef,
@@ -1562,13 +1592,14 @@ export async function extractAddItemsFromText(
         products,
         languageSegments,
         "language_segmenter",
-        referenceCatalog
+        referenceCatalog,
+        options.preferredProductIds
       )
-    : extractAddItemsFromTextWithCatalog(normalizedUserText, referenceCatalog);
+    : extractAddItemsFromTextWithCatalog(normalizedUserText, referenceCatalog, options);
 
   if (languageSegments?.length && plan.actions[0].items.length === 0) {
     console.warn("[ADD_ITEMS_EXTRACTOR] LANGUAGE_SEGMENTER_EMPTY_PLAN_FALLBACK");
-    plan = extractAddItemsFromTextWithCatalog(normalizedUserText, referenceCatalog);
+    plan = extractAddItemsFromTextWithCatalog(normalizedUserText, referenceCatalog, options);
   }
 
   const adjustedPlan = await applyVagueQuantityPolicyToPlan(userRef, plan);

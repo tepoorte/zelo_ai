@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="referrer" content="no-referrer" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'self'"
+  />
+  <title>Créer mon compte · Assistant Zélo</title>
+  <link rel="stylesheet" href="/inscription-whatsapp.css" />
+  <script defer src="/inscription-whatsapp.js"></script>
+</head>
+<body>
+  <main class="page-shell">
+    <section class="onboarding-card" aria-labelledby="page-title">
+      <header class="brand-header">
+        <a class="brand" href="https://zelo-epicerie.ch/" rel="noreferrer" aria-label="Accueil Zélo">
+          <span class="brand-name">zélo</span>
+          <span class="brand-tagline">épicerie équitable</span>
+        </a>
+        <span class="channel-badge" aria-label="Inscription depuis WhatsApp">
+          <span aria-hidden="true">✓</span>
+          WhatsApp
+        </span>
+      </header>
+
+      <div class="intro">
+        <p class="eyebrow">Assistant Zélo</p>
+        <h1 id="page-title">Bienvenue chez Zélo</h1>
+        <p id="page-description" class="lead">
+          Finalise ton accès pour commander directement depuis WhatsApp.
+        </p>
+      </div>
+
+      <div id="status-message" class="status-message" role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <section id="loading-view" class="view loading-view" aria-labelledby="loading-title">
+        <span class="spinner" aria-hidden="true"></span>
+        <div>
+          <h2 id="loading-title">Vérification du lien…</h2>
+          <p>Cette étape ne prend que quelques secondes.</p>
+        </div>
+      </section>
+
+      <section id="registration-view" class="view" hidden aria-labelledby="registration-title">
+        <div class="step-heading">
+          <span class="step-number" aria-hidden="true">1</span>
+          <div>
+            <h2 id="registration-title">Créer mon compte</h2>
+            <p>Ton numéro WhatsApp est déjà associé à cette inscription.</p>
+          </div>
+        </div>
+
+        <form id="registration-form" novalidate>
+          <div class="field-row">
+            <div class="field">
+              <label for="firstname">Prénom</label>
+              <input id="firstname" name="firstname" type="text" autocomplete="given-name" maxlength="80" required />
+            </div>
+            <div class="field">
+              <label for="lastname">Nom</label>
+              <input id="lastname" name="lastname" type="text" autocomplete="family-name" maxlength="80" required />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="email">Adresse électronique</label>
+            <input id="email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254" required />
+            <p class="field-hint">Un code de confirmation sera envoyé à cette adresse.</p>
+          </div>
+
+          <fieldset class="address-fields">
+            <legend>Adresse de livraison</legend>
+            <div class="field">
+              <label for="street">Rue et numéro</label>
+              <input id="street" name="street" type="text" autocomplete="street-address" maxlength="160" required />
+            </div>
+            <div class="field-row address-row">
+              <div class="field zip-field">
+                <label for="zip">NPA</label>
+                <input id="zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="12" required />
+              </div>
+              <div class="field">
+                <label for="city">Localité</label>
+                <input id="city" name="city" type="text" autocomplete="address-level2" maxlength="120" required />
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="country">Pays</label>
+                <input id="country" name="country" type="text" autocomplete="country-name" maxlength="80" value="Suisse" required />
+              </div>
+              <div class="field">
+                <label for="region">Région Zélo</label>
+                <select id="region" name="regionId" required>
+                  <option value="">Chargement…</option>
+                </select>
+              </div>
+            </div>
+            <p class="field-hint">Cette adresse permet de préparer les livraisons et les créneaux correspondant à ta région.</p>
+          </fieldset>
+
+          <div class="field">
+            <label for="new-password">Mot de passe</label>
+            <div class="password-field">
+              <input id="new-password" name="password" type="password" autocomplete="new-password" minlength="10" required />
+              <button class="reveal-button" type="button" data-password-toggle="new-password" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button>
+            </div>
+            <p class="field-hint">Au moins 10 caractères. Les espaces au début et à la fin ne comptent pas.</p>
+          </div>
+
+          <label class="consent-field" for="terms-accepted">
+            <input id="terms-accepted" name="termsAccepted" type="checkbox" required />
+            <span>
+              J’accepte les
+              <a href="https://zelo-epicerie.ch/terms-conditions.html" target="_blank" rel="noopener noreferrer">conditions générales</a>.
+            </span>
+          </label>
+
+          <p class="privacy-note">
+            Zélo utilise ces informations uniquement pour créer ton compte, relier ce numéro WhatsApp
+            et exécuter tes demandes. Ton mot de passe et ton code ne sont jamais envoyés dans WhatsApp.
+          </p>
+
+          <button class="primary-button" type="submit">Créer mon compte</button>
+        </form>
+      </section>
+
+      <section id="verification-view" class="view" hidden aria-labelledby="verification-title">
+        <div class="step-heading">
+          <span class="step-number" aria-hidden="true">2</span>
+          <div>
+            <h2 id="verification-title">Confirmer mon adresse</h2>
+            <p>Saisis le code reçu par courriel pour terminer l’inscription.</p>
+          </div>
+        </div>
+
+        <form id="verification-form" novalidate>
+          <div id="email-code-field" class="field">
+            <label for="email-code">Code de confirmation</label>
+            <input
+              id="email-code"
+              name="emailCode"
+              class="code-input"
+              type="text"
+              inputmode="text"
+              autocomplete="one-time-code"
+              autocapitalize="none"
+              pattern="[0-9a-fA-F]{6}"
+              maxlength="6"
+              required
+              aria-describedby="email-code-hint"
+            />
+            <p id="email-code-hint" class="field-hint">Le code contient 6 caractères.</p>
+          </div>
+
+          <div class="field">
+            <label for="confirmation-password">Mot de passe</label>
+            <div class="password-field">
+              <input id="confirmation-password" name="password" type="password" autocomplete="current-password" minlength="10" required />
+              <button class="reveal-button" type="button" data-password-toggle="confirmation-password" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button>
+            </div>
+            <p class="field-hint">Retape le mot de passe choisi à l’étape précédente.</p>
+          </div>
+
+          <button class="primary-button" type="submit">Valider et me connecter</button>
+          <button id="resend-code-button" class="secondary-button" type="button">Renvoyer le code</button>
+        </form>
+      </section>
+
+      <section id="connection-view" class="view" hidden aria-labelledby="connection-title">
+        <div class="step-heading">
+          <span class="step-number account-icon" aria-hidden="true">✓</span>
+          <div>
+            <h2 id="connection-title">Compte retrouvé</h2>
+            <p>Connecte ton compte Zélo à ce numéro WhatsApp.</p>
+          </div>
+        </div>
+
+        <form id="connection-form" novalidate>
+          <div id="existing-email-field" class="field" hidden>
+            <label for="existing-email">Adresse électronique du compte Zélo</label>
+            <input
+              id="existing-email"
+              name="email"
+              type="email"
+              inputmode="email"
+              autocomplete="email"
+              maxlength="254"
+            />
+            <p class="field-hint">Elle permet de confirmer que ce compte est bien celui associé au numéro WhatsApp.</p>
+          </div>
+
+          <div class="field">
+            <label for="existing-password">Mot de passe Zélo</label>
+            <div class="password-field">
+              <input id="existing-password" name="password" type="password" autocomplete="current-password" required />
+              <button class="reveal-button" type="button" data-password-toggle="existing-password" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button>
+            </div>
+          </div>
+
+          <button class="primary-button" type="submit">Connecter mon compte</button>
+        </form>
+      </section>
+
+      <section id="success-view" class="view success-view" hidden aria-labelledby="success-title">
+        <div class="success-mark" aria-hidden="true">✓</div>
+        <h2 id="success-title">Tout est prêt&nbsp;!</h2>
+        <p>Ton compte est maintenant connecté à l’assistant Zélo.</p>
+        <p class="success-action">Retourne dans WhatsApp et écris simplement ce dont tu as besoin.</p>
+        <a class="primary-button button-link" href="https://wa.me/41000000001" rel="noreferrer">Retourner sur WhatsApp</a>
+      </section>
+
+      <section id="error-view" class="view error-view" hidden aria-labelledby="error-title">
+        <div class="error-mark" aria-hidden="true">!</div>
+        <h2 id="error-title">Impossible de continuer</h2>
+        <p id="error-description">Ce lien n’est plus valide. Retourne dans WhatsApp et demande un nouveau lien à l’assistant Zélo.</p>
+        <button id="retry-button" class="secondary-button" type="button" hidden>Réessayer</button>
+      </section>
+
+      <footer class="card-footer">
+        <span aria-hidden="true">🔒</span>
+        <span>Connexion sécurisée. Cette page ne conserve pas tes codes d’accès dans le stockage du navigateur.</span>
+      </footer>
+    </section>
+  </main>
+</body>
+</html>

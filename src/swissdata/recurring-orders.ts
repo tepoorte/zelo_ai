@@ -22,6 +22,7 @@ export type CustomerRecurringOrder = {
   id: string;
   name: string;
   customerId: string;
+  region?: string | null;
   daysOfWeek: number[];
   deliveryTime?: string | null;
   frequencyUnit?: string | null;
@@ -122,6 +123,7 @@ function normalizeRecurringOrder(
     id,
     name: String(order?.name ?? "Commande récurrente"),
     customerId,
+    region: idOf(order?.region) || null,
     daysOfWeek: days,
     deliveryTime: typeof order?.deliveryTime === "string" ? order.deliveryTime : null,
     frequencyUnit: typeof order?.frequencyUnit === "string" ? order.frequencyUnit : null,

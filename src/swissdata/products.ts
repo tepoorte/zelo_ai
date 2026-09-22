@@ -51,7 +51,30 @@ export type Product = {
   type?: string;
   metadata?: ProductMetadata[];
   categories?: string[];
+  availableRegions?: unknown[] | null;
 };
+
+function referencedId(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return referencedId(record.id ?? record._id);
+  }
+  return "";
+}
+
+/** Mirrors Swissdata's recurring-order region constraint before proposing a write. */
+export function isProductAvailableInRegion(
+  product: Pick<Product, "availableRegions"> | null | undefined,
+  regionId: string | null | undefined
+): boolean {
+  const expectedRegionId = referencedId(regionId);
+  if (!expectedRegionId || !product) return false;
+  if (product.availableRegions == null) return true;
+  if (!Array.isArray(product.availableRegions)) return false;
+  return product.availableRegions.some((region) => referencedId(region) === expectedRegionId);
+}
 
 async function getCatalog(userRef: string, forceRefresh = false): Promise<Product[]> {
   const cacheKey = userRef || "__anonymous__";

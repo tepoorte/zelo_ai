@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-10T11:27:58.196Z",
+  "updatedAt": "2026-08-28T14:45:09.073Z",
   "events": [
     {
       "id": "b57624e0-2d89-4be3-aa2a-fd4dba06387e",
@@ -210,6 +210,16 @@
       "predictedAction": "exec_cart",
       "correctAction": "add_items",
       "createdAt": "2026-07-10T11:27:58.196Z",
+      "userRef": "web-ui"
+    },
+    {
+      "id": "9d050094-0722-422d-b4b4-344857957de7",
+      "kind": "correction",
+      "text": "ajoute du cafe, du lait et du pain ma commande recurrante Samuel2",
+      "normalizedText": "ajoute du cafe du lait et du pain ma commande recurrante samuel2",
+      "predictedAction": "add_items",
+      "correctAction": "recurring_orders",
+      "createdAt": "2026-08-28T14:45:09.073Z",
       "userRef": "web-ui"
     }
   ]

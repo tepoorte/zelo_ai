@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
@@ -30,6 +31,8 @@ if [ -z "${LOCAL_ENV_FILE:-}" ]; then
   fi
 fi
 REMOTE_COMPOSE_FILE="${REMOTE_COMPOSE_FILE:-docker-compose.yml}"
+REMOTE_COMPOSE_STAGING="${REMOTE_COMPOSE_FILE}.incoming"
+REMOTE_ENV_STAGING=".env.template.incoming"
 PROXYNET="${PROXYNET:-traefik-net}"
 
 # Do not default to ai.zelo-epicerie.ch: it currently points to another server.
@@ -170,16 +173,42 @@ echo ""
 echo "== Prepare runtime directory on server =="
 ssh -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
   SERVER_RUNTIME_DIR="$SERVER_RUNTIME_DIR" \
+  REMOTE_COMPOSE_STAGING="$REMOTE_COMPOSE_STAGING" \
+  REMOTE_ENV_STAGING="$REMOTE_ENV_STAGING" \
+  ARCHIVE_BASENAME="$ARCHIVE_BASENAME" \
   'bash -s' <<'REMOTE_MKDIR'
 set -euo pipefail
-mkdir -p "$SERVER_RUNTIME_DIR"
+umask 077
+mkdir -p -m 700 "$SERVER_RUNTIME_DIR"
+chmod 700 "$SERVER_RUNTIME_DIR"
+touch \
+  "$SERVER_RUNTIME_DIR/$REMOTE_COMPOSE_STAGING" \
+  "$SERVER_RUNTIME_DIR/$REMOTE_ENV_STAGING" \
+  "$SERVER_RUNTIME_DIR/$ARCHIVE_BASENAME"
+chmod 600 \
+  "$SERVER_RUNTIME_DIR/$REMOTE_COMPOSE_STAGING" \
+  "$SERVER_RUNTIME_DIR/$REMOTE_ENV_STAGING" \
+  "$SERVER_RUNTIME_DIR/$ARCHIVE_BASENAME"
 REMOTE_MKDIR
 echo ""
 
 echo "== Copy runtime files to server =="
-scp -P "$SERVER_PORT" "$LOCAL_COMPOSE_FILE" "$SERVER_USER@$SERVER_HOST:$SERVER_RUNTIME_DIR/$REMOTE_COMPOSE_FILE"
-scp -P "$SERVER_PORT" "$LOCAL_ENV_FILE" "$SERVER_USER@$SERVER_HOST:$SERVER_RUNTIME_DIR/.env.template"
+scp -P "$SERVER_PORT" "$LOCAL_COMPOSE_FILE" "$SERVER_USER@$SERVER_HOST:$SERVER_RUNTIME_DIR/$REMOTE_COMPOSE_STAGING"
+scp -P "$SERVER_PORT" "$LOCAL_ENV_FILE" "$SERVER_USER@$SERVER_HOST:$SERVER_RUNTIME_DIR/$REMOTE_ENV_STAGING"
 scp -P "$SERVER_PORT" "$CACHE_ARCHIVE" "$SERVER_USER@$SERVER_HOST:$SERVER_RUNTIME_DIR/$ARCHIVE_BASENAME"
+ssh -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
+  SERVER_RUNTIME_DIR="$SERVER_RUNTIME_DIR" \
+  REMOTE_COMPOSE_STAGING="$REMOTE_COMPOSE_STAGING" \
+  REMOTE_ENV_STAGING="$REMOTE_ENV_STAGING" \
+  ARCHIVE_BASENAME="$ARCHIVE_BASENAME" \
+  'bash -s' <<'REMOTE_PERMISSIONS'
+set -euo pipefail
+chmod 700 "$SERVER_RUNTIME_DIR"
+chmod 600 \
+  "$SERVER_RUNTIME_DIR/$REMOTE_COMPOSE_STAGING" \
+  "$SERVER_RUNTIME_DIR/$REMOTE_ENV_STAGING" \
+  "$SERVER_RUNTIME_DIR/$ARCHIVE_BASENAME"
+REMOTE_PERMISSIONS
 echo ""
 
 echo "== Deploy runtime on server =="
@@ -188,68 +217,79 @@ ssh -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
   AI_HOST="$AI_HOST" \
   SERVER_RUNTIME_DIR="$SERVER_RUNTIME_DIR" \
   REMOTE_COMPOSE_FILE="$REMOTE_COMPOSE_FILE" \
+  REMOTE_COMPOSE_STAGING="$REMOTE_COMPOSE_STAGING" \
+  REMOTE_ENV_STAGING="$REMOTE_ENV_STAGING" \
   ARCHIVE_BASENAME="$ARCHIVE_BASENAME" \
   REPLACE_SERVER_CACHE="$REPLACE_SERVER_CACHE" \
   'bash -s' <<'REMOTE_SCRIPT'
 set -euo pipefail
+umask 077
 
 cd "$SERVER_RUNTIME_DIR"
 BACKUP_DIR="$HOME/zelo-ai-backups"
-mkdir -p "$BACKUP_DIR"
+mkdir -p -m 700 "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
 
 STAMP="$(date +%Y%m%d_%H%M%S)"
-
-echo "== Backup existing runtime files =="
 RESTORE_CACHE=1
-if [ -f .env ]; then
-  cp .env "$BACKUP_DIR/zelo_ai_env_before_$STAMP.env"
-  echo "Backed up .env to $BACKUP_DIR/zelo_ai_env_before_$STAMP.env"
-fi
+HAS_EXISTING_ONBOARDING_STATE=0
+ENV_CANDIDATE=".env.incoming"
+CACHE_STAGE_ROOT=""
+ARCHIVE_LISTING=""
 
-if [ -f "$REMOTE_COMPOSE_FILE" ]; then
-  cp "$REMOTE_COMPOSE_FILE" "$BACKUP_DIR/zelo_ai_compose_before_$STAMP.yml"
-  echo "Backed up compose to $BACKUP_DIR/zelo_ai_compose_before_$STAMP.yml"
+cleanup_staging() {
+  rm -f -- "$ENV_CANDIDATE" "$REMOTE_COMPOSE_STAGING" "$REMOTE_ENV_STAGING"
+  if [ -n "$ARCHIVE_LISTING" ]; then
+    rm -f -- "$ARCHIVE_LISTING"
+  fi
+  if [ -n "$CACHE_STAGE_ROOT" ] && [ -d "$CACHE_STAGE_ROOT" ]; then
+    rm -rf -- "$CACHE_STAGE_ROOT"
+  fi
+}
+trap cleanup_staging EXIT HUP INT TERM
+
+echo "== Validate incoming runtime files without touching the active runtime =="
+if [ ! -s "$REMOTE_COMPOSE_STAGING" ] || [ ! -s "$REMOTE_ENV_STAGING" ]; then
+  echo "ERROR: incoming compose or env template is missing/empty."
+  exit 1
 fi
 
 if [ -d .cache ]; then
-  tar -czf "$BACKUP_DIR/zelo_ai_cache_before_$STAMP.tgz" .cache
-  echo "Backed up .cache to $BACKUP_DIR/zelo_ai_cache_before_$STAMP.tgz"
-
-  if [ "$REPLACE_SERVER_CACHE" = "1" ]; then
-    mv .cache "$BACKUP_DIR/zelo_ai_cache_dir_before_$STAMP"
-    echo "Existing .cache moved to $BACKUP_DIR/zelo_ai_cache_dir_before_$STAMP"
-  else
+  if [ -f .cache/whatsapp-onboarding-state.json ]; then
+    HAS_EXISTING_ONBOARDING_STATE=1
+  fi
+  if [ "$REPLACE_SERVER_CACHE" != "1" ]; then
     RESTORE_CACHE=0
-    echo "Existing server .cache kept active. Local cache archive will not replace it."
   fi
 fi
 
-echo "== Render .env =="
-cp .env.template .env
-sed -i "s/^VERSION=.*/VERSION=$VERSION/" .env
-sed -i "s/^AI_HOST=.*/AI_HOST=$AI_HOST/" .env
+read_env_value() {
+  local key="$1"
+  local file="$2"
+  awk -F= -v key="$key" '$1 == key { sub(/^[^=]*=/, ""); print; exit }' "$file"
+}
 
-if [ -f "$BACKUP_DIR/zelo_ai_env_before_$STAMP.env" ]; then
+write_env_value() {
+  local key="$1"
+  local value="$2"
+  local file="$3"
+  local escaped
+  escaped="$(printf '%s\n' "$value" | sed -e 's/[\/&]/\\&/g')"
+  if grep -q "^${key}=" "$file"; then
+    sed -i "s/^${key}=.*/${key}=${escaped}/" "$file"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$file"
+  fi
+}
+
+echo "== Render and validate candidate environment =="
+cp "$REMOTE_ENV_STAGING" "$ENV_CANDIDATE"
+chmod 600 "$ENV_CANDIDATE"
+sed -i "s/^VERSION=.*/VERSION=$VERSION/" "$ENV_CANDIDATE"
+sed -i "s/^AI_HOST=.*/AI_HOST=$AI_HOST/" "$ENV_CANDIDATE"
+
+if [ -f .env ]; then
   echo "== Preserve existing production-only secrets when template leaves them empty =="
-
-  read_env_value() {
-    local key="$1"
-    local file="$2"
-    awk -F= -v key="$key" '$1 == key { sub(/^[^=]*=/, ""); print; exit }' "$file"
-  }
-
-  write_env_value() {
-    local key="$1"
-    local value="$2"
-    local file="$3"
-    local escaped
-    escaped="$(printf '%s\n' "$value" | sed -e 's/[\/&]/\\&/g')"
-    if grep -q "^${key}=" "$file"; then
-      sed -i "s/^${key}=.*/${key}=${escaped}/" "$file"
-    else
-      printf '%s=%s\n' "$key" "$value" >> "$file"
-    fi
-  }
 
   PRESERVE_IF_TEMPLATE_EMPTY_KEYS="
 META_VERIFY_TOKEN
@@ -258,6 +298,11 @@ META_GRAPH_TOKEN
 META_WHATSAPP_PHONE_NUMBER_ID
 META_WHATSAPP_BUSINESS_ACCOUNT_ID
 WHATSAPP_ADMIN_TOKEN
+WHATSAPP_ONBOARDING_URL
+WHATSAPP_ONBOARDING_TTL_MINUTES
+WHATSAPP_ONBOARDING_MAX_ATTEMPTS
+WHATSAPP_ONBOARDING_LOCK_MINUTES
+WHATSAPP_ONBOARDING_STATE_KEY
 WHATSAPP_TEST_PHONE
 WHATSAPP_ALLOWED_PHONES
 SWISSDATA_ADMIN_TOKEN
@@ -279,37 +324,164 @@ TWILIO_SWISSDATA_PASSWORD
 
   PRESERVED_COUNT=0
   for KEY in $PRESERVE_IF_TEMPLATE_EMPTY_KEYS; do
-    NEW_VALUE="$(read_env_value "$KEY" .env)"
-    OLD_VALUE="$(read_env_value "$KEY" "$BACKUP_DIR/zelo_ai_env_before_$STAMP.env")"
+    NEW_VALUE="$(read_env_value "$KEY" "$ENV_CANDIDATE")"
+    OLD_VALUE="$(read_env_value "$KEY" .env)"
     if [ -z "$NEW_VALUE" ] && [ -n "$OLD_VALUE" ]; then
-      write_env_value "$KEY" "$OLD_VALUE" .env
+      write_env_value "$KEY" "$OLD_VALUE" "$ENV_CANDIDATE"
       PRESERVED_COUNT=$((PRESERVED_COUNT + 1))
     fi
   done
   echo "Preserved $PRESERVED_COUNT existing secret/config values."
+elif [ "$HAS_EXISTING_ONBOARDING_STATE" = "1" ]; then
+  echo "ERROR: encrypted WhatsApp onboarding state exists but the previous .env is unavailable."
+  echo "Restore the previous .env before deploying so its encryption key can be verified."
+  exit 1
 fi
 
-echo "== Restore cache archive =="
-if tar -tzf "$ARCHIVE_BASENAME" | grep -Eq '^\.cache/(tmp|whatsapp-web-session)(/|$)'; then
-  echo "ERROR: cache archive contains .cache/tmp or .cache/whatsapp-web-session."
+echo "== Complete and validate WhatsApp onboarding configuration =="
+ONBOARDING_URL="$(read_env_value WHATSAPP_ONBOARDING_URL "$ENV_CANDIDATE")"
+if [ -z "$ONBOARDING_URL" ]; then
+  ONBOARDING_URL="https://$AI_HOST/inscription-whatsapp"
+  write_env_value WHATSAPP_ONBOARDING_URL "$ONBOARDING_URL" "$ENV_CANDIDATE"
+fi
+case "$ONBOARDING_URL" in
+  https://*) ;;
+  *)
+    echo "ERROR: WHATSAPP_ONBOARDING_URL must use HTTPS in production."
+    exit 1
+    ;;
+esac
+
+for DEFAULT_ENTRY in \
+  "WHATSAPP_ONBOARDING_TTL_MINUTES=30" \
+  "WHATSAPP_ONBOARDING_MAX_ATTEMPTS=5" \
+  "WHATSAPP_ONBOARDING_LOCK_MINUTES=15"; do
+  DEFAULT_KEY="${DEFAULT_ENTRY%%=*}"
+  DEFAULT_VALUE="${DEFAULT_ENTRY#*=}"
+  if [ -z "$(read_env_value "$DEFAULT_KEY" "$ENV_CANDIDATE")" ]; then
+    write_env_value "$DEFAULT_KEY" "$DEFAULT_VALUE" "$ENV_CANDIDATE"
+  fi
+done
+
+ONBOARDING_STATE_KEY="$(read_env_value WHATSAPP_ONBOARDING_STATE_KEY "$ENV_CANDIDATE")"
+if [ -z "$ONBOARDING_STATE_KEY" ]; then
+  if [ "$HAS_EXISTING_ONBOARDING_STATE" = "1" ]; then
+    echo "ERROR: encrypted WhatsApp onboarding state exists but its previous key is unavailable."
+    exit 1
+  fi
+  ONBOARDING_STATE_KEY="$(openssl rand -base64 32 | tr -d '\n')"
+  write_env_value WHATSAPP_ONBOARDING_STATE_KEY "$ONBOARDING_STATE_KEY" "$ENV_CANDIDATE"
+  echo "Generated a new persistent onboarding state key on the server (value not displayed)."
+else
+  echo "Using the persistent onboarding state key already configured (value not displayed)."
+fi
+
+ONBOARDING_KEY_BYTES="$(printf '%s' "$ONBOARDING_STATE_KEY" | openssl base64 -d -A 2>/dev/null | wc -c | tr -d ' ')"
+if [ "$ONBOARDING_KEY_BYTES" != "32" ]; then
+  echo "ERROR: WHATSAPP_ONBOARDING_STATE_KEY must decode to exactly 32 bytes."
+  exit 1
+fi
+
+if [ "$HAS_EXISTING_ONBOARDING_STATE" = "1" ]; then
+  OLD_ONBOARDING_STATE_KEY="$(read_env_value WHATSAPP_ONBOARDING_STATE_KEY .env)"
+  if [ -z "$OLD_ONBOARDING_STATE_KEY" ] || [ "$OLD_ONBOARDING_STATE_KEY" != "$ONBOARDING_STATE_KEY" ]; then
+    echo "ERROR: WHATSAPP_ONBOARDING_STATE_KEY changed while encrypted onboarding state exists."
+    echo "Keep the existing key for this deploy; rotate only after active links have expired."
+    exit 1
+  fi
+fi
+
+if [ "$(read_env_value WHATSAPP_AUTH_MODE "$ENV_CANDIDATE")" != "otp" ]; then
+  echo "ERROR: WHATSAPP_AUTH_MODE must be otp in production."
+  exit 1
+fi
+chmod 600 "$ENV_CANDIDATE"
+echo "Candidate WhatsApp onboarding configuration is ready."
+
+echo "== Validate cache archive =="
+ARCHIVE_LISTING="$(mktemp "$SERVER_RUNTIME_DIR/.cache-archive-list.XXXXXX")"
+chmod 600 "$ARCHIVE_LISTING"
+if ! tar -tzf "$ARCHIVE_BASENAME" > "$ARCHIVE_LISTING"; then
+  echo "ERROR: cache archive is unreadable or corrupt."
+  exit 1
+fi
+if grep -E '^\.cache/(tmp|whatsapp-web-session|whatsapp-onboarding-state\.json)(/|$)' "$ARCHIVE_LISTING" >/dev/null; then
+  echo "ERROR: cache archive contains local-only runtime/session state."
   echo "Re-run ./deploy/01-local-preflight.sh to create a clean cache archive."
+  exit 1
+fi
+if grep -E '(^/|(^|/)\.\.(/|$))' "$ARCHIVE_LISTING" >/dev/null; then
+  echo "ERROR: cache archive contains an unsafe path."
+  exit 1
+fi
+if ! grep -E '^\.cache(/|$)' "$ARCHIVE_LISTING" >/dev/null; then
+  echo "ERROR: cache archive does not contain a .cache directory."
   exit 1
 fi
 
 if [ "$RESTORE_CACHE" = "1" ]; then
-  tar -xzf "$ARCHIVE_BASENAME"
+  CACHE_STAGE_ROOT="$(mktemp -d "$SERVER_RUNTIME_DIR/.cache-stage.XXXXXX")"
+  chmod 700 "$CACHE_STAGE_ROOT"
+  tar -xzf "$ARCHIVE_BASENAME" -C "$CACHE_STAGE_ROOT"
+  if [ ! -d "$CACHE_STAGE_ROOT/.cache" ]; then
+    echo "ERROR: cache archive did not create a staged .cache directory."
+    exit 1
+  fi
+  chmod 700 "$CACHE_STAGE_ROOT/.cache"
+  if [ "$HAS_EXISTING_ONBOARDING_STATE" = "1" ]; then
+    cp .cache/whatsapp-onboarding-state.json "$CACHE_STAGE_ROOT/.cache/whatsapp-onboarding-state.json"
+    chmod 600 "$CACHE_STAGE_ROOT/.cache/whatsapp-onboarding-state.json"
+  fi
 else
-  echo "Skipped cache restore because server .cache already exists."
+  echo "Existing server .cache will remain active."
 fi
-if [ ! -d .cache ]; then
-  echo "ERROR: cache archive did not create .cache."
-  exit 1
+
+echo "== Validate candidate compose =="
+docker compose --env-file "$ENV_CANDIDATE" -f "$REMOTE_COMPOSE_STAGING" config >/dev/null
+
+echo "== Backup existing runtime files =="
+if [ -f .env ]; then
+  cp .env "$BACKUP_DIR/zelo_ai_env_before_$STAMP.env"
+  chmod 600 "$BACKUP_DIR/zelo_ai_env_before_$STAMP.env"
+  echo "Backed up .env to $BACKUP_DIR/zelo_ai_env_before_$STAMP.env"
+fi
+if [ -f .env.template ]; then
+  cp .env.template "$BACKUP_DIR/zelo_ai_env_template_before_$STAMP.env"
+  chmod 600 "$BACKUP_DIR/zelo_ai_env_template_before_$STAMP.env"
+fi
+if [ -f "$REMOTE_COMPOSE_FILE" ]; then
+  cp "$REMOTE_COMPOSE_FILE" "$BACKUP_DIR/zelo_ai_compose_before_$STAMP.yml"
+  chmod 600 "$BACKUP_DIR/zelo_ai_compose_before_$STAMP.yml"
+  echo "Backed up compose to $BACKUP_DIR/zelo_ai_compose_before_$STAMP.yml"
+fi
+if [ -d .cache ]; then
+  tar -czf "$BACKUP_DIR/zelo_ai_cache_before_$STAMP.tgz" .cache
+  chmod 600 "$BACKUP_DIR/zelo_ai_cache_before_$STAMP.tgz"
+  echo "Backed up .cache to $BACKUP_DIR/zelo_ai_cache_before_$STAMP.tgz"
+fi
+
+echo "== Promote validated runtime files =="
+mv "$REMOTE_COMPOSE_STAGING" "$REMOTE_COMPOSE_FILE"
+mv "$REMOTE_ENV_STAGING" .env.template
+mv "$ENV_CANDIDATE" .env
+chmod 600 "$REMOTE_COMPOSE_FILE" .env.template .env
+
+if [ "$RESTORE_CACHE" = "1" ]; then
+  if [ -d .cache ]; then
+    mv .cache "$BACKUP_DIR/zelo_ai_cache_dir_before_$STAMP"
+    echo "Existing .cache moved to $BACKUP_DIR/zelo_ai_cache_dir_before_$STAMP"
+  fi
+  mv "$CACHE_STAGE_ROOT/.cache" .cache
+  chmod 700 .cache
+  echo "Validated cache archive promoted."
+  if [ "$HAS_EXISTING_ONBOARDING_STATE" = "1" ]; then
+    echo "Preserved the server WhatsApp onboarding state across cache replacement."
+  fi
+else
+  echo "Skipped cache promotion because server .cache already exists."
 fi
 find .cache -maxdepth 1 -type f -name "*.json" | sort
 du -sh .cache
-
-echo "== Validate compose =="
-docker compose --env-file .env -f "$REMOTE_COMPOSE_FILE" config >/tmp/zelo_ai_compose_config.txt
 
 echo "== Docker pull/up =="
 docker compose --env-file .env -f "$REMOTE_COMPOSE_FILE" pull zelo_ai

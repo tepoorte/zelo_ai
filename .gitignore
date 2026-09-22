@@ -30,6 +30,8 @@ pre_stage_merge_backup/
 .cache/backups/
 .cache/tmp/
 .cache/whatsapp-web-session/
+.cache/whatsapp-onboarding-state.json
+.cache/.whatsapp-onboarding-state.json.*.tmp
 .cache/discover-budget-ui-audit-results.json
 .cache/product-eligibility-ui-audit-results.json
 .cache/intent-ui-audit-results.json

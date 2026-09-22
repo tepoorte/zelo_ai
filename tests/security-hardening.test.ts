@@ -14,11 +14,14 @@ function productionEnv(overrides: Partial<AppEnv> = {}): AppEnv {
     nodeEnv: "production",
     aiProvider: "ollama",
     whatsappProvider: "meta_cloud",
+    whatsappAuthMode: "otp",
     metaVerifyToken: "verify-token",
     metaAppSecret: "meta-app-secret",
     metaGraphToken: "EAATESTTOKEN123456789012345678901234567890",
     metaWhatsappPhoneNumberId: "1274254025760821",
     whatsappAdminToken: "admin-token",
+    whatsappOnboardingUrl: "https://assistant.example.test/inscription-whatsapp",
+    whatsappOnboardingStateKey: crypto.randomBytes(32).toString("base64"),
     swissdataBaseUrl: "https://swissdata.example.test",
     swissdataShopId: "shop-id",
     swissdataApiKey: "swissdata-api-key",
@@ -64,6 +67,11 @@ function fakeReq(headers: Record<string, string> = {}, query: Record<string, unk
   assert(findings.includes("Missing production env: metaGraphToken"));
   assert(findings.includes("Missing production env: whatsappAdminToken"));
   assert(findings.includes("Missing Swissdata admin auth: provide token or username/password"));
+
+  const authModeFindings = validateProductionEnv(
+    productionEnv({ whatsappAuthMode: "legacy_dev" })
+  );
+  assert(authModeFindings.includes("WHATSAPP_AUTH_MODE must be otp in production"));
 }
 
 {
@@ -74,6 +82,22 @@ function fakeReq(headers: Record<string, string> = {}, query: Record<string, unk
     })
   );
   assert(openAiFindings.includes("Missing production env: openaiApiKey"));
+}
+
+{
+  const onboardingFindings = validateProductionEnv(
+    productionEnv({ whatsappOnboardingUrl: "http://assistant.example.test/inscription-whatsapp" })
+  );
+  assert(onboardingFindings.includes("WHATSAPP_ONBOARDING_URL must use https in production"));
+
+  const invalidKeyFindings = validateProductionEnv(
+    productionEnv({ whatsappOnboardingStateKey: Buffer.alloc(16).toString("base64") })
+  );
+  assert(
+    invalidKeyFindings.includes(
+      "WHATSAPP_ONBOARDING_STATE_KEY must be a base64-encoded 32-byte key"
+    )
+  );
 }
 
 {

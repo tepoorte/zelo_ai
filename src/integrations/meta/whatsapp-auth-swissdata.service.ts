@@ -1,5 +1,10 @@
 import { env } from "../../config/env.js";
 import { swissdataAdminClient } from "../../swissdata/admin-client.js";
+import {
+  isSameWhatsAppPhone,
+  normalizeMetaWhatsAppPhone,
+  swissdataPhoneSearchPattern,
+} from "./whatsapp-phone.js";
 
 export type WhatsAppCustomerIdentity = {
   customerId: string;
@@ -41,40 +46,11 @@ function idOf(value: unknown): string {
   return "";
 }
 
-function normalizePhone(input: string): string {
-  const withoutJid = String(input || "").split("@")[0] || "";
-  const digits = withoutJid.replace(/\D/g, "");
-  return digits.startsWith("00") ? digits.slice(2) : digits;
-}
-
-function phoneVariants(value: string): Set<string> {
-  const normalized = normalizePhone(value);
-  const variants = new Set<string>();
-  if (!normalized) return variants;
-  variants.add(normalized);
-  if (normalized.startsWith("41") && normalized.length > 9) {
-    variants.add(`0${normalized.slice(2)}`);
-    variants.add(normalized.slice(2));
-  }
-  if (normalized.startsWith("0") && normalized.length > 8) {
-    variants.add(`41${normalized.slice(1)}`);
-    variants.add(normalized.slice(1));
-  }
-  return variants;
-}
-
-function phonesMatch(left: string | undefined, right: string): boolean {
-  if (!left || !right) return false;
-  const leftVariants = phoneVariants(left);
-  const rightVariants = phoneVariants(right);
-  for (const variant of leftVariants) {
-    if (rightVariants.has(variant)) return true;
-  }
-  return false;
-}
-
 function customerPhoneMatches(customer: SwissdataCustomerLike, phone: string): boolean {
-  return phonesMatch(customer.mobile, phone) || phonesMatch(customer.user?.mobile, phone);
+  return (
+    isSameWhatsAppPhone(customer.mobile ?? "", phone) ||
+    isSameWhatsAppPhone(customer.user?.mobile ?? "", phone)
+  );
 }
 
 function displayName(customer: SwissdataCustomerLike): string | undefined {
@@ -87,7 +63,12 @@ function displayName(customer: SwissdataCustomerLike): string | undefined {
 
 function toIdentity(customer: SwissdataCustomerLike): WhatsAppCustomerLookupResult {
   const customerId = idOf(customer.id ?? customer._id);
-  const userId = idOf(customer.userId ?? customer.user?.id ?? customer.user?._id);
+  const directUserId = idOf(customer.userId);
+  const populatedUserId = idOf(customer.user?.id ?? customer.user?._id);
+  if (directUserId && populatedUserId && directUserId !== populatedUserId) {
+    return { ok: false, reason: "ambiguous" };
+  }
+  const userId = populatedUserId || directUserId;
   if (!customerId || !userId) {
     return { ok: false, reason: "missing_user" };
   }
@@ -114,27 +95,42 @@ export async function lookupWhatsAppCustomerByPhone(
 ): Promise<WhatsAppCustomerLookupResult> {
   if (!env.swissdataShopId) return { ok: false, reason: "config" };
 
-  const normalizedPhone = normalizePhone(phone);
+  const normalizedPhone = normalizeMetaWhatsAppPhone(phone);
   if (!normalizedPhone) return { ok: false, reason: "not_found" };
 
   const api = await swissdataAdminClient();
-  const res = await api.get(`/shop/admin/${env.swissdataShopId}/customer`, {
-    params: {
-      q: normalizedPhone,
-      autoFetch: "user",
-      limit: 20,
-    },
-  });
-
-  const candidates = Array.isArray(res.data)
-    ? res.data
-    : Array.isArray(res.data?.items)
-      ? res.data.items
-      : [];
-
-  const matches = candidates.filter((customer: SwissdataCustomerLike) =>
-    customerPhoneMatches(customer, normalizedPhone)
-  );
+  const searchPattern = swissdataPhoneSearchPattern(normalizedPhone);
+  if (!searchPattern) return { ok: false, reason: "not_found" };
+  const candidates: SwissdataCustomerLike[] = [];
+  const pageSize = 100;
+  const maxCandidates = 1_000;
+  for (let skip = 0; skip < maxCandidates; skip += pageSize) {
+    const res = await api.get(`/shop/admin/${env.swissdataShopId}/customer`, {
+      params: {
+        q: searchPattern,
+        autoFetch: "user",
+        limit: pageSize,
+        skip,
+      },
+    });
+    const page = Array.isArray(res.data)
+      ? res.data
+      : Array.isArray(res.data?.items)
+        ? res.data.items
+        : [];
+    candidates.push(...(page as SwissdataCustomerLike[]));
+    if (page.length < pageSize) break;
+    if (skip + pageSize >= maxCandidates) return { ok: false, reason: "ambiguous" };
+  }
+  const matchesByCustomer = new Map<string, SwissdataCustomerLike>();
+  for (const customer of candidates) {
+    if (!customerPhoneMatches(customer, normalizedPhone)) continue;
+    const customerId = idOf(customer.id ?? customer._id);
+    const userId = idOf(customer.userId ?? customer.user?.id ?? customer.user?._id);
+    const key = customerId || `missing:${userId}:${customer.mobile ?? ""}:${customer.user?.mobile ?? ""}`;
+    if (!matchesByCustomer.has(key)) matchesByCustomer.set(key, customer);
+  }
+  const matches = [...matchesByCustomer.values()];
 
   if (matches.length === 0) return { ok: false, reason: "not_found" };
   if (matches.length > 1) return { ok: false, reason: "ambiguous" };

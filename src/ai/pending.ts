@@ -39,6 +39,7 @@ export type PendingMealSuggestionChoice = {
 export type PendingRecurringOrderSummary = {
   id: string;
   name: string;
+  region?: string | null;
   dayLabels: string[];
   deliveryTime?: string | null;
   frequencyUnit?: string | null;

@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 1,
   "fallbackIntent": "noop",
   "common": {
     "stopwords": [
@@ -94,9 +94,123 @@
   },
   "feedback": {
     "overrides": {
-      "ok": "exec_cart"
+      "j'ai trouve un person dehors la maison": "noop",
+      "mon pere voudrais des ide": "discover_meals"
     },
-    "reinforced": {}
+    "reinforced": {
+      "noop": [
+        {
+          "text": "comment je vais a la gare a pie?",
+          "normalized": "comment je vais a la gare a pie",
+          "count": 2
+        },
+        {
+          "text": "ja ne sai pas",
+          "normalized": "ja ne sai pas",
+          "count": 2
+        },
+        {
+          "text": "j'ai trouvé un person dehors la maison",
+          "normalized": "j'ai trouve un person dehors la maison",
+          "count": 4
+        }
+      ],
+      "add_items": [
+        {
+          "text": "Non, je veux le pain balance coupé en tranche",
+          "normalized": "non je veux le pain balance coupe en tranche",
+          "count": 2
+        },
+        {
+          "text": "A. Lait Bio pasteurisé",
+          "normalized": "a lait bio pasteurise",
+          "count": 2
+        },
+        {
+          "text": "Salut André, j’espère que tu vas bien. Si c’est possible pour ta tournée, je te prends volontiers 2 litres de lait sapalet, 8 œufs, 250 gr de fromage aléatoire gimelan et 2kg de pommes. Si pas possible ou que c’est trop, c’est pas grave! Merci et bonne journée, Loraine",
+          "normalized": "salut andre j espere que tu vas bien si c est possible pour ta tournee je te prends volontiers 2 litres de lait sapalet 8 ufs 250 gr de fromage aleatoire gimelan et 2kg de pommes si pas possible ou que c est trop c est pas grave merci et bonne journee loraine",
+          "count": 2
+        },
+        {
+          "text": "je veux une farine pour une pizz",
+          "normalized": "je veux une farine pour une pizz",
+          "count": 2
+        },
+        {
+          "text": "quels tomates as-tu ?",
+          "normalized": "quels tomates as tu",
+          "count": 2
+        },
+        {
+          "text": "lard",
+          "normalized": "lard",
+          "count": 2
+        },
+        {
+          "text": "ajout du pain a ma commande",
+          "normalized": "ajout du pain a ma commande",
+          "count": 2
+        }
+      ],
+      "clear_cart": [
+        {
+          "text": "Enlève le pain balance du panier",
+          "normalized": "enleve le pain balance du panier",
+          "count": 2
+        },
+        {
+          "text": "supprime 1 lard du begnins de mon panier",
+          "normalized": "supprime 1 lard du begnins de mon panier",
+          "count": 2
+        },
+        {
+          "text": "garde hot dog",
+          "normalized": "garde hot dog",
+          "count": 2
+        }
+      ],
+      "discover_meals": [
+        {
+          "text": "aide moi",
+          "normalized": "aide moi",
+          "count": 2
+        },
+        {
+          "text": "une boisson pour accompagner",
+          "normalized": "une boisson pour accompagner",
+          "count": 2
+        },
+        {
+          "text": "j’ai envie d’un truc simple mais bon",
+          "normalized": "j ai envie d un truc simple mais bon",
+          "count": 2
+        },
+        {
+          "text": "je veux compléter mon panier pour demain matin",
+          "normalized": "je veux completer mon panier pour demain matin",
+          "count": 2
+        },
+        {
+          "text": "mon père voudrais des ide",
+          "normalized": "mon pere voudrais des ide",
+          "count": 4
+        }
+      ],
+      "exec_cart": [
+        {
+          "text": "ok",
+          "normalized": "ok",
+          "count": 2
+        }
+      ],
+      "recurring_orders": [
+        {
+          "text": "ajoute du cafe, du lait et du pain ma commande recurrante Samuel2",
+          "normalized": "ajoute du cafe du lait et du pain ma commande recurrante samuel2",
+          "count": 2
+        }
+      ]
+    }
   },
   "intents": [
     {
@@ -162,6 +276,13 @@
         "j aime avoir ajoutee",
         "j aimerais mettre du lard de begnins",
         "je veux du lard de begnins dans mon panier",
+        "Non, je veux le pain balance coupé en tranche",
+        "A. Lait Bio pasteurisé",
+        "Salut André, j’espère que tu vas bien. Si c’est possible pour ta tournée, je te prends volontiers 2 litres de lait sapalet, 8 œufs, 250 gr de fromage aléatoire gimelan et 2kg de pommes. Si pas possible ou que c’est trop, c’est pas grave! Merci et bonne journée, Loraine",
+        "je veux une farine pour une pizz",
+        "quels tomates as-tu ?",
+        "lard",
+        "ajout du pain a ma commande",
         "ajoute 1 Magret de canard et 1 kg de Confiture aléatoire et 4 kg de Plateau de fromages (vache, petit) et 4 kg de Crème glacée pistache et 3 Garniture pour Bouchée à la Reine",
         "je voudrais acheter 4 kg de Lait pasteurisé (Non Bio)\n- 2 litres de Haricots Borlotti",
         "rajoute 2 litres de Tartare de boeuf\n- 1 kg de Pizza Porcini",
@@ -444,7 +565,6 @@
         "pour la prochaine livraison, Filets pour fruits\n- 4 Bière Blonde japonaise\n- Yaourt de brebis bio aléatoire (Sapalet, petit)\n- 4 Maté Daily Energy 365",
         "j'aimerais commander 3 Brochette de porc streu mi et 200g de Petit pain au lait",
         "ajoute 3 kg de Contenants en prêt (Marché Nyon), 1 Noix de coco râpée, Sel fin, 3 Farine d'épeautre Bio, 4 Brochette mixte, Herbes de Provence",
-        "Non, je veux le pain balance coupé en tranche",
         "ajoute 4 litres de Boîte à savon puis 2 litres de Kéfir Poire Cassis puis 3 kg de Masque de protection S",
         "je voudrais acheter 2 litres de Location Curve Mountain\n- Orangettes\n- 250g de Panier de FRUITS Bio ou VV Classique Petit\n- 2 Baguette du château\n- 250g de Café en grain Dolce Vita (10kg)",
         "rajoute juste 6 Pain blé ancien puis 3 litres de Pot Zélo puis 5 (Lu) Menu Malakoff puis 3 kg de Panier de fruits exotiques Petit puis 1 kg de Muesli Maison Bio (sans sucre)",
@@ -590,7 +710,6 @@
         "Salut André, pour demain tu peux me mettre 4 kg de Gingembre bio, 2 Sac isotherme (grand) ? Merci beaucoup",
         "bonjour andre, je veux bien Plateau Apéro\n- Cr00se\n- 5 Porc - Lard en tranche\n- 400g de Pain sandwich Hamburger, merci",
         "ajoute Garanoir La Côte AOC (carton de 6) et 1 Plaquette de présentation (à récupérer) et 200g de Rosé de Gamay 2021 (Coeur perdu) et Pastrami et Sauce soja traditionnelle et 4 kg de Gimelan au poivre vert",
-        "Salut André, j’espère que tu vas bien. Si c’est possible pour ta tournée, je te prends volontiers 2 litres de lait sapalet, 8 œufs, 250 gr de fromage aléatoire gimelan et 2kg de pommes. Si pas possible ou que c’est trop, c’est pas grave! Merci et bonne journée, Loraine",
         "si possible ajoute 100g de Sel de cristaux bleu, 6 Mortadelle, 1 kg de Noisettes moulues bio, 1 kg de Cake Vaisselle, 250g de Graines de pavot, 4 Vaisselle réutilisable Récupération",
         "mets-moi 100g de Coton démaquillant Grand, 2 kg de Grand mouchoir",
         "bonjour andre, je veux bien 300g de Poulet - Cuisse puis 100g de Pain mi-blanc puis 3 kg de Sandwich au Roasbeef, merci",
@@ -823,7 +942,6 @@
         "mets 4 litres de Pâtes aléatoires env. 1kg puis 6 Pistaches grillées salées (avec coques) puis Held Lessive liquide laine & soie puis Yaourt Citron dans mon panier",
         "pour la prochaine livraison, 4 kg de Yaourt stracciatella (Grand pot), Porc - Côtelette, Gimelan aléatoire, 1 Panier de FRUITS Bio ou VV Classique Moyen, 500g de Pain blé ancien",
         "bonjour andre, je veux bien 2 kg de Gewurztraminer 2020 puis 3 Contec Rétroviseur E-View King puis 1 litre de Ketchup Connie's puis Filet de poulet, merci",
-        "ajout du pain a ma commande",
         "il me faudrait 6 Graines de Sarrasin puis 3 Chocolat artisanal noir framboise 63% puis 4 kg de Eclairs au chocolat (duo) puis Pain de la veille ou congelé puis 200g de Viennes par paire puis A. Pain Anglais",
         "Salut André, peux-tu me mettre 5 Chocolat artisanal noir amandes 63%\n- 2 kg de Cardamome en grain\n- 300g de Panini au poulet\n- 2 litres de Eau minérale gazeuse\n- 250g de Pâtes alphabet ?",
         "est-ce que tu peux me livrer 1 litre de Fricandeaux, 4 litres de Feuilles de lavage (échantillon standard)",
@@ -895,6 +1013,9 @@
         "retire le panier budget 50 de mon panier",
         "supprime panier budget 50",
         "enleve panier budget 50",
+        "Enlève le pain balance du panier",
+        "supprime 1 lard du begnins de mon panier",
+        "garde hot dog",
         "enleve juste 1 Emincé de poulet",
         "supprime 2 litres de Poulet entier épicé de mon panier",
         "finalement pas de 3 kg de Paini Tomates-Mozza",
@@ -1381,7 +1502,6 @@
         "enleve juste Vianed sechee",
         "finalement pas de 2 Viande hachée (250g)",
         "enleve tout du apnier",
-        "garde hot dog",
         "supprime 1 Pistaches grillées salées (avec coques) de mon panier",
         "tu peux enlever 1 kg de Crottins de chèvre par 2 seulement",
         "supprime 4 kg de Brosse à ongle de mon panier",
@@ -1789,6 +1909,10 @@
         "que me conseilles tu si je recois des amis",
         "des produits pour la maison",
         "une selection pour la maison",
+        "aide moi",
+        "j’ai envie d’un truc simple mais bon",
+        "je veux compléter mon panier pour demain matin",
+        "mon père voudrais des ide",
         "tu me conseilles quoi puor un petit dejeuner equilibre",
         "de quoi faire un repas vegetarien",
         "je ne sais pas quoi prendre pour quelque chose de leger",
@@ -1819,7 +1943,6 @@
         "je cherche une idee caeau",
         "j'ai envie de une opton avec de la viande",
         "aide mo ia choisir un petit dejeuner equilibre",
-        "aide moi",
         "une inspiration pour des boissons pour ce soir",
         "qu'et-ce que tu me proposes aujourd'hui",
         "que prendre si je veux une option avec de la viane",
@@ -2058,7 +2181,6 @@
         "que prendre si je veu xquelque chose pour la maison",
         "que prendre si je evux j'aimerais faire des crepes",
         "aide moi a choisir des boissons pour ce sori",
-        "j’ai envie d’un truc simple mais bon",
         "propose moi une idee vegetarienne",
         "propose moi des prodiuts pour les enfants",
         "que prndre si je veux un repas sain",
@@ -2153,6 +2275,7 @@
         "supprime les pommes de ma commande recurrante",
         "garde 1 pain dans ma commande recurrente",
         "modifie ma commande récurrente du mardi",
+        "ajoute du cafe, du lait et du pain ma commande recurrante Samuel2",
         "ajoute 4 Sandwich Bagnat au poulet-curry a ma recurrante du lundi",
         "garde seulement 1 2 Ketchup Connie's dans ma récurrente",
         "supprime 5 Cannoli à la Pistache dans ma commandes récurrentes",
@@ -2770,6 +2893,9 @@
         "bonne journee",
         "raconte moi quelque chose",
         "que fais tu aujourd hui",
+        "comment je vais a la gare a pie?",
+        "ja ne sai pas",
+        "j'ai trouvé un person dehors la maison",
         "ca rolue",
         "tu fais quoi aujourd'hui",
         "raconte moi quelque chsoe",
@@ -2814,7 +2940,6 @@
         "ej teste seulement l'application",
         "je teste seulement l'applicaiton",
         "quel temps fati-il aujourd'hui",
-        "comment je vais a la gare a pie?",
         "raconte moi quelqeu chose",
         "emrci beaucoup",
         "ok je comprned",
@@ -2834,7 +2959,6 @@
         "super merci pour l info",
         "salut adnre",
         "a puls tard",
-        "j'ai trouvé un person dehors la maison",
         "ok mreci",
         "a plus tadr",
         "super merci pour l'inof",
@@ -2875,7 +2999,6 @@
         "ja ne sai psa",
         "tu fais quoi aujour'dhui",
         "quel temps fait-il aujourd'hi",
-        "ja ne sai pas",
         "bonojur",
         "quel temps fait-il aujoud'hui",
         "haha meric c'est drole",
@@ -2896,6 +3019,7 @@
       ]
     }
   ],
+  "updatedAt": "2026-08-28T14:45:09.176Z",
   "intentModel": {
     "type": "linear_tfidf_v1",
     "labels": [
@@ -106047,7 +106171,7 @@
       "add_items": 0.08,
       "clear_cart": 0.08,
       "show_cart": -0.08,
-      "exec_cart": 0.0,
+      "exec_cart": 0,
       "discover_meals": -0.04,
       "recurring_orders": -0.16,
       "noop": 0.12
@@ -106104,5 +106228,295 @@
       }
     }
   },
-  "updatedAt": "2026-07-15T11:31:48.556938+00:00"
+  "intentModelMeta": {
+    "generatedAt": "2026-07-15T11:31:48.556938+00:00",
+    "validationReport": {
+      "accuracy": 0.9921,
+      "total": 1136,
+      "perLabel": {
+        "add_items": {
+          "precision": 0.9953,
+          "recall": 0.9969,
+          "total": 640,
+          "tp": 638,
+          "fp": 3,
+          "fn": 2
+        },
+        "clear_cart": {
+          "precision": 0.9925,
+          "recall": 0.9925,
+          "total": 266,
+          "tp": 264,
+          "fp": 2,
+          "fn": 2
+        },
+        "show_cart": {
+          "precision": 0.9,
+          "recall": 0.9,
+          "total": 10,
+          "tp": 9,
+          "fp": 1,
+          "fn": 1
+        },
+        "exec_cart": {
+          "precision": 1,
+          "recall": 1,
+          "total": 11,
+          "tp": 11,
+          "fp": 0,
+          "fn": 0
+        },
+        "discover_meals": {
+          "precision": 0.9857,
+          "recall": 0.9857,
+          "total": 70,
+          "tp": 69,
+          "fp": 1,
+          "fn": 1
+        },
+        "recurring_orders": {
+          "precision": 1,
+          "recall": 0.9825,
+          "total": 114,
+          "tp": 112,
+          "fp": 0,
+          "fn": 2
+        },
+        "noop": {
+          "precision": 0.9231,
+          "recall": 0.96,
+          "total": 25,
+          "tp": 24,
+          "fp": 2,
+          "fn": 1
+        }
+      },
+      "confusionMatrix": {
+        "add_items": {
+          "add_items": 638,
+          "noop": 2
+        },
+        "clear_cart": {
+          "clear_cart": 264,
+          "show_cart": 1,
+          "add_items": 1
+        },
+        "show_cart": {
+          "show_cart": 9,
+          "clear_cart": 1
+        },
+        "exec_cart": {
+          "exec_cart": 11
+        },
+        "discover_meals": {
+          "discover_meals": 69,
+          "add_items": 1
+        },
+        "recurring_orders": {
+          "recurring_orders": 112,
+          "add_items": 1,
+          "clear_cart": 1
+        },
+        "noop": {
+          "noop": 24,
+          "discover_meals": 1
+        }
+      },
+      "confidenceThresholds": {
+        "add_items": 45,
+        "clear_cart": 45,
+        "show_cart": 68,
+        "exec_cart": 45,
+        "discover_meals": 45,
+        "recurring_orders": 45,
+        "noop": 45
+      },
+      "failures": [
+        {
+          "text": "ajoute du pain à ma commande réurrente du mardi",
+          "expected": "recurring_orders",
+          "detected": "add_items",
+          "confidence": 29,
+          "margin": 0.1833,
+          "secondChoice": "recurring_orders"
+        },
+        {
+          "text": "Bonojur Andre, si jamais tu peux me mettre 4 kg de Pizza Vegetarienne, merci",
+          "expected": "add_items",
+          "detected": "noop",
+          "confidence": 28,
+          "margin": 0.2749,
+          "secondChoice": "add_items"
+        },
+        {
+          "text": "qu ies-tu",
+          "expected": "noop",
+          "detected": "discover_meals",
+          "confidence": 15,
+          "margin": 0.0538,
+          "secondChoice": "clear_cart"
+        },
+        {
+          "text": "raoute juste Box Cookies",
+          "expected": "add_items",
+          "detected": "noop",
+          "confidence": 16,
+          "margin": 0.0452,
+          "secondChoice": "add_items"
+        },
+        {
+          "text": "supprime 1 kg de Gommage corporal Caresse dans ma recurrante",
+          "expected": "recurring_orders",
+          "detected": "clear_cart",
+          "confidence": 35,
+          "margin": 0.3777,
+          "secondChoice": "recurring_orders"
+        },
+        {
+          "text": "eface tout ce qu'il y a dans mon panier",
+          "expected": "clear_cart",
+          "detected": "show_cart",
+          "confidence": 24,
+          "margin": 0.0955,
+          "secondChoice": "clear_cart"
+        },
+        {
+          "text": "mon père voudrais des ide",
+          "expected": "discover_meals",
+          "detected": "add_items",
+          "confidence": 18,
+          "margin": 0.1037,
+          "secondChoice": "discover_meals"
+        },
+        {
+          "text": "je ne veux plus 5 Plat du jour (Abo min. 2x/sem.)",
+          "expected": "clear_cart",
+          "detected": "add_items",
+          "confidence": 21,
+          "margin": 0.2323,
+          "secondChoice": "clear_cart"
+        },
+        {
+          "text": "qu est ce qu il y a dans mon panier",
+          "expected": "show_cart",
+          "detected": "clear_cart",
+          "confidence": 13,
+          "margin": 0.0139,
+          "secondChoice": "discover_meals"
+        }
+      ]
+    },
+    "uiHoldoutReport": {
+      "accuracy": 0.978,
+      "total": 91,
+      "perLabel": {
+        "add_items": {
+          "precision": 0.913,
+          "recall": 1,
+          "total": 21,
+          "tp": 21,
+          "fp": 2,
+          "fn": 0
+        },
+        "clear_cart": {
+          "precision": 1,
+          "recall": 1,
+          "total": 20,
+          "tp": 20,
+          "fp": 0,
+          "fn": 0
+        },
+        "show_cart": {
+          "precision": 0,
+          "recall": 0,
+          "total": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0
+        },
+        "exec_cart": {
+          "precision": 0,
+          "recall": 0,
+          "total": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0
+        },
+        "discover_meals": {
+          "precision": 1,
+          "recall": 1,
+          "total": 20,
+          "tp": 20,
+          "fp": 0,
+          "fn": 0
+        },
+        "recurring_orders": {
+          "precision": 1,
+          "recall": 1,
+          "total": 10,
+          "tp": 10,
+          "fp": 0,
+          "fn": 0
+        },
+        "noop": {
+          "precision": 1,
+          "recall": 0.9,
+          "total": 20,
+          "tp": 18,
+          "fp": 0,
+          "fn": 2
+        }
+      },
+      "confusionMatrix": {
+        "add_items": {
+          "add_items": 21
+        },
+        "clear_cart": {
+          "clear_cart": 20
+        },
+        "show_cart": {},
+        "exec_cart": {},
+        "discover_meals": {
+          "discover_meals": 20
+        },
+        "recurring_orders": {
+          "recurring_orders": 10
+        },
+        "noop": {
+          "noop": 18,
+          "add_items": 2
+        }
+      },
+      "confidenceThresholds": {
+        "add_items": 45,
+        "clear_cart": 45,
+        "show_cart": 68,
+        "exec_cart": 68,
+        "discover_meals": 45,
+        "recurring_orders": 45,
+        "noop": 45
+      },
+      "failures": [
+        {
+          "text": "Tu peux m'expliquer qui tu es ?",
+          "expected": "noop",
+          "detected": "add_items",
+          "confidence": 16,
+          "margin": 0.0434,
+          "secondChoice": "noop"
+        },
+        {
+          "text": "Coucou",
+          "expected": "noop",
+          "detected": "add_items",
+          "confidence": 13,
+          "margin": 0.0219,
+          "secondChoice": "noop"
+        }
+      ]
+    },
+    "hiddenIntents": [
+      "build_meal"
+    ]
+  }
 }

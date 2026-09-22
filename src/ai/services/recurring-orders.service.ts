@@ -4,7 +4,12 @@ import {
   updateCustomerRecurringProducts,
   type CustomerRecurringOrder,
 } from "../../swissdata/recurring-orders.js";
-import { fetchFullProduct, type Product } from "../../swissdata/products.js";
+import {
+  fetchFullProduct,
+  getAllProducts,
+  isProductAvailableInRegion,
+  type Product,
+} from "../../swissdata/products.js";
 import { computeBasketQty } from "./cart-quantity.service.js";
 import { shouldAskForProductOptions } from "./cart.service.js";
 import { extractAddItemsFromText, type ExtractedAddItemsPlan } from "./add-items-extractor.service.js";
@@ -39,6 +44,7 @@ export type RecurringOrdersDeps = {
   resolveProduct: typeof resolveProduct;
   computeBasketQty: typeof computeBasketQty;
   fetchCurrentProduct?: AssistantCurrentProductReader;
+  getAllProducts?: typeof getAllProducts;
 };
 
 const DEFAULT_DEPS: RecurringOrdersDeps = {
@@ -49,6 +55,7 @@ const DEFAULT_DEPS: RecurringOrdersDeps = {
   resolveProduct,
   computeBasketQty,
   fetchCurrentProduct: fetchCurrentAssistantEligibleProduct,
+  getAllProducts,
 };
 
 const CONFIRM_RECURRING_TEXT = "confirme la commande récurrente";
@@ -163,6 +170,7 @@ function summarizeRecurringOrder(order: CustomerRecurringOrder): PendingRecurrin
   return {
     id: order.id,
     name: order.name,
+    region: order.region,
     dayLabels: order.daysOfWeek.map(dayLabel),
     deliveryTime: order.deliveryTime,
     frequencyUnit: order.frequencyUnit,
@@ -280,9 +288,11 @@ function ambiguousRecurringOrders(
 
 function sanitizeRecurringChangeText(text: string, order?: PendingRecurringOrderSummary): string {
   let cleaned = ` ${text} `;
+  // Remove the target introducer before the recurring keyword itself; otherwise
+  // "à ma commande récurrente" leaves a dangling "à ma" in the product text.
+  cleaned = cleaned.replace(/\b(a|à|dans|pour|sur)\s+(ma|mes|la|les|une|des)\s+commande[s]?\b/gi, " ");
   cleaned = cleaned.replace(recurringKeywordPattern(), " ");
   cleaned = cleaned.replace(/\b(du|de la|de l|des|le|la|les)\s+(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/gi, " ");
-  cleaned = cleaned.replace(/\b(a|à|dans|pour|sur)\s+(ma|mes|la|les|une|des)\s+commande[s]?\b/gi, " ");
   cleaned = cleaned.replace(/\b(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/gi, " ");
   if (order?.name) {
     cleaned = cleaned.replace(new RegExp(escapeRegExp(order.name), "gi"), " ");
@@ -429,7 +439,19 @@ async function buildAddChange(
   pendingOptionsProduct?: Product;
 }> {
   const cleaned = sanitizeRecurringChangeText(text, order);
-  const plan: ExtractedAddItemsPlan = await deps.extractAddItemsFromText(userRef, cleaned);
+  const scopedCatalog = order.region && deps.getAllProducts
+    ? (await deps.getAllProducts(userRef)).filter((product) =>
+        isProductAvailableInRegion(product, order.region)
+      )
+    : undefined;
+  const plan: ExtractedAddItemsPlan = await deps.extractAddItemsFromText(
+    userRef,
+    cleaned,
+    {
+      ...(scopedCatalog ? { catalog: scopedCatalog } : {}),
+      preferredProductIds: order.products.map((product) => product.productId),
+    }
+  );
   const items = plan.actions[0]?.items ?? [];
   const askForOptions = shouldAskForProductOptions(items.length);
   let after = [...order.products];
@@ -467,6 +489,7 @@ async function buildAddChange(
 
 async function recurringIncreasesAreEligible(
   userRef: string,
+  orderRegion: string | null | undefined,
   before: PendingRecurringOrderSummary["products"],
   after: PendingRecurringOrderSummary["products"],
   deps: RecurringOrdersDeps
@@ -494,7 +517,11 @@ async function recurringIncreasesAreEligible(
   for (const [productId, afterQuantity] of afterQuantityById) {
     if (afterQuantity <= (beforeQuantityById.get(productId) || 0)) continue;
     const product = await (deps.fetchCurrentProduct ?? deps.fetchFullProduct)(userRef, productId);
-    if (!product || !isAssistantProductEligible(product)) return false;
+    if (
+      !product ||
+      !isAssistantProductEligible(product) ||
+      (orderRegion && !isProductAvailableInRegion(product, orderRegion))
+    ) return false;
   }
 
   return true;
@@ -705,6 +732,7 @@ export async function tryHandleRecurringOrders(
 
     if (!await recurringIncreasesAreEligible(
       userRef,
+      pending.recurringOrder.region,
       pending.beforeProducts,
       pending.afterProducts,
       deps

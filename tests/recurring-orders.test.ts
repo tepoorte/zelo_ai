@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 
 import { clearPending, getPending } from "../src/ai/pending.js";
 import {
+  extractAddItemsFromTextWithCatalog,
+} from "../src/ai/services/add-items-extractor.service.js";
+import {
   tryHandleRecurringOrders,
   type RecurringOrdersDeps,
 } from "../src/ai/services/recurring-orders.service.js";
@@ -408,6 +411,86 @@ async function testRecurringSingleAddAsksOptionsThenContinues(): Promise<void> {
   assert.equal(getPending(userRef), undefined);
 }
 
+async function testRecurringAddUsesTheOrderRegionCatalog(): Promise<void> {
+  const userRef = "test:recurring:region-catalog";
+  clearPending(userRef);
+  const order = mondayAmbiguousOrders().find((candidate) => candidate.name === "Samuel2");
+  assert(order);
+  order.region = "region-a";
+  const compatibleMilk: Product = {
+    ...products.lait,
+    name: "Lait cru",
+    availableRegions: ["region-a"],
+  };
+  order.products = [
+    { productId: products.pain.id, name: products.pain.name, quantity: 1 },
+    { productId: compatibleMilk.id, name: compatibleMilk.name, quantity: 1 },
+  ];
+
+  const compatiblePain: Product = { ...products.pain, availableRegions: ["region-a"] };
+  const incompatiblePetitPain: Product = {
+    id: "p-petit-pain-lait",
+    name: "Petit pain au lait",
+    type: "sell",
+    availableRegions: ["region-b"],
+  };
+  const compatibleSandwich: Product = {
+    id: "p-sandwich-pain-lait",
+    name: "Sandwich pain au lait Jambon",
+    type: "sell",
+    availableRegions: ["region-a"],
+  };
+  const otherMilkProducts: Product[] = [
+    "Lait pasteurisé",
+    "Lait d'avoine",
+    "Pain au lait rond",
+    "Lait de brebis bio",
+  ].map((name, index) => ({
+    id: `p-other-milk-${index}`,
+    name,
+    type: "sell",
+    availableRegions: ["region-a"],
+  }));
+  const catalog = [
+    compatiblePain,
+    compatibleMilk,
+    incompatiblePetitPain,
+    compatibleSandwich,
+    ...otherMilkProducts,
+  ];
+  const { deps, updates } = makeDeps([order]);
+  deps.getAllProducts = async () => catalog;
+  deps.extractAddItemsFromText = async (_ref, text, options) =>
+    extractAddItemsFromTextWithCatalog(
+      text,
+      [...(options?.catalog ?? catalog)],
+      { preferredProductIds: options?.preferredProductIds }
+    );
+  deps.fetchFullProduct = async (_ref, productId) =>
+    catalog.find((product) => product.id === productId) ?? null;
+  deps.fetchCurrentProduct = deps.fetchFullProduct;
+
+  const prepared = await tryHandleRecurringOrders(
+    userRef,
+    "ajoute du pain et du lait a ma commande recurrante Samuel2",
+    { actionKey: "recurring_orders" },
+    deps
+  );
+  assert(prepared);
+  assertIncludes(prepared.message, "Pain Balance : 1 → 2");
+  assertIncludes(prepared.message, "Lait cru : 1 → 2");
+  assert(!prepared.message.includes("Petit pain au lait"));
+  assert(!prepared.message.includes("Sandwich pain au lait"));
+
+  const confirmed = await tryHandleRecurringOrders(userRef, "ok", undefined, deps);
+  assert(confirmed);
+  assertIncludes(confirmed.message, "Commande récurrente mise à jour");
+  assert.equal(updates.length, 1);
+  assert(updates[0].products.some((line) => line.productId === products.pain.id && line.quantity === 2));
+  assert(updates[0].products.some((line) => line.productId === products.lait.id && line.quantity === 2));
+  assert(!updates[0].products.some((line) => line.productId === incompatiblePetitPain.id));
+}
+
 async function testAmbiguousRemoveDoesNotWrite(): Promise<void> {
   const userRef = "test:recurring:ambiguous-remove";
   clearPending(userRef);
@@ -804,6 +887,33 @@ async function testRecurringConfirmationRechecksEligibility(): Promise<void> {
   assert.equal(updates.length, 0);
 }
 
+async function testRecurringConfirmationRechecksTheOrderRegion(): Promise<void> {
+  const userRef = "test:recurring:region-recheck";
+  clearPending(userRef);
+  const orders = baseOrders();
+  orders[0].region = "region-a";
+  const { deps, updates } = makeDeps(orders);
+
+  const prepared = await tryHandleRecurringOrders(
+    userRef,
+    "ajoute du pain à ma commande récurrente du mardi",
+    { actionKey: "recurring_orders" },
+    deps
+  );
+  assert(prepared);
+  assertIncludes(prepared.message, "Changements proposés");
+
+  deps.fetchCurrentProduct = async (_ref, productId) =>
+    productId === products.pain.id
+      ? { ...products.pain, availableRegions: ["region-b"] }
+      : null;
+
+  const confirmation = await tryHandleRecurringOrders(userRef, "ok", undefined, deps);
+  assert(confirmation);
+  assertIncludes(confirmation.message, "n’a pas été modifiée");
+  assert.equal(updates.length, 0);
+}
+
 async function testExistingBlockedRecurringLineCanStillBeRemoved(): Promise<void> {
   const userRef = "test:recurring:blocked-remove";
   clearPending(userRef);
@@ -836,6 +946,7 @@ async function main(): Promise<void> {
   await testRecurringAddUsesFullProductForWeightUnits();
   await testRecurringMultiAddSkipsOptionsLikeCartAdd();
   await testRecurringSingleAddAsksOptionsThenContinues();
+  await testRecurringAddUsesTheOrderRegionCatalog();
   await testAmbiguousRemoveDoesNotWrite();
   await testAmbiguousMondayRequiresChoice();
   await testFrequencyAndTimeSelectRightMonday();
@@ -855,6 +966,7 @@ async function main(): Promise<void> {
   await testNoKeywordReturnsNullWithoutHint();
   await testBlockedProductCannotBePreparedForRecurringOrder();
   await testRecurringConfirmationRechecksEligibility();
+  await testRecurringConfirmationRechecksTheOrderRegion();
   await testExistingBlockedRecurringLineCanStillBeRemoved();
   console.log("[recurring-orders.test] all checks passed.");
 }

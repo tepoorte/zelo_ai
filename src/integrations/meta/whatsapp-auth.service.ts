@@ -20,6 +20,12 @@ import {
 } from "./whatsapp-auth-rate-limit.service.js";
 import { sendWhatsAppOtpEmail } from "./whatsapp-auth-mailer.service.js";
 import { lookupWhatsAppCustomerByPhone } from "./whatsapp-auth-swissdata.service.js";
+import {
+  buildWhatsAppOnboardingOfferMessage,
+  isWhatsAppOnboardingLinkRotationCommand,
+  whatsappOnboardingService,
+  type WhatsAppOnboardingOffer,
+} from "./whatsapp-onboarding.service.js";
 
 export type PasswordlessWhatsAppSessionResult =
   | { ok: true }
@@ -37,6 +43,26 @@ type PendingChallenge = {
 };
 
 const CHALLENGES = new Map<string, PendingChallenge>();
+const AUTH_GENERATIONS = new Map<string, number>();
+const MAX_AUTH_GENERATIONS = 10_000;
+
+export type WhatsAppPasswordlessDeps = {
+  lookupCustomer: typeof lookupWhatsAppCustomerByPhone;
+  sendOtpEmail: typeof sendWhatsAppOtpEmail;
+  issueOnboardingOffer: (input: {
+    userRef: string;
+    phone: string;
+    rotate?: boolean;
+  }) => WhatsAppOnboardingOffer;
+  revokeOnboarding?: (userRef: string) => void;
+};
+
+const DEFAULT_PASSWORDLESS_DEPS: WhatsAppPasswordlessDeps = {
+  lookupCustomer: lookupWhatsAppCustomerByPhone,
+  sendOtpEmail: sendWhatsAppOtpEmail,
+  issueOnboardingOffer: (input) => whatsappOnboardingService.issueOffer(input),
+  revokeOnboarding: (userRef) => whatsappOnboardingService.revokeForUserRef(userRef),
+};
 
 function otpTtlMinutes(): number {
   return Number.isFinite(env.whatsappOtpTtlMinutes) ? env.whatsappOtpTtlMinutes : 10;
@@ -135,10 +161,37 @@ function activeChallengeFor(userRef: string): PendingChallenge | null {
   return challenge;
 }
 
+function authGeneration(userRef: string): number {
+  return AUTH_GENERATIONS.get(userRef) ?? 0;
+}
+
+function advanceAuthGeneration(userRef: string): void {
+  const next = authGeneration(userRef) + 1;
+  AUTH_GENERATIONS.delete(userRef);
+  AUTH_GENERATIONS.set(userRef, next);
+  while (AUTH_GENERATIONS.size > MAX_AUTH_GENERATIONS) {
+    const oldest = AUTH_GENERATIONS.keys().next().value as string | undefined;
+    if (!oldest) break;
+    AUTH_GENERATIONS.delete(oldest);
+  }
+}
+
+function revokeOnboardingBestEffort(userRef: string, deps: WhatsAppPasswordlessDeps): void {
+  try {
+    deps.revokeOnboarding?.(userRef);
+  } catch {
+    // Authentication/session revocation must not depend on an auxiliary
+    // onboarding-state write. The outstanding capability remains short-lived.
+    console.error("[whatsapp-auth] onboarding revocation failed");
+  }
+}
+
 async function startOrResendChallenge(input: {
   userRef: string;
   phone: string;
-}): Promise<PasswordlessWhatsAppSessionResult> {
+  text: string;
+}, deps: WhatsAppPasswordlessDeps): Promise<PasswordlessWhatsAppSessionResult> {
+  const generation = authGeneration(input.userRef);
   if (isWhatsAppAuthLocked(input.userRef)) {
     return { ok: false, message: unavailableMessage() };
   }
@@ -148,12 +201,32 @@ async function startOrResendChallenge(input: {
     return { ok: false, message: buildWhatsAppOtpSentMessage() };
   }
 
-  const lookup = await lookupWhatsAppCustomerByPhone(input.phone).catch((error) => {
+  const lookup = await deps.lookupCustomer(input.phone).catch(() => {
     console.error(`[whatsapp-auth] customer lookup failed phone=${hashPhoneForAudit(input.phone)}`);
     return null;
   });
 
-  if (!lookup || !lookup.ok) {
+  if (!lookup) {
+    return { ok: false, message: unavailableMessage() };
+  }
+  if (authGeneration(input.userRef) !== generation) {
+    return { ok: false, message: unavailableMessage() };
+  }
+
+  if (!lookup.ok && lookup.reason === "not_found") {
+    try {
+      const offer = deps.issueOnboardingOffer({
+        userRef: input.userRef,
+        phone: input.phone,
+        rotate: isWhatsAppOnboardingLinkRotationCommand(input.text),
+      });
+      return { ok: false, message: buildWhatsAppOnboardingOfferMessage(offer) };
+    } catch {
+      return { ok: false, message: unavailableMessage() };
+    }
+  }
+
+  if (!lookup.ok) {
     return { ok: false, message: genericLookupFailureMessage() };
   }
 
@@ -170,13 +243,16 @@ async function startOrResendChallenge(input: {
     expiresAt: challengeExpiry(),
   };
 
-  const mailResult = await sendWhatsAppOtpEmail({
+  const mailResult = await deps.sendOtpEmail({
     to: lookup.identity.email,
     code,
     ttlMinutes: otpTtlMinutes(),
   });
 
   if (!mailResult.ok) {
+    return { ok: false, message: unavailableMessage() };
+  }
+  if (authGeneration(input.userRef) !== generation) {
     return { ok: false, message: unavailableMessage() };
   }
 
@@ -186,22 +262,28 @@ async function startOrResendChallenge(input: {
   return { ok: false, message: buildWhatsAppOtpSentMessage() };
 }
 
-function clearAllWhatsAppAuthState(userRef: string): void {
+function clearAllWhatsAppAuthState(
+  userRef: string,
+  deps: WhatsAppPasswordlessDeps
+): void {
+  advanceAuthGeneration(userRef);
   CHALLENGES.delete(userRef);
-  resetWhatsAppAuthRateLimit(userRef);
   clearWhatsAppCustomerSession(userRef);
   clearStoredToken(userRef);
   clearSession(userRef);
+  revokeOnboardingBestEffort(userRef, deps);
 }
 
 async function validateChallenge(input: {
   userRef: string;
   phone: string;
+  text: string;
   code: string;
-}): Promise<PasswordlessWhatsAppSessionResult> {
+}, deps: WhatsAppPasswordlessDeps): Promise<PasswordlessWhatsAppSessionResult> {
+  const generation = authGeneration(input.userRef);
   const challenge = activeChallengeFor(input.userRef);
   if (!challenge) {
-    return await startOrResendChallenge(input);
+    return await startOrResendChallenge(input, deps);
   }
 
   const candidateHash = hashOtp(input.code, challenge.salt);
@@ -217,6 +299,27 @@ async function validateChallenge(input: {
     };
   }
 
+  const refreshed = await deps.lookupCustomer(input.phone).catch(() => null);
+  if (
+    authGeneration(input.userRef) !== generation ||
+    CHALLENGES.get(input.userRef) !== challenge
+  ) {
+    return { ok: false, message: unavailableMessage() };
+  }
+  if (!refreshed) {
+    return { ok: false, message: unavailableMessage() };
+  }
+  if (
+    !refreshed.ok ||
+    refreshed.identity.customerId !== challenge.customerId ||
+    refreshed.identity.userId !== challenge.userId ||
+    refreshed.identity.email.toLowerCase() !== challenge.email.toLowerCase()
+  ) {
+    CHALLENGES.delete(input.userRef);
+    return { ok: false, message: genericLookupFailureMessage() };
+  }
+
+  revokeOnboardingBestEffort(input.userRef, deps);
   setWhatsAppCustomerSession({
     userRef: input.userRef,
     phone: input.phone,
@@ -238,9 +341,9 @@ export async function ensureWhatsAppPasswordlessSession(input: {
   userRef: string;
   phone: string;
   text: string;
-}): Promise<PasswordlessWhatsAppSessionResult> {
+}, deps: WhatsAppPasswordlessDeps = DEFAULT_PASSWORDLESS_DEPS): Promise<PasswordlessWhatsAppSessionResult> {
   if (isWhatsAppLogoutCommand(input.text)) {
-    clearAllWhatsAppAuthState(input.userRef);
+    clearAllWhatsAppAuthState(input.userRef, deps);
     return {
       ok: false,
       message: "Session WhatsApp fermée. Réécris-moi quand tu veux te reconnecter.",
@@ -249,8 +352,8 @@ export async function ensureWhatsAppPasswordlessSession(input: {
 
   const otp = extractOtp(input.text);
   if (otp) {
-    return await validateChallenge({ ...input, code: otp });
+    return await validateChallenge({ ...input, code: otp }, deps);
   }
 
-  return await startOrResendChallenge(input);
+  return await startOrResendChallenge(input, deps);
 }

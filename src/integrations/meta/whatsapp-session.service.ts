@@ -6,6 +6,7 @@ import {
   ensureWhatsAppPasswordlessSession,
   isWhatsAppLogoutCommand,
 } from "./whatsapp-auth.service.js";
+import { normalizeMetaWhatsAppPhone } from "./whatsapp-phone.js";
 
 export type WhatsAppLoginCommand =
   | { kind: "missing" }
@@ -43,9 +44,7 @@ const DEFAULT_DEPS: WhatsAppSessionDeps = {
 };
 
 export function normalizeWhatsAppPhone(input: string): string {
-  const withoutJid = String(input || "").split("@")[0] || "";
-  const digits = withoutJid.replace(/\D/g, "");
-  return digits.startsWith("00") ? digits.slice(2) : digits;
+  return normalizeMetaWhatsAppPhone(input);
 }
 
 export function parseWhatsAppLoginCommand(text: string): WhatsAppLoginCommand {

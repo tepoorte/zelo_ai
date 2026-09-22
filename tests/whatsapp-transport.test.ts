@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 
+import { env } from "../src/config/env.js";
 import { metaEnv } from "../src/integrations/meta/env.js";
 import {
   sendWhatsAppTypingIndicator,
@@ -8,7 +9,9 @@ import {
 import { buildWhatsAppOtpEmail } from "../src/integrations/meta/whatsapp-auth-mailer.service.js";
 import {
   buildWhatsAppOtpSentMessage,
+  ensureWhatsAppPasswordlessSession,
   formatWhatsAppPostLoginMessage,
+  type WhatsAppPasswordlessDeps,
 } from "../src/integrations/meta/whatsapp-auth.service.js";
 import {
   buildWhatsAppConversationReply,
@@ -21,6 +24,11 @@ import {
   type WhatsAppSessionDeps,
 } from "../src/integrations/meta/whatsapp-session.service.js";
 import { parseBaileysInboundTextMessage } from "../src/integrations/meta/whatsapp-web.service.js";
+import {
+  clearWhatsAppCustomerSession,
+  getWhatsAppCustomerSession,
+  setWhatsAppCustomerSession,
+} from "../src/swissdata/whatsapp-customer-session.js";
 
 {
   assert.equal(normalizeWhatsAppPhone("+41 00 000 00 02"), "41000000002");
@@ -115,6 +123,319 @@ import { parseBaileysInboundTextMessage } from "../src/integrations/meta/whatsap
   const message = formatWhatsAppPostLoginMessage([]);
   assert.equal(message.includes("Tu prends souvent aussi"), false);
   assert.equal(message.includes("• « passe la commande »"), true);
+}
+
+function passwordlessDeps(
+  lookupCustomer: WhatsAppPasswordlessDeps["lookupCustomer"]
+): {
+  deps: WhatsAppPasswordlessDeps;
+  counters: {
+    offerCalls: number;
+    issuedOffers: number;
+    emails: number;
+    rotations: boolean[];
+    revocations: string[];
+    otpCodes: string[];
+  };
+} {
+  const counters = {
+    offerCalls: 0,
+    issuedOffers: 0,
+    emails: 0,
+    rotations: [] as boolean[],
+    revocations: [] as string[],
+    otpCodes: [] as string[],
+  };
+  let hasActiveOffer = false;
+  return {
+    counters,
+    deps: {
+      lookupCustomer,
+      issueOnboardingOffer: (input) => {
+        counters.offerCalls += 1;
+        counters.rotations.push(input.rotate === true);
+        if (hasActiveOffer && !input.rotate) {
+          return {
+            kind: "active",
+            expiresInMinutes: 29,
+          };
+        }
+        hasActiveOffer = true;
+        counters.issuedOffers += 1;
+        return {
+          kind: "issued",
+          url: `https://assistant.example.test/inscription-whatsapp#token=TEST-${counters.issuedOffers}`,
+          expiresInMinutes: 30,
+        };
+      },
+      sendOtpEmail: async (input) => {
+        counters.emails += 1;
+        counters.otpCodes.push(input.code);
+        return { ok: true } as any;
+      },
+      revokeOnboarding: (userRef) => {
+        counters.revocations.push(userRef);
+      },
+    },
+  };
+}
+
+{
+  const { deps, counters } = passwordlessDeps(async () => ({ ok: false, reason: "not_found" }));
+  const first = await ensureWhatsAppPasswordlessSession(
+    { userRef: "wa:41700000001", phone: "41700000001", text: "bonjour" },
+    deps
+  );
+  const repeated = await ensureWhatsAppPasswordlessSession(
+    { userRef: "wa:41700000001", phone: "41700000001", text: "toujours là ?" },
+    deps
+  );
+  assert.equal(first.ok, false);
+  assert.equal("message" in first && first.message.includes("Création de ton compte"), true);
+  assert.equal("message" in first && first.message.includes("#token=TEST-1"), true);
+  assert.equal(repeated.ok, false);
+  assert.equal("message" in repeated && repeated.message.includes("déjà actif"), true);
+  assert.equal("message" in repeated && repeated.message.includes("#token="), false);
+  assert.equal(counters.offerCalls, 2);
+  assert.equal(counters.issuedOffers, 1);
+  assert.equal(counters.emails, 0);
+  assert.deepEqual(counters.rotations, [false, false]);
+}
+
+{
+  const { deps, counters } = passwordlessDeps(async () => ({ ok: false, reason: "not_found" }));
+  await ensureWhatsAppPasswordlessSession(
+    { userRef: "wa:41700000004", phone: "41700000004", text: "bonjour" },
+    deps
+  );
+  const rotated = await ensureWhatsAppPasswordlessSession(
+    { userRef: "wa:41700000004", phone: "41700000004", text: "nouveau lien" },
+    deps
+  );
+  assert.equal(rotated.ok, false);
+  assert.equal("message" in rotated && rotated.message.includes("#token=TEST-2"), true);
+  assert.equal(counters.issuedOffers, 2);
+  assert.deepEqual(counters.rotations, [false, true]);
+}
+
+for (const reason of ["ambiguous", "missing_user", "missing_email", "config"] as const) {
+  const suffix = String(reason.length).padStart(2, "0");
+  const { deps, counters } = passwordlessDeps(async () => ({ ok: false, reason }));
+  const result = await ensureWhatsAppPasswordlessSession(
+    { userRef: `wa:417000001${suffix}`, phone: `417000001${suffix}`, text: "bonjour" },
+    deps
+  );
+  assert.equal(result.ok, false);
+  assert.equal("message" in result && result.message.includes("contacte l’équipe Zélo"), true);
+  assert.equal(counters.offerCalls, 0);
+  assert.equal(counters.emails, 0);
+}
+
+{
+  const { deps, counters } = passwordlessDeps(async () => {
+    throw new Error("upstream unavailable");
+  });
+  const result = await ensureWhatsAppPasswordlessSession(
+    { userRef: "wa:41700000002", phone: "41700000002", text: "bonjour" },
+    deps
+  );
+  assert.equal(result.ok, false);
+  assert.equal("message" in result && result.message.includes("temporairement indisponible"), true);
+  assert.equal(counters.offerCalls, 0);
+  assert.equal(counters.emails, 0);
+}
+
+{
+  const { deps, counters } = passwordlessDeps(async () => ({
+    ok: true,
+    identity: {
+      customerId: "customer-existing",
+      userId: "user-existing",
+      email: "existing@example.test",
+      mobile: "+41000000003",
+    },
+  }));
+  const result = await ensureWhatsAppPasswordlessSession(
+    { userRef: "wa:41000000003", phone: "41000000003", text: "bonjour" },
+    deps
+  );
+  assert.equal(result.ok, false);
+  assert.equal("message" in result && result.message.includes("6 chiffres"), true);
+  assert.equal(counters.offerCalls, 0);
+  assert.equal(counters.emails, 1);
+}
+
+{
+  const userRef = "wa:41000000004";
+  const { deps, counters } = passwordlessDeps(async () => ({
+    ok: true,
+    identity: {
+      customerId: "customer-otp-success",
+      userId: "user-otp-success",
+      email: "otp-success@example.test",
+      mobile: "+41000000004",
+    },
+  }));
+  await ensureWhatsAppPasswordlessSession(
+    { userRef, phone: "41000000004", text: "bonjour" },
+    deps
+  );
+  const result = await ensureWhatsAppPasswordlessSession(
+    { userRef, phone: "41000000004", text: counters.otpCodes[0] },
+    deps
+  );
+  assert.equal(result.ok, false);
+  assert.equal("message" in result && result.message.includes("Connexion confirmée"), true);
+  assert.deepEqual(counters.revocations, [userRef]);
+}
+
+// A valid code cannot authenticate a Customer/User mapping that changed after issuance.
+{
+  const userRef = "wa:41000000005";
+  let lookups = 0;
+  const { deps, counters } = passwordlessDeps(async () => {
+    lookups += 1;
+    return {
+      ok: true,
+      identity: {
+        customerId: lookups === 1 ? "customer-original" : "customer-changed",
+        userId: "user-otp-mapping",
+        email: "mapping@example.test",
+        mobile: "+41000000005",
+      },
+    };
+  });
+  await ensureWhatsAppPasswordlessSession(
+    { userRef, phone: "41000000005", text: "bonjour" },
+    deps
+  );
+  const result = await ensureWhatsAppPasswordlessSession(
+    { userRef, phone: "41000000005", text: counters.otpCodes[0] },
+    deps
+  );
+  assert.equal("message" in result && result.message.includes("contacte l’équipe Zélo"), true);
+  assert.equal(getWhatsAppCustomerSession(userRef), null);
+}
+
+// Logout always clears an established session even if onboarding-state revocation fails.
+{
+  const userRef = "wa:41700000008";
+  setWhatsAppCustomerSession({
+    userRef,
+    phone: "41700000008",
+    customerId: "customer-logout",
+    userId: "user-logout",
+    email: "logout@example.test",
+  });
+  const { deps } = passwordlessDeps(async () => ({ ok: false, reason: "not_found" }));
+  deps.revokeOnboarding = () => {
+    throw new Error("simulated onboarding-store failure");
+  };
+  const result = await ensureWhatsAppPasswordlessSession(
+    { userRef, phone: "41700000008", text: "déconnexion" },
+    deps
+  );
+  assert.equal("message" in result && result.message.includes("Session WhatsApp fermée"), true);
+  assert.equal(getWhatsAppCustomerSession(userRef), null);
+}
+
+// A logout racing the final OTP ownership check cannot recreate the session afterwards.
+{
+  const userRef = "wa:41000000006";
+  let lookups = 0;
+  let releaseLookup!: () => void;
+  let markLookupEntered!: () => void;
+  const lookupGate = new Promise<void>((resolve) => {
+    releaseLookup = resolve;
+  });
+  const lookupEntered = new Promise<void>((resolve) => {
+    markLookupEntered = resolve;
+  });
+  const { deps, counters } = passwordlessDeps(async () => {
+    lookups += 1;
+    if (lookups === 2) {
+      markLookupEntered();
+      await lookupGate;
+    }
+    return {
+      ok: true,
+      identity: {
+        customerId: "customer-race",
+        userId: "user-race",
+        email: "race@example.test",
+        mobile: "+41000000006",
+      },
+    };
+  });
+  await ensureWhatsAppPasswordlessSession(
+    { userRef, phone: "41000000006", text: "bonjour" },
+    deps
+  );
+  const validation = ensureWhatsAppPasswordlessSession(
+    { userRef, phone: "41000000006", text: counters.otpCodes[0] },
+    deps
+  );
+  await lookupEntered;
+  await ensureWhatsAppPasswordlessSession(
+    { userRef, phone: "41000000006", text: "déconnexion" },
+    deps
+  );
+  releaseLookup();
+  const result = await validation;
+  assert.equal("message" in result && result.message.includes("temporairement indisponible"), true);
+  assert.equal(getWhatsAppCustomerSession(userRef), null);
+  clearWhatsAppCustomerSession(userRef);
+}
+
+{
+  const userRef = "wa:41000000007";
+  const originalMaxAttempts = env.whatsappOtpMaxAttempts;
+  let lookups = 0;
+  try {
+    env.whatsappOtpMaxAttempts = 1;
+    const { deps, counters } = passwordlessDeps(async () => {
+      lookups += 1;
+      return {
+        ok: true,
+        identity: {
+          customerId: "customer-rate-limit",
+          userId: "user-rate-limit",
+          email: "rate-limit@example.test",
+          mobile: "+41000000007",
+        },
+      };
+    });
+    await ensureWhatsAppPasswordlessSession(
+      { userRef, phone: "41000000007", text: "bonjour" },
+      deps
+    );
+    const wrongCode = counters.otpCodes[0] === "000000" ? "999999" : "000000";
+    const locked = await ensureWhatsAppPasswordlessSession(
+      { userRef, phone: "41000000007", text: wrongCode },
+      deps
+    );
+    assert.equal("message" in locked && locked.message.includes("temporairement indisponible"), true);
+
+    const logout = await ensureWhatsAppPasswordlessSession(
+      { userRef, phone: "41000000007", text: "déconnexion" },
+      deps
+    );
+    assert.equal("message" in logout && logout.message.includes("Session WhatsApp fermée"), true);
+    assert.deepEqual(counters.revocations, [userRef]);
+
+    const afterLogout = await ensureWhatsAppPasswordlessSession(
+      { userRef, phone: "41000000007", text: "bonjour" },
+      deps
+    );
+    assert.equal(
+      "message" in afterLogout && afterLogout.message.includes("temporairement indisponible"),
+      true
+    );
+    assert.equal(lookups, 1);
+    assert.equal(counters.emails, 1);
+  } finally {
+    env.whatsappOtpMaxAttempts = originalMaxAttempts;
+  }
 }
 
 {

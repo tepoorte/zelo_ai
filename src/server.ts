@@ -12,6 +12,7 @@ import { redactSensitive, safeError } from "./utils/redaction.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { aiRoutes } from "./routes/ai.routes.js";
 import { whatsappMetaRoutes } from "./integrations/meta/whatsapp.routes.js";
+import { whatsappOnboardingRoutes } from "./integrations/meta/whatsapp-onboarding.routes.js";
 import { whatsappWebRoutes } from "./integrations/meta/whatsapp-web.routes.js";
 import { startWhatsAppWebSession } from "./integrations/meta/whatsapp-web.service.js";
 import { twilioWhatsAppRoutes } from "./integrations/twilio/whatsapp.routes.js";
@@ -50,6 +51,20 @@ app.use(express.json({ verify: (req, res, buf) => rawBodySaver(req as any, res a
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+function sendWhatsAppOnboardingPage(_req: express.Request, res: express.Response): void {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+  );
+  res.sendFile(path.join(__dirname, "..", "public", "inscription-whatsapp.html"));
+}
+
+// Register both paths before express.static so the security headers cannot be
+// bypassed by requesting the physical .html file directly.
+app.get(["/inscription-whatsapp", "/inscription-whatsapp.html"], sendWhatsAppOnboardingPage);
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 app.get("/", (_req, res) => {
@@ -58,6 +73,7 @@ app.get("/", (_req, res) => {
 
 app.use("/health", healthRouter);
 app.use("/ai", aiRoutes());
+app.use("/integrations/meta/whatsapp/onboarding", whatsappOnboardingRoutes());
 app.use("/integrations/meta/whatsapp", whatsappMetaRoutes());
 if (env.whatsappProvider === "web_session") {
   app.use("/integrations/meta/whatsapp-web", whatsappWebRoutes());

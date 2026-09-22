@@ -38,6 +38,18 @@ export const env = {
   whatsappOtpMaxAttempts: Number(process.env.WHATSAPP_OTP_MAX_ATTEMPTS ?? 5),
   whatsappOtpResendCooldownSeconds: Number(process.env.WHATSAPP_OTP_RESEND_COOLDOWN_SECONDS ?? 90),
   whatsappSessionTtlHours: Number(process.env.WHATSAPP_SESSION_TTL_HOURS ?? 24 * 14),
+  whatsappOnboardingUrl:
+    process.env.WHATSAPP_ONBOARDING_URL ??
+    (process.env.NODE_ENV === "production"
+      ? process.env.AI_HOST
+        ? `https://${process.env.AI_HOST}/inscription-whatsapp`
+        : ""
+      : `http://localhost:${Number(process.env.PORT ?? 3041)}/inscription-whatsapp`),
+  whatsappOnboardingTtlMinutes: Number(process.env.WHATSAPP_ONBOARDING_TTL_MINUTES ?? 30),
+  whatsappOnboardingMaxAttempts: Number(process.env.WHATSAPP_ONBOARDING_MAX_ATTEMPTS ?? 5),
+  whatsappOnboardingLockMinutes: Number(process.env.WHATSAPP_ONBOARDING_LOCK_MINUTES ?? 15),
+  /** Base64-encoded 32-byte AES-256-GCM key for persistent WhatsApp onboarding state. */
+  whatsappOnboardingStateKey: process.env.WHATSAPP_ONBOARDING_STATE_KEY ?? "",
   zeloTestUsername: process.env.ZELO_TEST_USERNAME ?? "",
   zeloTestPassword: process.env.ZELO_TEST_PASSWORD ?? "",
 
@@ -84,6 +96,9 @@ export function validateProductionEnv(candidate: AppEnv = env): string[] {
   if (candidate.whatsappProvider !== "meta_cloud") {
     findings.push("WHATSAPP_PROVIDER must be meta_cloud in production");
   }
+  if (candidate.whatsappAuthMode !== "otp") {
+    findings.push("WHATSAPP_AUTH_MODE must be otp in production");
+  }
 
   const required: Array<keyof AppEnv> = [
     "metaVerifyToken",
@@ -91,6 +106,8 @@ export function validateProductionEnv(candidate: AppEnv = env): string[] {
     "metaGraphToken",
     "metaWhatsappPhoneNumberId",
     "whatsappAdminToken",
+    "whatsappOnboardingUrl",
+    "whatsappOnboardingStateKey",
     "swissdataBaseUrl",
     "swissdataShopId",
     "swissdataApiKey",
@@ -115,6 +132,27 @@ export function validateProductionEnv(candidate: AppEnv = env): string[] {
 
   if (candidate.aiProvider === "openai" && !candidate.openaiApiKey.trim()) {
     findings.push("Missing production env: openaiApiKey");
+  }
+
+  if (
+    candidate.whatsappOnboardingUrl.trim() &&
+    !candidate.whatsappOnboardingUrl.startsWith("https://")
+  ) {
+    findings.push("WHATSAPP_ONBOARDING_URL must use https in production");
+  }
+
+  if (candidate.whatsappOnboardingStateKey.trim()) {
+    const supplied = candidate.whatsappOnboardingStateKey
+      .trim()
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .replace(/=+$/, "");
+    const validAlphabet = /^[A-Za-z0-9+/]+$/.test(supplied);
+    const decoded = validAlphabet ? Buffer.from(supplied, "base64") : Buffer.alloc(0);
+    const canonical = decoded.toString("base64").replace(/=+$/, "");
+    if (decoded.length !== 32 || canonical !== supplied) {
+      findings.push("WHATSAPP_ONBOARDING_STATE_KEY must be a base64-encoded 32-byte key");
+    }
   }
 
   return findings;
