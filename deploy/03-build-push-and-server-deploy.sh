@@ -455,9 +455,15 @@ if [ -f "$REMOTE_COMPOSE_FILE" ]; then
   echo "Backed up compose to $BACKUP_DIR/zelo_ai_compose_before_$STAMP.yml"
 fi
 if [ -d .cache ]; then
-  tar -czf "$BACKUP_DIR/zelo_ai_cache_before_$STAMP.tgz" .cache
-  chmod 600 "$BACKUP_DIR/zelo_ai_cache_before_$STAMP.tgz"
-  echo "Backed up .cache to $BACKUP_DIR/zelo_ai_cache_before_$STAMP.tgz"
+  CACHE_BACKUP="$BACKUP_DIR/zelo_ai_cache_before_$STAMP.tgz"
+  # The application container runs as root and deliberately writes the
+  # encrypted onboarding state with mode 0600. Archive through passwordless
+  # sudo without changing the live file's owner or permissions, then hand the
+  # resulting archive back to the deployment user.
+  sudo -n tar -czf "$CACHE_BACKUP" .cache
+  sudo -n chown "$(id -u):$(id -g)" "$CACHE_BACKUP"
+  chmod 600 "$CACHE_BACKUP"
+  echo "Backed up .cache to $CACHE_BACKUP"
 fi
 
 echo "== Promote validated runtime files =="
