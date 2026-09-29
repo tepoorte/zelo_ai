@@ -31,6 +31,11 @@ import {
   lookupWhatsAppCustomerByPhone,
   type WhatsAppCustomerLookupResult,
 } from "./whatsapp-auth-swissdata.service.js";
+import {
+  sendWhatsAppNewCustomerDiscoveryWelcome,
+  type SendNewCustomerDiscoveryWelcomeInput,
+  type SendNewCustomerDiscoveryWelcomeResult,
+} from "./whatsapp-new-customer-discovery.service.js";
 import { normalizeMetaWhatsAppPhone } from "./whatsapp-phone.js";
 import { sendWhatsAppText } from "./whatsapp.send.js";
 import {
@@ -107,6 +112,9 @@ export type WhatsAppOnboardingDeps = {
     email: string;
   }) => WhatsAppCustomerSession;
   sendText: typeof sendWhatsAppText;
+  sendNewCustomerDiscoveryWelcome: (
+    input: SendNewCustomerDiscoveryWelcomeInput
+  ) => Promise<SendNewCustomerDiscoveryWelcomeResult>;
 };
 
 const TERMS_VERSION = "zelo-conditions-generales-2026-09-21";
@@ -153,6 +161,7 @@ const DEFAULT_DEPS: WhatsAppOnboardingDeps = {
   stateStore: defaultStateStore(),
   setCustomerSession: setWhatsAppCustomerSession,
   sendText: sendWhatsAppText,
+  sendNewCustomerDiscoveryWelcome: sendWhatsAppNewCustomerDiscoveryWelcome,
 };
 
 function onboardingTtlMinutes(): number {
@@ -265,6 +274,10 @@ function emptyRateBucket(): WhatsAppOnboardingRateBucket {
 
 function publicStage(stage: WhatsAppOnboardingStoredTicket["stage"]): WhatsAppOnboardingStage {
   return stage;
+}
+
+function canCreateAccountForLookup(result: WhatsAppCustomerLookupResult): boolean {
+  return !result.ok && (result.reason === "not_found" || result.reason === "incomplete");
 }
 
 function sameAddress(
@@ -760,34 +773,58 @@ export class WhatsAppOnboardingService {
   async status(token: string): Promise<WhatsAppOnboardingStatus> {
     const { state, ticket, tokenHash } = this.requireTicket(token);
     this.assertNotLocked(state, ticket.userRef);
-    if (ticket.mode) {
-      if (
-        ticket.mode === "existing_account" &&
-        (!ticket.expectedLogin || !ticket.expectedLogin.includes("@"))
-      ) {
-        let liveResolution: SwissdataPhoneAccountResolution;
-        try {
-          liveResolution = await this.deps.resolveAccountForPhone(ticket.canonicalPhone);
-        } catch {
+    if (ticket.mode === "existing_account") {
+      // Tickets issued by an older deployment may have selected this mode
+      // from a standalone User phone match. Re-evaluate every persisted ticket
+      // against the complete Customer identity before keeping password login.
+      let liveLookup: WhatsAppCustomerLookupResult;
+      try {
+        liveLookup = await this.deps.lookupCustomer(ticket.canonicalPhone);
+      } catch {
+        throw new WhatsAppOnboardingError(
+          "temporarily_unavailable",
+          503,
+          "La vérification du compte est temporairement indisponible."
+        );
+      }
+      const current = this.requireTicketByHash(tokenHash);
+      if (!liveLookup.ok) {
+        if (canCreateAccountForLookup(liveLookup)) {
+          current.ticket.mode = "new_account";
+          delete current.ticket.expectedUserId;
+          delete current.ticket.expectedLogin;
+          this.deps.stateStore.write(current.state);
+          return this.statusFor(current.ticket);
+        }
+        if (liveLookup.reason === "config") {
           throw new WhatsAppOnboardingError(
             "temporarily_unavailable",
             503,
             "La vérification du compte est temporairement indisponible."
           );
         }
-        this.requireTicketByHash(tokenHash);
-        if (
-          !ticket.expectedUserId ||
-          liveResolution.kind !== "unique" ||
-          liveResolution.userId !== ticket.expectedUserId
-        ) {
-          throw new WhatsAppOnboardingError(
-            "account_ambiguous",
-            409,
-            "Ce numéro ne correspond plus de manière unique au compte retrouvé. Contacte l’équipe Zélo."
-          );
-        }
+        throw new WhatsAppOnboardingError(
+          "account_ambiguous",
+          409,
+          "Ce numéro correspond à plusieurs fiches utilisables. Contacte l’équipe Zélo."
+        );
       }
+      if (
+        current.ticket.expectedUserId &&
+        current.ticket.expectedUserId !== liveLookup.identity.userId
+      ) {
+        throw new WhatsAppOnboardingError(
+          "account_ambiguous",
+          409,
+          "Ce numéro ne correspond plus au compte initialement retrouvé. Contacte l’équipe Zélo."
+        );
+      }
+      current.ticket.expectedUserId = liveLookup.identity.userId;
+      current.ticket.expectedLogin = liveLookup.identity.email;
+      this.deps.stateStore.write(current.state);
+      return this.statusFor(current.ticket);
+    }
+    if (ticket.mode) {
       return this.statusFor(ticket);
     }
 
@@ -805,7 +842,7 @@ export class WhatsAppOnboardingService {
       );
     }
 
-    if (!customerLookup.ok && customerLookup.reason !== "not_found") {
+    if (!customerLookup.ok && !canCreateAccountForLookup(customerLookup)) {
       if (customerLookup.reason === "config") {
         throw new WhatsAppOnboardingError(
           "temporarily_unavailable",
@@ -816,46 +853,20 @@ export class WhatsAppOnboardingService {
       throw new WhatsAppOnboardingError(
         "account_ambiguous",
         409,
-        "Ce numéro correspond à une fiche incomplète ou ambiguë. Contacte l’équipe Zélo."
-      );
-    }
-
-    let resolution: SwissdataPhoneAccountResolution;
-    try {
-      resolution = await this.deps.resolveAccountForPhone(ticket.canonicalPhone);
-    } catch {
-      throw new WhatsAppOnboardingError(
-        "temporarily_unavailable",
-        503,
-        "La vérification du compte est temporairement indisponible."
-      );
-    }
-    if (resolution.kind === "ambiguous") {
-      throw new WhatsAppOnboardingError(
-        "account_ambiguous",
-        409,
-        "Ce numéro correspond à plusieurs comptes. Contacte l’équipe Zélo."
+        "Ce numéro correspond à plusieurs fiches utilisables. Contacte l’équipe Zélo."
       );
     }
 
     if (customerLookup.ok) {
-      if (
-        resolution.kind === "unique" &&
-        resolution.userId !== customerLookup.identity.userId
-      ) {
-        throw new WhatsAppOnboardingError(
-          "account_ambiguous",
-          409,
-          "Ce numéro correspond à des comptes différents. Contacte l’équipe Zélo."
-        );
-      }
       mode = "existing_account";
       expectedUserId = customerLookup.identity.userId;
       expectedLogin = customerLookup.identity.email;
     } else {
-      mode = resolution.kind === "unique" ? "existing_account" : "new_account";
-      expectedUserId = resolution.kind === "unique" ? resolution.userId : undefined;
-      expectedLogin = resolution.kind === "unique" ? resolution.login : undefined;
+      // A User found only by its phone is not sufficient proof that a usable
+      // Zélo customer account exists. This notably covers old records without
+      // an email address: they remain untouched while the caller is allowed to
+      // create a fresh, complete account.
+      mode = "new_account";
     }
 
     const current = this.requireTicketByHash(tokenHash);
@@ -963,10 +974,8 @@ export class WhatsAppOnboardingService {
       this.consumeStartAttempt(tokenHash);
 
       let phoneLookup: WhatsAppCustomerLookupResult;
-      let phoneResolution: SwissdataPhoneAccountResolution;
       try {
         phoneLookup = await this.deps.lookupCustomer(currentAtStart.ticket.canonicalPhone);
-        phoneResolution = await this.deps.resolveAccountForPhone(currentAtStart.ticket.canonicalPhone);
       } catch {
         throw new WhatsAppOnboardingError(
           "temporarily_unavailable",
@@ -974,14 +983,21 @@ export class WhatsAppOnboardingService {
           "La vérification du compte est temporairement indisponible."
         );
       }
-      if (phoneLookup.ok || phoneResolution.kind === "unique") {
+      if (phoneLookup.ok) {
         throw new WhatsAppOnboardingError(
           "account_already_exists",
           409,
           "Un compte vient d’être retrouvé pour ce numéro. Retourne dans WhatsApp pour te connecter."
         );
       }
-      if (phoneLookup.reason !== "not_found" || phoneResolution.kind === "ambiguous") {
+      if (!canCreateAccountForLookup(phoneLookup)) {
+        if (phoneLookup.reason === "config") {
+          throw new WhatsAppOnboardingError(
+            "temporarily_unavailable",
+            503,
+            "La vérification du compte est temporairement indisponible."
+          );
+        }
         throw new WhatsAppOnboardingError(
           "account_ambiguous",
           409,
@@ -1252,8 +1268,15 @@ export class WhatsAppOnboardingService {
         );
       }
       this.requireTicketByHash(tokenHash);
+      if (!preBind.ok && preBind.reason === "config") {
+        throw new WhatsAppOnboardingError(
+          "temporarily_unavailable",
+          503,
+          "La liaison WhatsApp est temporairement indisponible."
+        );
+      }
       if (
-        (!preBind.ok && preBind.reason !== "not_found") ||
+        (!preBind.ok && !canCreateAccountForLookup(preBind)) ||
         (preBind.ok &&
           (preBind.identity.customerId !== customer.id || preBind.identity.userId !== user.id))
       ) {
@@ -1315,6 +1338,13 @@ export class WhatsAppOnboardingService {
         );
       }
       this.requireTicketByHash(tokenHash);
+      if (!postBind.ok && postBind.reason === "config") {
+        throw new WhatsAppOnboardingError(
+          "temporarily_unavailable",
+          503,
+          "La vérification finale est temporairement indisponible."
+        );
+      }
       if (
         !postBind.ok ||
         postBind.identity.customerId !== updatedCustomer.id ||
@@ -1342,7 +1372,12 @@ export class WhatsAppOnboardingService {
         userId: user.id,
         email: user.email,
       });
-      void this.notifyConnected(finalTicket.canonicalPhone, true).catch(() => undefined);
+      void this.notifyConnected({
+        phone: finalTicket.canonicalPhone,
+        created: true,
+        userRef: finalTicket.userRef,
+        regionId: pending.regionId,
+      }).catch(() => undefined);
       return completed;
     });
   }
@@ -1546,25 +1581,37 @@ export class WhatsAppOnboardingService {
         userId: user.id,
         email: user.email,
       });
-      void this.notifyConnected(finalTicket.canonicalPhone, false).catch(() => undefined);
+      void this.notifyConnected({
+        phone: finalTicket.canonicalPhone,
+        created: false,
+      }).catch(() => undefined);
       return completed;
     });
   }
 
-  private async notifyConnected(phone: string, created: boolean): Promise<void> {
-    const message = created
-      ? [
-          "✅ *Compte Zélo créé et connecté*",
-          "",
-          "Tu peux revenir ici et utiliser l’assistant.",
-          "Essaie par exemple : « ajoute un pain » ou « propose-moi une idée pour ce soir ».",
-        ].join("\n")
-      : [
-          "✅ *Compte Zélo connecté*",
-          "",
-          "Tu peux revenir ici et utiliser l’assistant normalement.",
-        ].join("\n");
-    await this.deps.sendText({ to: phone, body: message, previewUrl: false }).catch(() => {
+  private async notifyConnected(input: {
+    phone: string;
+    created: boolean;
+    userRef?: string;
+    regionId?: string;
+  }): Promise<void> {
+    if (input.created && input.userRef && input.regionId) {
+      await this.deps.sendNewCustomerDiscoveryWelcome({
+        userRef: input.userRef,
+        phone: input.phone,
+        regionId: input.regionId,
+      }).catch(() => {
+        // The HTTPS page already confirms success; a Meta delivery failure must not roll it back.
+      });
+      return;
+    }
+
+    const message = [
+      "✅ *Compte Zélo connecté*",
+      "",
+      "Tu peux revenir ici et utiliser l’assistant normalement.",
+    ].join("\n");
+    await this.deps.sendText({ to: input.phone, body: message, previewUrl: false }).catch(() => {
       // The HTTPS page already confirms success; a Meta delivery failure must not roll it back.
     });
   }
@@ -1587,7 +1634,7 @@ export function buildWhatsAppOnboardingOfferMessage(offer: WhatsAppOnboardingOff
   return [
     "*Création de ton compte Zélo*",
     "",
-    "Ce numéro WhatsApp n’est lié à aucun compte Zélo.",
+    "Aucun compte Zélo utilisable n’est actuellement lié à ce numéro WhatsApp.",
     "Tu peux créer ton compte de manière sécurisée avec ce lien :",
     offer.url,
     "",

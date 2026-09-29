@@ -26,6 +26,7 @@
     "test:session-isolation": "node --loader ts-node/esm ./tests/session-isolation.test.ts",
     "test:whatsapp": "node --loader ts-node/esm ./tests/whatsapp-transport.test.ts",
     "test:whatsapp-onboarding": "node --loader ts-node/esm ./tests/whatsapp-onboarding.test.ts",
+    "test:whatsapp-new-customer-discovery": "node --loader ts-node/esm ./tests/whatsapp-new-customer-discovery.test.ts",
     "test:whatsapp-onboarding-store": "node --loader ts-node/esm ./tests/whatsapp-onboarding-store.test.ts",
     "test:whatsapp-onboarding-swissdata": "node --loader ts-node/esm ./tests/whatsapp-onboarding-swissdata.test.ts",
     "test:whatsapp-onboarding-routes": "node --loader ts-node/esm ./tests/whatsapp-onboarding-routes.test.ts",

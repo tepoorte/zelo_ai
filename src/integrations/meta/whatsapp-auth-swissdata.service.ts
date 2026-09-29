@@ -16,7 +16,16 @@ export type WhatsAppCustomerIdentity = {
 
 export type WhatsAppCustomerLookupResult =
   | { ok: true; identity: WhatsAppCustomerIdentity }
-  | { ok: false; reason: "not_found" | "ambiguous" | "missing_user" | "missing_email" | "config" };
+  | {
+      ok: false;
+      reason:
+        | "not_found"
+        | "incomplete"
+        | "ambiguous"
+        | "missing_user"
+        | "missing_email"
+        | "config";
+    };
 
 type SwissdataCustomerLike = {
   id?: string;
@@ -61,6 +70,10 @@ function displayName(customer: SwissdataCustomerLike): string | undefined {
   return String(customer.companyName || parts.join(" ") || "").trim() || undefined;
 }
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function toIdentity(customer: SwissdataCustomerLike): WhatsAppCustomerLookupResult {
   const customerId = idOf(customer.id ?? customer._id);
   const directUserId = idOf(customer.userId);
@@ -74,7 +87,7 @@ function toIdentity(customer: SwissdataCustomerLike): WhatsAppCustomerLookupResu
   }
 
   const email = String(customer.user?.email || customer.email || "").trim();
-  if (!email || !email.includes("@")) {
+  if (!isValidEmail(email)) {
     return { ok: false, reason: "missing_email" };
   }
 
@@ -133,6 +146,33 @@ export async function lookupWhatsAppCustomerByPhone(
   const matches = [...matchesByCustomer.values()];
 
   if (matches.length === 0) return { ok: false, reason: "not_found" };
-  if (matches.length > 1) return { ok: false, reason: "ambiguous" };
-  return toIdentity(matches[0]);
+
+  // A phone may still be present on one or more obsolete Swissdata records.
+  // Those records must not make an otherwise unique, usable customer
+  // ambiguous. Only identities that are complete enough for the email OTP
+  // flow participate in the uniqueness decision.
+  const completeIdentities: WhatsAppCustomerIdentity[] = [];
+  let hasConflictingUserLink = false;
+  for (const match of matches) {
+    const candidate = toIdentity(match);
+    if (candidate.ok) {
+      completeIdentities.push(candidate.identity);
+    } else if (candidate.reason === "ambiguous") {
+      hasConflictingUserLink = true;
+    }
+  }
+
+  // A Customer whose direct userId disagrees with its populated User is not
+  // merely incomplete: selecting either identity would be unsafe, even when
+  // another complete record exists for the same phone.
+  if (hasConflictingUserLink) {
+    return { ok: false, reason: "ambiguous" };
+  }
+  if (completeIdentities.length === 0) {
+    return { ok: false, reason: "incomplete" };
+  }
+  if (completeIdentities.length > 1) {
+    return { ok: false, reason: "ambiguous" };
+  }
+  return { ok: true, identity: completeIdentities[0] };
 }

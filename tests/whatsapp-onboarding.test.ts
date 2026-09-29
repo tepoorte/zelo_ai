@@ -78,6 +78,18 @@ function tokenFromOffer(offer: WhatsAppOnboardingOffer): string {
   return tokenFrom((offer as Extract<WhatsAppOnboardingOffer, { kind: "issued" }>).url);
 }
 
+function completeCustomerLookup() {
+  return {
+    ok: true as const,
+    identity: {
+      customerId: customer.id,
+      userId: user.id,
+      email: user.email,
+      mobile: `+${phone}`,
+    },
+  };
+}
+
 function makeDeps(
   overrides: Partial<WhatsAppOnboardingDeps> = {}
 ): WhatsAppOnboardingDeps {
@@ -141,6 +153,11 @@ function makeDeps(
       expiresAt: Date.now() + 60_000,
     }),
     sendText: async () => ({}),
+    sendNewCustomerDiscoveryWelcome: async () => ({
+      sent: true,
+      offered: false,
+      message: "",
+    }),
     ...overrides,
   };
   return deps;
@@ -234,7 +251,7 @@ async function expectError(
   let sessionInput: any;
   let recordInput: any;
   let bound = false;
-  const sent: any[] = [];
+  const discoveryWelcomes: any[] = [];
   const passwordSentinel = "NeverStore-Me-42";
   const deps = makeDeps({
     createAccount: async (input) => {
@@ -286,9 +303,9 @@ async function expectError(
         expiresAt: Date.now() + 60_000,
       };
     },
-    sendText: async (input) => {
-      sent.push(input);
-      return {};
+    sendNewCustomerDiscoveryWelcome: async (input) => {
+      discoveryWelcomes.push(input);
+      return { sent: true, offered: true, message: "discovery welcome" };
     },
   });
   const service = new WhatsAppOnboardingService(deps);
@@ -360,9 +377,8 @@ async function expectError(
   assert.equal(recordInput.regionId, "region-1");
   assert.deepEqual(recordInput.address, address);
   assert.equal(recordInput.termsVersion, "zelo-conditions-generales-2026-09-21");
-  assert.equal(sent.length, 1);
-  assert.equal(sent[0].to, phone);
-  assert.equal(JSON.stringify(sent).includes(passwordSentinel), false);
+  assert.deepEqual(discoveryWelcomes, [{ userRef, phone, regionId: "region-1" }]);
+  assert.equal(JSON.stringify(discoveryWelcomes).includes(passwordSentinel), false);
 
   await expectError(service.status(token), "invalid_or_expired_link", 404);
   await expectError(
@@ -372,160 +388,166 @@ async function expectError(
   );
 }
 
-// A regex-only phone match has no trusted login: require an email that resolves
-// to the same Swissdata user ID before attempting password authentication.
+// A User found only through its phone must not turn a fresh onboarding link
+// into a password-login flow. Only a complete Customer identity is trusted.
 {
-  let phoneBound = false;
-  let authenticationCalls = 0;
-  const resolvedEmails: string[] = [];
+  let phoneResolutionCalls = 0;
   const service = new WhatsAppOnboardingService(
     makeDeps({
-      resolveAccountForPhone: async () => ({ kind: "unique", userId: user.id }),
-      resolveAccountForEmail: async (email) => {
-        resolvedEmails.push(email);
-        return email === user.email
-          ? { kind: "unique", userId: user.id }
-          : { kind: "unique", userId: "different-user" };
+      resolveAccountForPhone: async () => {
+        phoneResolutionCalls += 1;
+        return { kind: "unique", userId: "obsolete-user", login: `+${phone}` };
       },
-      lookupCustomer: async () =>
-        phoneBound
-          ? {
-              ok: true,
-              identity: {
-                customerId: customer.id,
-                userId: user.id,
-                email: user.email,
-                mobile: `+${phone}`,
-              },
-            }
-          : { ok: false, reason: "not_found" },
-      authenticateAccount: async (login, password) => {
-        authenticationCalls += 1;
-        assert.equal(login, user.email);
-        assert.equal(password, "existing-password");
-        return "existing-access-token";
-      },
-      authenticatePhoneAccount: async () => {
-        throw new Error("regex-only resolution must never guess a phone login");
-      },
-      bindCustomerPhone: async ({ accessToken, phone: candidatePhone }) => {
-        assert.equal(accessToken, "existing-access-token");
-        assert.equal(candidatePhone, phone);
-        phoneBound = true;
-        return { ...customer, mobile: `+${phone}` };
-      },
+      lookupCustomer: async () => ({ ok: false, reason: "incomplete" }),
     })
   );
   const token = tokenFromOffer(service.issueOffer({ userRef, phone }));
   assert.deepEqual(await service.status(token), {
     ok: true,
-    mode: "existing_account",
+    mode: "new_account",
     stage: "offered",
     expiresAt: "2026-09-21T12:30:00.000Z",
-    requiresEmail: true,
   });
-  const mismatch = await expectError(
-    service.connect({
-      token,
-      email: "other@example.test",
-      password: "existing-password",
-    }),
-    "login_failed",
-    400
-  );
-  assert.equal(mismatch.message, "Adresse électronique ou mot de passe incorrect.");
-  assert.equal(authenticationCalls, 0);
-  assert.equal(
-    (
-      await service.connect({
-        token,
-        email: " CLIENT@EXAMPLE.TEST ",
-        password: "existing-password",
-      })
-    ).stage,
-    "completed"
-  );
-  assert.deepEqual(resolvedEmails, ["other@example.test", user.email]);
-  assert.equal(authenticationCalls, 1);
+  assert.equal(phoneResolutionCalls, 0);
 }
 
-// A collision introduced after link issuance is rechecked before email/password authentication.
+// A complete Customer that appears after the initial check blocks account creation.
 {
   let collisionIntroduced = false;
-  let authenticationCalls = 0;
+  let createCalls = 0;
   const service = new WhatsAppOnboardingService(
     makeDeps({
-      resolveAccountForPhone: async () =>
+      lookupCustomer: async () =>
         collisionIntroduced
-          ? { kind: "ambiguous" }
-          : { kind: "unique", userId: user.id },
-      authenticateAccount: async () => {
-        authenticationCalls += 1;
-        return "must-not-authenticate";
+          ? {
+              ok: true,
+              identity: {
+                customerId: "concurrent-customer",
+                userId: "concurrent-user",
+                email: "concurrent@example.test",
+                mobile: `+${phone}`,
+              },
+            }
+          : { ok: false, reason: "incomplete" },
+      createAccount: async () => {
+        createCalls += 1;
+        throw new Error("must not create after a complete Customer appears");
       },
     })
   );
   const token = tokenFromOffer(service.issueOffer({ userRef, phone }));
-  assert.equal((await service.status(token)).requiresEmail, true);
+  assert.equal((await service.status(token)).mode, "new_account");
   collisionIntroduced = true;
   await expectError(
-    service.connect({
+    service.start({
       token,
+      firstname: "Alice",
+      lastname: "Exemple",
       email: user.email,
-      password: "existing-password",
+      address,
+      regionId: "region-1",
+      password: "Password-42",
+      termsAccepted: true,
     }),
-    "account_ambiguous",
+    "account_already_exists",
     409
   );
-  assert.equal(authenticationCalls, 0);
+  assert.equal(createCalls, 0);
 }
 
-// An exact phone login is also re-resolved before authentication when it later becomes ambiguous.
+// A true ambiguity that appears after issuance also fails closed.
 {
   let collisionIntroduced = false;
-  let authenticationCalls = 0;
+  let createCalls = 0;
   const service = new WhatsAppOnboardingService(
     makeDeps({
-      resolveAccountForPhone: async () =>
+      lookupCustomer: async () =>
         collisionIntroduced
-          ? { kind: "ambiguous" }
-          : {
-              kind: "unique",
-              userId: user.id,
-              login: "+ 41 76 334 83 51",
-            },
-      authenticateAccount: async () => {
-        authenticationCalls += 1;
-        return "must-not-authenticate";
+          ? { ok: false, reason: "ambiguous" }
+          : { ok: false, reason: "not_found" },
+      createAccount: async () => {
+        createCalls += 1;
+        throw new Error("must not create for an ambiguous phone");
       },
     })
   );
   const token = tokenFromOffer(service.issueOffer({ userRef, phone }));
-  assert.equal((await service.status(token)).requiresEmail, undefined);
+  assert.equal((await service.status(token)).mode, "new_account");
   collisionIntroduced = true;
   await expectError(
-    service.connect({ token, password: "existing-password" }),
+    service.start({
+      token,
+      firstname: "Alice",
+      lastname: "Exemple",
+      email: user.email,
+      address,
+      regionId: "region-1",
+      password: "Password-42",
+      termsAccepted: true,
+    }),
     "account_ambiguous",
     409
   );
-  assert.equal(authenticationCalls, 0);
+  assert.equal(createCalls, 0);
 }
 
-// Existing Swissdata User without Customer is connected, and Customer is created lazily.
+// An email already owned by another Swissdata account is rejected before any
+// account creation request is made.
 {
-  let createCalled = false;
-  let customerCalls = 0;
-  let phoneBound = false;
-  let sessionInput: any;
+  let createCalls = 0;
   const service = new WhatsAppOnboardingService(
     makeDeps({
+      lookupCustomer: async () => ({ ok: false, reason: "incomplete" }),
+      accountExists: async (field, value) => {
+        assert.equal(field, "email");
+        assert.equal(value, user.email);
+        return true;
+      },
+      createAccount: async () => {
+        createCalls += 1;
+        throw new Error("must not create an account for an existing email");
+      },
+    })
+  );
+  const token = tokenFromOffer(service.issueOffer({ userRef, phone }));
+  await expectError(
+    service.start({
+      token,
+      firstname: "Alice",
+      lastname: "Exemple",
+      email: user.email,
+      address,
+      regionId: "region-1",
+      password: "Password-42",
+      termsAccepted: true,
+    }),
+    "email_already_exists",
+    409
+  );
+  assert.equal(createCalls, 0);
+}
+
+// The production-like legacy record (Customer + User + phone, but no email)
+// remains byte-for-byte untouched while a new complete account is created.
+{
+  const legacyRecord = {
+    id: "legacy-customer-2022",
+    userId: "legacy-user-2022",
+    mobile: `+${phone}`,
+    email: "",
+    addresses: [{ street: "Ancienne rue 1", zip: "1000", city: "Lausanne", country: "Suisse" }],
+  };
+  const legacySnapshot = structuredClone(legacyRecord);
+  let newCustomerBound = false;
+  let sessionInput: any;
+  const deps = makeDeps({
       resolveAccountForPhone: async () => ({
         kind: "unique",
-        userId: user.id,
+        userId: legacyRecord.userId,
         login: "+ 41 76 334 83 51",
       }),
       lookupCustomer: async () =>
-        phoneBound
+        newCustomerBound
           ? {
               ok: true,
               identity: {
@@ -535,28 +557,19 @@ async function expectError(
                 mobile: `+${phone}`,
               },
             }
-          : { ok: false, reason: "not_found" },
-      createAccount: async () => {
-        createCalled = true;
-        throw new Error("must not create an existing account");
-      },
-      authenticateAccount: async (candidateLogin, password) => {
-        assert.equal(candidateLogin, "+ 41 76 334 83 51");
-        assert.equal(password, "old-7");
-        return "existing-access-token";
-      },
-      authenticatePhoneAccount: async () => {
-        throw new Error("the trusted exact Swissdata login must be used");
-      },
-      ensureCustomer: async () => {
-        customerCalls += 1;
-        return customer;
-      },
-      bindCustomerPhone: async ({ accessToken, phone: candidatePhone }) => {
-        assert.equal(accessToken, "existing-access-token");
-        assert.equal(candidatePhone, phone);
-        phoneBound = true;
-        return { ...customer, mobile: `+${phone}` };
+          : { ok: false, reason: "incomplete" },
+      recordOnboarding: async (input) => {
+        newCustomerBound = true;
+        return {
+          ...customer,
+          firstname: input.firstname,
+          lastname: input.lastname,
+          email: input.email,
+          mobile: `+${phone}`,
+          region: input.regionId,
+          addresses: [input.address],
+          metadata: consentMetadata(input),
+        };
       },
       setCustomerSession: (input) => {
         sessionInput = input;
@@ -567,19 +580,85 @@ async function expectError(
           expiresAt: 1,
         };
       },
+    });
+  const service = new WhatsAppOnboardingService(deps);
+  const token = tokenFromOffer(service.issueOffer({ userRef, phone }));
+  assert.equal((await service.status(token)).mode, "new_account");
+  await service.start({
+    token,
+    firstname: "Alice",
+    lastname: "Exemple",
+    email: user.email,
+    address,
+    regionId: "region-1",
+    password: "Password-42",
+    termsAccepted: true,
+  });
+  assert.equal(
+    (
+      await service.complete({
+        token,
+        emailCode: "a1b2c3",
+        password: "Password-42",
+      })
+    ).stage,
+    "completed"
+  );
+  assert.equal(sessionInput.customerId, customer.id);
+  assert.deepEqual(legacyRecord, legacySnapshot);
+  await expectError(service.status(token), "invalid_or_expired_link");
+}
+
+// A valid competing Customer that appears after account creation has started
+// is detected before the phone or onboarding metadata can be written.
+{
+  let competitorAppeared = false;
+  let recordCalls = 0;
+  let sessionCreated = false;
+  const service = new WhatsAppOnboardingService(
+    makeDeps({
+      lookupCustomer: async () =>
+        competitorAppeared
+          ? {
+              ok: true,
+              identity: {
+                customerId: "competing-customer",
+                userId: "competing-user",
+                email: "competing@example.test",
+                mobile: `+${phone}`,
+              },
+            }
+          : { ok: false, reason: "incomplete" },
+      recordOnboarding: async () => {
+        recordCalls += 1;
+        throw new Error("must not mutate when a competing Customer appears");
+      },
+      setCustomerSession: (input) => {
+        sessionCreated = true;
+        return { ...input, phoneHash: "hash", createdAt: 0, expiresAt: 1 };
+      },
     })
   );
   const token = tokenFromOffer(service.issueOffer({ userRef, phone }));
-  assert.equal((await service.status(token)).mode, "existing_account");
-  assert.equal(
-    (await service.connect({ token, password: "old-7" })).stage,
-    "completed"
+  await service.start({
+    token,
+    firstname: "Alice",
+    lastname: "Exemple",
+    email: user.email,
+    address,
+    regionId: "region-1",
+    password: "Password-42",
+    termsAccepted: true,
+  });
+  competitorAppeared = true;
+  await expectError(
+    service.complete({ token, emailCode: "a1b2c3", password: "Password-42" }),
+    "identity_mismatch",
+    409
   );
-  assert.equal(createCalled, false);
-  assert.equal(customerCalls, 1);
-  assert.equal(phoneBound, true);
-  assert.equal(sessionInput.customerId, customer.id);
-  await expectError(service.status(token), "invalid_or_expired_link");
+  assert.equal(recordCalls, 0);
+  assert.equal(sessionCreated, false);
+  await expectError(service.status(token), "invalid_or_expired_link", 404);
 }
 
 // An existing Customer is reconciled with its User and authenticates through
@@ -631,7 +710,8 @@ async function expectError(
   assert.equal(sessionCreated, true);
 }
 
-// A Customer and a phone-resolved User with different owners fail closed.
+// A complete Customer remains authoritative even when a stale standalone User
+// happens to expose the same phone number.
 {
   const service = new WhatsAppOnboardingService(
     makeDeps({
@@ -652,7 +732,35 @@ async function expectError(
     })
   );
   const token = tokenFromOffer(service.issueOffer({ userRef, phone }));
-  await expectError(service.status(token), "account_ambiguous", 409);
+  assert.equal((await service.status(token)).mode, "existing_account");
+}
+
+// An already-issued legacy ticket selected only from a User phone match is
+// converted to account creation when no complete Customer identity exists.
+{
+  let phoneResolutionCalls = 0;
+  const deps = makeDeps({
+    resolveAccountForPhone: async () => {
+      phoneResolutionCalls += 1;
+      return { kind: "unique", userId: "obsolete-user", login: user.email };
+    },
+    lookupCustomer: async () => ({ ok: false, reason: "incomplete" }),
+  });
+  const service = new WhatsAppOnboardingService(deps);
+  const token = tokenFromOffer(service.issueOffer({ userRef, phone }));
+  const legacyState = deps.stateStore.read();
+  legacyState.tickets[0].mode = "existing_account";
+  legacyState.tickets[0].expectedUserId = "obsolete-user";
+  legacyState.tickets[0].expectedLogin = user.email;
+  deps.stateStore.write(legacyState);
+
+  const status = await service.status(token);
+  assert.equal(status.mode, "new_account");
+  assert.equal(status.requiresEmail, undefined);
+  assert.equal(phoneResolutionCalls, 0);
+  const migratedState = deps.stateStore.read();
+  assert.equal(migratedState.tickets[0].expectedUserId, undefined);
+  assert.equal(migratedState.tickets[0].expectedLogin, undefined);
 }
 
 // A transient Customer failure resumes after validation and never validates/creates twice.
@@ -924,6 +1032,7 @@ async function expectError(
     makeDeps({
       now: () => now,
       randomToken: () => String.fromCharCode(65 + sequence++).repeat(43),
+      lookupCustomer: async () => completeCustomerLookup(),
       resolveAccountForPhone: async () => ({ kind: "unique", userId: user.id }),
       authenticateAccount: async () => {
         throw new SwissdataOnboardingGatewayError("credentials");
@@ -968,6 +1077,7 @@ async function expectError(
 {
   const service = new WhatsAppOnboardingService(
     makeDeps({
+      lookupCustomer: async () => completeCustomerLookup(),
       resolveAccountForPhone: async () => ({ kind: "unique", userId: user.id }),
       authenticateAccount: async () => {
         throw new SwissdataOnboardingGatewayError("upstream");
@@ -991,6 +1101,7 @@ async function expectError(
   let sessionCreated = false;
   const service = new WhatsAppOnboardingService(
     makeDeps({
+      lookupCustomer: async () => completeCustomerLookup(),
       resolveAccountForPhone: async () => ({ kind: "unique", userId: user.id }),
       currentUser: async () => ({ ...user, id: "different-user" }),
       setCustomerSession: (input) => {

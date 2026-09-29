@@ -164,6 +164,77 @@ const server = http.createServer(async (req, res) => {
         email: "other@example.test",
         mobile: "000 000 10 02",
       },
+      {
+        id: "customer-incomplete-email",
+        userId: "user-incomplete-email",
+        mobile: "+41 00 000 10 08",
+        addresses: [existingAddress],
+        user: {
+          id: "user-incomplete-email",
+          mobile: "0041000001008",
+        },
+      },
+      {
+        id: "customer-stale-alongside-valid",
+        userId: "user-stale-alongside-valid",
+        mobile: "+41000001009",
+        user: {
+          id: "user-stale-alongside-valid",
+          mobile: "+41000001009",
+        },
+      },
+      {
+        id: "customer-valid-alongside-stale",
+        userId: "user-valid-alongside-stale",
+        email: "valid-alongside-stale@example.test",
+        mobile: "000 000 10 09",
+        user: {
+          id: "user-valid-alongside-stale",
+          email: "valid-alongside-stale@example.test",
+          mobile: "+41 00 000 10 09",
+        },
+      },
+      {
+        id: "customer-valid-ambiguous-a",
+        userId: "user-valid-ambiguous-a",
+        email: "valid-a@example.test",
+        mobile: "+41000001010",
+      },
+      {
+        id: "customer-valid-ambiguous-b",
+        userId: "user-valid-ambiguous-b",
+        email: "valid-b@example.test",
+        mobile: "0041000001010",
+      },
+      {
+        id: "customer-incomplete-user",
+        email: "orphan-customer@example.test",
+        mobile: "+41000001011",
+        addresses: [existingAddress],
+      },
+      {
+        id: "customer-conflicting-user-link",
+        userId: "user-direct-conflict",
+        email: "conflict@example.test",
+        mobile: "+41000001012",
+        user: {
+          id: "user-populated-conflict",
+          email: "conflict@example.test",
+          mobile: "+41000001012",
+        },
+      },
+      {
+        id: "customer-valid-beside-conflict",
+        userId: "user-valid-beside-conflict",
+        email: "valid-beside-conflict@example.test",
+        mobile: "0041000001012",
+      },
+      {
+        id: "customer-invalid-email-format",
+        userId: "user-invalid-email-format",
+        email: "not-an-email@localhost",
+        mobile: "+41000001013",
+      },
     ];
     sendJson(
       res,
@@ -347,6 +418,47 @@ try {
       mobile: "00 41 00 000 10 07",
       displayName: undefined,
     },
+  });
+
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001008"), {
+    ok: false,
+    reason: "incomplete",
+  });
+
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001009"), {
+    ok: true,
+    identity: {
+      customerId: "customer-valid-alongside-stale",
+      userId: "user-valid-alongside-stale",
+      email: "valid-alongside-stale@example.test",
+      mobile: "+41 00 000 10 09",
+      displayName: undefined,
+    },
+  });
+
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001010"), {
+    ok: false,
+    reason: "ambiguous",
+  });
+
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001011"), {
+    ok: false,
+    reason: "incomplete",
+  });
+
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001012"), {
+    ok: false,
+    reason: "ambiguous",
+  });
+
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001013"), {
+    ok: false,
+    reason: "incomplete",
+  });
+
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001014"), {
+    ok: false,
+    reason: "not_found",
   });
 
   assert.deepEqual(await listSwissdataOnboardingRegions(), [

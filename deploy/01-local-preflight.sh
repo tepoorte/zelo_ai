@@ -55,9 +55,8 @@ echo "== Unit/regression tests =="
 npm run test:delivery
 npm run test:intents
 npm run test:add-items
-if ! ./tests/run_add_items_random_catalog_tests.sh; then
-  echo "WARNING: random catalog add-items test failed; continuing because this test can hit ambiguous near-duplicate products."
-fi
+ZELO_RANDOM_ADD_ITEMS_CASES=20 ZELO_RANDOM_ADD_ITEMS_MIN_PASS=16 \
+  ./tests/run_add_items_random_catalog_tests.sh
 npm run test:clear-cart
 npm run test:agent-formatting
 npm run test:discover-meals
@@ -69,6 +68,7 @@ npm run test:whatsapp-onboarding-store
 npm run test:whatsapp-onboarding-swissdata
 npm run test:whatsapp-onboarding-routes
 npm run test:whatsapp-onboarding
+npm run test:whatsapp-new-customer-discovery
 npm run test:recurring-orders
 npm run test:pending-options
 npm run test:product-eligibility

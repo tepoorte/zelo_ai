@@ -213,7 +213,7 @@ async function startOrResendChallenge(input: {
     return { ok: false, message: unavailableMessage() };
   }
 
-  if (!lookup.ok && lookup.reason === "not_found") {
+  if (!lookup.ok && (lookup.reason === "not_found" || lookup.reason === "incomplete")) {
     try {
       const offer = deps.issueOnboardingOffer({
         userRef: input.userRef,

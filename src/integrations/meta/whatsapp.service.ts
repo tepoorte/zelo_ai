@@ -9,6 +9,11 @@ import {
   sendWhatsAppTypingIndicator,
   splitWhatsAppText,
 } from "./whatsapp.send.js";
+import { isWhatsAppLogoutCommand } from "./whatsapp-auth.service.js";
+import {
+  clearWhatsAppNewCustomerDiscovery,
+  handleWhatsAppNewCustomerDiscoveryMessage,
+} from "./whatsapp-new-customer-discovery.service.js";
 import {
   ensureWhatsAppSwissdataSession,
   isAllowedWhatsAppPhone,
@@ -20,6 +25,8 @@ export type WhatsAppConversationDeps = {
   buildIntentHint: typeof buildServerFrontendIntentHint;
   ensureSession: typeof ensureWhatsAppSwissdataSession;
   isAllowedPhone: typeof isAllowedWhatsAppPhone;
+  handleNewCustomerDiscovery: typeof handleWhatsAppNewCustomerDiscoveryMessage;
+  clearNewCustomerDiscovery: typeof clearWhatsAppNewCustomerDiscovery;
 };
 
 const DEFAULT_CONVERSATION_DEPS: WhatsAppConversationDeps = {
@@ -27,6 +34,8 @@ const DEFAULT_CONVERSATION_DEPS: WhatsAppConversationDeps = {
   buildIntentHint: buildServerFrontendIntentHint,
   ensureSession: ensureWhatsAppSwissdataSession,
   isAllowedPhone: isAllowedWhatsAppPhone,
+  handleNewCustomerDiscovery: handleWhatsAppNewCustomerDiscoveryMessage,
+  clearNewCustomerDiscovery: clearWhatsAppNewCustomerDiscovery,
 };
 
 export async function processIncomingWhatsAppTexts(messages: WhatsAppInboundTextMessage[]) {
@@ -86,9 +95,27 @@ export async function buildWhatsAppConversationReply(
     };
   }
 
+  const logoutRequested = isWhatsAppLogoutCommand(message.text);
+  if (logoutRequested) {
+    await deps.clearNewCustomerDiscovery(userRef);
+  }
+
   const session = await deps.ensureSession({ userRef, phone, text: message.text });
+  if (logoutRequested) {
+    // Close a welcome that could have started while the session itself was
+    // being revoked. This second pass makes logout the final state transition.
+    await deps.clearNewCustomerDiscovery(userRef);
+  }
   if (!session.ok) {
     return { userRef, message: "message" in session ? session.message : "" };
+  }
+
+  const discoveryMessage = await deps.handleNewCustomerDiscovery({
+    userRef,
+    text: message.text,
+  });
+  if (discoveryMessage !== null) {
+    return { userRef, message: discoveryMessage };
   }
 
   const frontendIntentHint = await deps.buildIntentHint(message.text);

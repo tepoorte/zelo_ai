@@ -203,6 +203,20 @@ function passwordlessDeps(
 }
 
 {
+  const { deps, counters } = passwordlessDeps(async () => ({ ok: false, reason: "incomplete" }));
+  const result = await ensureWhatsAppPasswordlessSession(
+    { userRef: "wa:41700000011", phone: "41700000011", text: "bonjour" },
+    deps
+  );
+  assert.equal(result.ok, false);
+  assert.equal("message" in result && result.message.includes("Création de ton compte"), true);
+  assert.equal("message" in result && result.message.includes("#token=TEST-1"), true);
+  assert.equal(counters.offerCalls, 1);
+  assert.equal(counters.issuedOffers, 1);
+  assert.equal(counters.emails, 0);
+}
+
+{
   const { deps, counters } = passwordlessDeps(async () => ({ ok: false, reason: "not_found" }));
   await ensureWhatsAppPasswordlessSession(
     { userRef: "wa:41700000004", phone: "41700000004", text: "bonjour" },
@@ -615,6 +629,8 @@ for (const reason of ["ambiguous", "missing_user", "missing_email", "config"] as
     }),
     ensureSession: async () => ({ ok: true }),
     isAllowedPhone: () => true,
+    handleNewCustomerDiscovery: async () => null,
+    clearNewCustomerDiscovery: async () => undefined,
   };
 
   const reply = await buildWhatsAppConversationReply(
@@ -635,6 +651,7 @@ for (const reason of ["ambiguous", "missing_user", "missing_email", "config"] as
 
 {
   let runAgentCalled = false;
+  let discoveryCalled = false;
   const deps: WhatsAppConversationDeps = {
     runAgent: async () => {
       runAgentCalled = true;
@@ -648,6 +665,11 @@ for (const reason of ["ambiguous", "missing_user", "missing_email", "config"] as
     }),
     ensureSession: async () => ({ ok: false, message: "*Connexion confirmée*" }),
     isAllowedPhone: () => true,
+    handleNewCustomerDiscovery: async () => {
+      discoveryCalled = true;
+      throw new Error("OTP completion must not start the new-customer discovery flow");
+    },
+    clearNewCustomerDiscovery: async () => undefined,
   };
 
   const reply = await buildWhatsAppConversationReply(
@@ -662,6 +684,88 @@ for (const reason of ["ambiguous", "missing_user", "missing_email", "config"] as
 
   assert.equal(reply.message, "*Connexion confirmée*");
   assert.equal(runAgentCalled, false);
+  assert.equal(discoveryCalled, false);
+}
+
+{
+  let runAgentCalled = false;
+  let intentHintCalled = false;
+  const deps: WhatsAppConversationDeps = {
+    runAgent: async () => {
+      runAgentCalled = true;
+      throw new Error("A discovery reply must not be routed to runAgent");
+    },
+    buildIntentHint: async () => {
+      intentHintCalled = true;
+      throw new Error("A discovery reply must not be classified");
+    },
+    ensureSession: async () => ({ ok: true }),
+    isAllowedPhone: () => true,
+    handleNewCustomerDiscovery: async ({ userRef, text }) => {
+      assert.equal(userRef, "wa:41000000002");
+      assert.equal(text, "1");
+      return "*Panier découverte sélectionné*";
+    },
+    clearNewCustomerDiscovery: async () => undefined,
+  };
+
+  const reply = await buildWhatsAppConversationReply(
+    {
+      channel: "whatsapp",
+      userId: "+41000000002",
+      text: "1",
+      messageId: "MSG-DISCOVERY",
+    },
+    deps
+  );
+
+  assert.equal(reply.message, "*Panier découverte sélectionné*");
+  assert.equal(runAgentCalled, false);
+  assert.equal(intentHintCalled, false);
+}
+
+{
+  const cleared: string[] = [];
+  let discoveryCalled = false;
+  let lateWelcomeActive = false;
+  const deps: WhatsAppConversationDeps = {
+    runAgent: async () => {
+      throw new Error("Logout must not be routed to runAgent");
+    },
+    buildIntentHint: async () => {
+      throw new Error("Logout must not be classified");
+    },
+    ensureSession: async () => {
+      // Simulate a detached post-creation welcome that starts only after the
+      // first clear, while logout is revoking the authenticated session.
+      lateWelcomeActive = true;
+      return { ok: false, message: "Session WhatsApp fermée." };
+    },
+    isAllowedPhone: () => true,
+    handleNewCustomerDiscovery: async () => {
+      discoveryCalled = true;
+      return null;
+    },
+    clearNewCustomerDiscovery: async (userRef) => {
+      cleared.push(userRef);
+      lateWelcomeActive = false;
+    },
+  };
+
+  const reply = await buildWhatsAppConversationReply(
+    {
+      channel: "whatsapp",
+      userId: "+41000000002",
+      text: "déconnexion",
+      messageId: "MSG-DISCOVERY-LOGOUT",
+    },
+    deps
+  );
+
+  assert.equal(reply.message, "Session WhatsApp fermée.");
+  assert.deepEqual(cleared, ["wa:41000000002", "wa:41000000002"]);
+  assert.equal(lateWelcomeActive, false);
+  assert.equal(discoveryCalled, false);
 }
 
 {
