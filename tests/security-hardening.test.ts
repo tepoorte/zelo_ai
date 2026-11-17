@@ -128,10 +128,10 @@ function fakeReq(headers: Record<string, string> = {}, query: Record<string, unk
   };
 
   const redacted = JSON.stringify(redactSensitive(sensitive));
-  assert(!redacted.includes("samuel.tepoorten"));
+  assert(!redacted.includes("public-contact-003"));
   assert(!redacted.includes("0041000000001"));
   assert(!redacted.includes("000000000000000000000001"));
-  assert(!redacted.includes("EAATWQAwWXEUBRZBoh"));
+  assert(!redacted.includes("DUMMY_META_GRAPH_TOKEN_NOT_FOR_USE"));
 
   const redactedUrl = redactSensitive(
     "/ai/intent-feedback?token=admin-token&apiKey=swissdata-key&password=smtp-pass"

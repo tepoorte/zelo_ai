@@ -30,11 +30,11 @@ type CapturedRequest = {
 type PhoneLookupResult = { exists: boolean; id?: string };
 
 const phoneLookupResults = new Map<string, PhoneLookupResult>([
-  ["+41 00 000 00 02", { exists: true, id: "user-phone-1" }],
-  ["+41000001002", { exists: true, id: "user-phone-a" }],
-  ["41000001002", { exists: true, id: "user-phone-b" }],
-  ["+41000001003", { exists: true }],
-  ["+41000001004", { exists: true, id: "user-merge-exact" }],
+  ["+41 10 000 00 02", { exists: true, id: "user-phone-1" }],
+  ["+41100001002", { exists: true, id: "user-phone-a" }],
+  ["41100001002", { exists: true, id: "user-phone-b" }],
+  ["+41100001003", { exists: true }],
+  ["+41100001004", { exists: true, id: "user-merge-exact" }],
 ]);
 
 const emailLookupResults = new Map<string, PhoneLookupResult>([
@@ -119,14 +119,14 @@ const server = http.createServer(async (req, res) => {
     const pattern = rawPattern.startsWith("$") ? rawPattern.slice(1) : "(?!)";
     const regex = new RegExp(pattern);
     const users = [
-      { id: "user-phone-1", mobile: "+41 00 000 00 02" },
-      { id: "user-phone-a", mobile: "+41000001002" },
-      { id: "user-phone-b", mobile: "000 000 10 02" },
-      { id: "user-regex-only", mobile: "+ 41 00 000 10 05" },
-      { id: "user-regex-a", mobile: "00 41 00 000 10 06" },
-      { id: "user-regex-b", mobile: "000 000-10-06" },
-      { id: "user-merge-exact", mobile: "+41000001004" },
-      { id: "user-merge-regex", mobile: "+ 41 00 000 10 04" },
+      { id: "user-phone-1", mobile: "+41 10 000 00 02" },
+      { id: "user-phone-a", mobile: "+41100001002" },
+      { id: "user-phone-b", mobile: "010 000 10 02" },
+      { id: "user-regex-only", mobile: "+ 41 10 000 10 05" },
+      { id: "user-regex-a", mobile: "00 41 10 000 10 06" },
+      { id: "user-regex-b", mobile: "010 000-10-06" },
+      { id: "user-merge-exact", mobile: "+41100001004" },
+      { id: "user-merge-regex", mobile: "+ 41 10 000 10 04" },
     ];
     const limit = Math.max(0, Number(request.query.limit || 0));
     sendJson(
@@ -151,89 +151,89 @@ const server = http.createServer(async (req, res) => {
         id: "customer-legacy-phone",
         userId: "user-phone-1",
         email: "legacy@example.test",
-        mobile: "  + 41 00 000 10 07  ",
+        mobile: "  + 41 10 000 10 07  ",
         user: {
           id: "user-phone-1",
           email: "legacy@example.test",
-          mobile: "00 41 00 000 10 07",
+          mobile: "00 41 10 000 10 07",
         },
       },
       {
         id: "customer-near-collision",
         userId: "user-other",
         email: "other@example.test",
-        mobile: "000 000 10 02",
+        mobile: "010 000 10 02",
       },
       {
         id: "customer-incomplete-email",
         userId: "user-incomplete-email",
-        mobile: "+41 00 000 10 08",
+        mobile: "+41 10 000 10 08",
         addresses: [existingAddress],
         user: {
           id: "user-incomplete-email",
-          mobile: "0041000001008",
+          mobile: "0041100001008",
         },
       },
       {
         id: "customer-stale-alongside-valid",
         userId: "user-stale-alongside-valid",
-        mobile: "+41000001009",
+        mobile: "+41100001009",
         user: {
           id: "user-stale-alongside-valid",
-          mobile: "+41000001009",
+          mobile: "+41100001009",
         },
       },
       {
         id: "customer-valid-alongside-stale",
         userId: "user-valid-alongside-stale",
         email: "valid-alongside-stale@example.test",
-        mobile: "000 000 10 09",
+        mobile: "010 000 10 09",
         user: {
           id: "user-valid-alongside-stale",
           email: "valid-alongside-stale@example.test",
-          mobile: "+41 00 000 10 09",
+          mobile: "+41 10 000 10 09",
         },
       },
       {
         id: "customer-valid-ambiguous-a",
         userId: "user-valid-ambiguous-a",
         email: "valid-a@example.test",
-        mobile: "+41000001010",
+        mobile: "+41100001010",
       },
       {
         id: "customer-valid-ambiguous-b",
         userId: "user-valid-ambiguous-b",
         email: "valid-b@example.test",
-        mobile: "0041000001010",
+        mobile: "0041100001010",
       },
       {
         id: "customer-incomplete-user",
         email: "orphan-customer@example.test",
-        mobile: "+41000001011",
+        mobile: "+41100001011",
         addresses: [existingAddress],
       },
       {
         id: "customer-conflicting-user-link",
         userId: "user-direct-conflict",
         email: "conflict@example.test",
-        mobile: "+41000001012",
+        mobile: "+41100001012",
         user: {
           id: "user-populated-conflict",
           email: "conflict@example.test",
-          mobile: "+41000001012",
+          mobile: "+41100001012",
         },
       },
       {
         id: "customer-valid-beside-conflict",
         userId: "user-valid-beside-conflict",
         email: "valid-beside-conflict@example.test",
-        mobile: "0041000001012",
+        mobile: "0041100001012",
       },
       {
         id: "customer-invalid-email-format",
         userId: "user-invalid-email-format",
         email: "not-an-email@localhost",
-        mobile: "+41000001013",
+        mobile: "+41100001013",
       },
     ];
     sendJson(
@@ -403,60 +403,60 @@ try {
 
   const phoneBoundCustomer = await bindSwissdataCurrentCustomerPhone({
     accessToken,
-    phone: "41000000002",
+    phone: "41100000002",
   });
   assert.equal(phoneBoundCustomer.id, customer.id);
   assert.equal(phoneBoundCustomer.userId, customer.userId);
-  assert.equal(phoneBoundCustomer.mobile, "+41000000002");
+  assert.equal(phoneBoundCustomer.mobile, "+41100000002");
 
-  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000000002"), {
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41100000002"), {
     ok: true,
     identity: {
       customerId: "customer-legacy-phone",
       userId: "user-phone-1",
       email: "legacy@example.test",
-      mobile: "00 41 00 000 10 07",
+      mobile: "00 41 10 000 10 07",
       displayName: undefined,
     },
   });
 
-  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001008"), {
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41100001008"), {
     ok: false,
     reason: "incomplete",
   });
 
-  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001009"), {
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41100001009"), {
     ok: true,
     identity: {
       customerId: "customer-valid-alongside-stale",
       userId: "user-valid-alongside-stale",
       email: "valid-alongside-stale@example.test",
-      mobile: "+41 00 000 10 09",
+      mobile: "+41 10 000 10 09",
       displayName: undefined,
     },
   });
 
-  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001010"), {
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41100001010"), {
     ok: false,
     reason: "ambiguous",
   });
 
-  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001011"), {
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41100001011"), {
     ok: false,
     reason: "incomplete",
   });
 
-  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001012"), {
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41100001012"), {
     ok: false,
     reason: "ambiguous",
   });
 
-  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001013"), {
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41100001013"), {
     ok: false,
     reason: "incomplete",
   });
 
-  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41000001014"), {
+  assert.deepEqual(await lookupWhatsAppCustomerByPhone("41100001014"), {
     ok: false,
     reason: "not_found",
   });
@@ -468,7 +468,7 @@ try {
 
   const recordInput = {
     accessToken,
-    phone: "41000000002",
+    phone: "41100000002",
     firstname: "Alice",
     lastname: "Exemple",
     email: "client@example.test",
@@ -501,7 +501,7 @@ try {
       firstname: "Alice",
       lastname: "Exemple",
       email: "client@example.test",
-      mobile: "+41000000002",
+      mobile: "+41100000002",
       region: "region-1",
       addresses: [newAddress, existingAddress],
       metadata: [
@@ -520,28 +520,28 @@ try {
   });
   assert.deepEqual(retriedCustomer, updatedCustomer);
 
-  assert.deepEqual(await resolveSwissdataAccountForPhone("41000000002"), {
+  assert.deepEqual(await resolveSwissdataAccountForPhone("41100000002"), {
     kind: "unique",
     userId: "user-phone-1",
-    login: "+41 00 000 00 02",
+    login: "+41 10 000 00 02",
   });
-  assert.deepEqual(await resolveSwissdataAccountForPhone("41000001002"), {
+  assert.deepEqual(await resolveSwissdataAccountForPhone("41100001002"), {
     kind: "ambiguous",
   });
-  assert.deepEqual(await resolveSwissdataAccountForPhone("41000001003"), {
+  assert.deepEqual(await resolveSwissdataAccountForPhone("41100001003"), {
     kind: "ambiguous",
   });
-  assert.deepEqual(await resolveSwissdataAccountForPhone("41000001015"), {
+  assert.deepEqual(await resolveSwissdataAccountForPhone("41100001015"), {
     kind: "none",
   });
-  assert.deepEqual(await resolveSwissdataAccountForPhone("41000001005"), {
+  assert.deepEqual(await resolveSwissdataAccountForPhone("41100001005"), {
     kind: "unique",
     userId: "user-regex-only",
   });
-  assert.deepEqual(await resolveSwissdataAccountForPhone("41000001006"), {
+  assert.deepEqual(await resolveSwissdataAccountForPhone("41100001006"), {
     kind: "ambiguous",
   });
-  assert.deepEqual(await resolveSwissdataAccountForPhone("41000001004"), {
+  assert.deepEqual(await resolveSwissdataAccountForPhone("41100001004"), {
     kind: "ambiguous",
   });
   assert.deepEqual(
@@ -624,7 +624,7 @@ try {
     firstname: "Alice",
     lastname: "Exemple",
     email: "client@example.test",
-    mobile: "+41000000002",
+    mobile: "+41100000002",
     addresses: [newAddress, existingAddress],
     region: "region-1",
     metadata: [
@@ -635,7 +635,7 @@ try {
       },
     ],
   };
-  assert.deepEqual(customerRequests[1].body, { mobile: "+41000000002" });
+  assert.deepEqual(customerRequests[1].body, { mobile: "+41100000002" });
   assert.deepEqual(customerRequests[2].body, expectedCustomerUpdate);
   assert.deepEqual(customerRequests[3].body, expectedCustomerUpdate);
   for (const request of customerRequests.slice(1)) {

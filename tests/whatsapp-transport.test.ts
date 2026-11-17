@@ -32,7 +32,7 @@ import {
 
 {
   assert.equal(normalizeWhatsAppPhone("+41 00 000 00 02"), "41000000002");
-  assert.equal(normalizeWhatsAppPhone("public-contact-004@example.invalid"), "41000000002");
+  assert.equal(normalizeWhatsAppPhone("41000000002@s.whatsapp.net"), "41000000002");
   assert.equal(normalizeWhatsAppPhone("0041000000002"), "41000000002");
 }
 
@@ -49,7 +49,7 @@ import {
 {
   const inbound = parseBaileysInboundTextMessage({
     key: {
-      remoteJid: "public-contact-004@example.invalid",
+      remoteJid: "41000000002@s.whatsapp.net",
       fromMe: false,
       id: "MSG-1",
     },
@@ -71,7 +71,7 @@ import {
 {
   const inbound = parseBaileysInboundTextMessage({
     key: {
-      remoteJid: "public-contact-004@example.invalid",
+      remoteJid: "41000000002@s.whatsapp.net",
       fromMe: false,
       id: "MSG-2",
     },
@@ -86,7 +86,7 @@ import {
 {
   const inbound = parseBaileysInboundTextMessage({
     key: {
-      remoteJid: "public-contact-005@example.invalid",
+      remoteJid: "120363000000000000@g.us",
       fromMe: false,
       id: "GROUP-1",
     },
